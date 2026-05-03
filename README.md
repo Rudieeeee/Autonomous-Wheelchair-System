@@ -35,7 +35,8 @@ The system is divided into four main subsystems:
 
 ## Reports & Documentation
 - 📄 Literature Study: https://www.overleaf.com/read/pxfggznvhxvc#7b4c1a  
-- 📄 Program of Requirements (PoR): https://www.overleaf.com/read/cvwwdwxjmvfz#97bd66  
+- 📄 Program of Requirements (PoR): https://www.overleaf.com/read/cvwwdwxjmvfz#97bd66
+- 📄 Meeting Notes: https://docs.google.com/document/d/1JzAj3k3fk30Rmm3bZLfRvXuysjHTRjCx-jTIksM33J0/edit?tab=t.0
 
 ---
 
