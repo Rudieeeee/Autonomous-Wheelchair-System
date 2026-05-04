@@ -38,6 +38,7 @@ The system is divided into four main subsystems:
 - 📄 Program of Requirements (PoR): https://www.overleaf.com/read/cvwwdwxjmvfz#97bd66
 - 📄 Meeting Notes: https://docs.google.com/document/d/1JzAj3k3fk30Rmm3bZLfRvXuysjHTRjCx-jTIksM33J0/edit?tab=t.0
 - 📄 Gantt Chart: https://docs.google.com/spreadsheets/d/1LeIonz3t87s3dJxeFGJFFnhabDehzJCSFnnsxjkrOPM/edit?gid=1115838130#gid=1115838130
+- 📄 Wheelchair Measurements https://docs.google.com/spreadsheets/d/1bqGMkIiJ7xfXbivKcnknhoT9pYHNBYwShCx7t04MR1Q/edit?usp=sharing
 
 ---
 
