@@ -1,0 +1,30 @@
+[1.153s] Invoking command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/build/mapping_test': PYTHONPATH=/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/build/mapping_test/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/mapping_test/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/build/mapping_test/build --no-deps symlink_data
+[1.553s] running develop
+[1.764s] running egg_info
+[1.764s] creating mapping_test.egg-info
+[1.785s] writing mapping_test.egg-info/PKG-INFO
+[1.786s] writing dependency_links to mapping_test.egg-info/dependency_links.txt
+[1.787s] writing entry points to mapping_test.egg-info/entry_points.txt
+[1.787s] writing requirements to mapping_test.egg-info/requires.txt
+[1.787s] writing top-level names to mapping_test.egg-info/top_level.txt
+[1.787s] writing manifest file 'mapping_test.egg-info/SOURCES.txt'
+[1.829s] reading manifest file 'mapping_test.egg-info/SOURCES.txt'
+[1.829s] writing manifest file 'mapping_test.egg-info/SOURCES.txt'
+[1.866s] running build_ext
+[1.866s] Creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/mapping_test/lib/python3.12/site-packages/mapping-test.egg-link (link to .)
+[1.866s] Installing replay_carmen_log script to /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/mapping_test/lib/mapping_test
+[1.867s] 
+[1.867s] Installed /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/build/mapping_test
+[1.867s] running symlink_data
+[1.868s] creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/mapping_test/share/ament_index
+[1.868s] creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/mapping_test/share/ament_index/resource_index
+[1.868s] creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/mapping_test/share/ament_index/resource_index/packages
+[1.869s] symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/build/mapping_test/resource/mapping_test -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/mapping_test/share/ament_index/resource_index/packages
+[1.869s] symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/build/mapping_test/package.xml -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/mapping_test/share/mapping_test
+[1.869s] creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/mapping_test/share/mapping_test/launch
+[1.870s] symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/build/mapping_test/launch/mapping_test.launch.py -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/mapping_test/share/mapping_test/launch
+[1.870s] creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/mapping_test/share/mapping_test/config
+[1.870s] symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/build/mapping_test/config/slam_toolbox_mapping.yaml -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/mapping_test/share/mapping_test/config
+[1.871s] creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/mapping_test/share/mapping_test/rviz
+[1.871s] symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/build/mapping_test/rviz/mapping.rviz -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/mapping_test/share/mapping_test/rviz
+[1.934s] Invoked command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/build/mapping_test' returned '0': PYTHONPATH=/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/build/mapping_test/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/mapping_test/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/build/mapping_test/build --no-deps symlink_data

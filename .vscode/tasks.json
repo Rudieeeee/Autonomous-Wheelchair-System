@@ -1,0 +1,142 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build mapping_test",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest && source /opt/ros/jazzy/setup.bash && colcon build --packages-select mapping_test --build-base build --install-base install"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run mapping_test",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch mapping_test mapping_test.launch.py"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run mapping_test without RViz",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch mapping_test mapping_test.launch.py use_rviz:=false"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Clean mapping_test build",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest && rm -rf build install log"
+      ],
+      "problemMatcher": []
+    },
+
+    {
+      "label": "Build localization_test",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && colcon build --packages-select localization_test --build-base build --install-base install"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run localization_test",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source install/setup.bash && ros2 launch localization_test localization_test.launch.py"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run localization_test without RViz",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source install/setup.bash && ros2 launch localization_test localization_test.launch.py use_rviz:=false"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Clean localization_test build",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest && rm -rf build install log"
+      ],
+      "problemMatcher": []
+    },
+
+    {
+      "label": "Build navigation_test",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/NavigationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/setup.bash && colcon build --packages-select navigation_test --build-base build --install-base install"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run navigation_test",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/NavigationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/setup.bash && source install/setup.bash && ros2 launch navigation_test navigation_test.launch.py"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run navigation_test without RViz",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/NavigationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/setup.bash && source install/setup.bash && ros2 launch navigation_test navigation_test.launch.py use_rviz:=false"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Clean navigation_test build",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/NavigationTest && rm -rf build install log"
+      ],
+      "problemMatcher": []
+    },
+
+    {
+      "label": "Build all test packages",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "source /opt/ros/jazzy/setup.bash && cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest && colcon build --packages-select mapping_test --build-base build --install-base install && source install/setup.bash && cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest && colcon build --packages-select localization_test --build-base build --install-base install && source install/setup.bash && cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/NavigationTest && colcon build --packages-select navigation_test --build-base build --install-base install"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}

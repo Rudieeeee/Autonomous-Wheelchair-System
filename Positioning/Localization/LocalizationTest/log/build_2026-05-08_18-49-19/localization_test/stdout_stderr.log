@@ -1,0 +1,26 @@
+running develop
+running egg_info
+creating localization_test.egg-info
+writing localization_test.egg-info/PKG-INFO
+writing dependency_links to localization_test.egg-info/dependency_links.txt
+writing requirements to localization_test.egg-info/requires.txt
+writing top-level names to localization_test.egg-info/top_level.txt
+writing manifest file 'localization_test.egg-info/SOURCES.txt'
+reading manifest file 'localization_test.egg-info/SOURCES.txt'
+writing manifest file 'localization_test.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/lib/python3.12/site-packages/localization-test.egg-link (link to .)
+
+Installed /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/build/localization_test
+running symlink_data
+creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/ament_index
+creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/ament_index/resource_index
+creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/ament_index/resource_index/packages
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/build/localization_test/resource/localization_test -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/ament_index/resource_index/packages
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/build/localization_test/package.xml -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/localization_test
+creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/localization_test/launch
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/build/localization_test/launch/localization_test.launch.py -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/localization_test/launch
+creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/localization_test/config
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/build/localization_test/config/amcl.yaml -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/localization_test/config
+creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/localization_test/rviz
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/build/localization_test/rviz/localization.rviz -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/localization_test/rviz

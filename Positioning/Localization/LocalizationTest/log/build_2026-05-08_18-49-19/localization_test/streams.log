@@ -1,0 +1,28 @@
+[1.014s] Invoking command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/build/localization_test': PYTHONPATH=/home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/build/localization_test/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/build/localization_test/build --no-deps symlink_data
+[1.395s] running develop
+[1.613s] running egg_info
+[1.613s] creating localization_test.egg-info
+[1.635s] writing localization_test.egg-info/PKG-INFO
+[1.635s] writing dependency_links to localization_test.egg-info/dependency_links.txt
+[1.636s] writing requirements to localization_test.egg-info/requires.txt
+[1.636s] writing top-level names to localization_test.egg-info/top_level.txt
+[1.636s] writing manifest file 'localization_test.egg-info/SOURCES.txt'
+[1.675s] reading manifest file 'localization_test.egg-info/SOURCES.txt'
+[1.676s] writing manifest file 'localization_test.egg-info/SOURCES.txt'
+[1.706s] running build_ext
+[1.706s] Creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/lib/python3.12/site-packages/localization-test.egg-link (link to .)
+[1.707s] 
+[1.707s] Installed /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/build/localization_test
+[1.708s] running symlink_data
+[1.708s] creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/ament_index
+[1.708s] creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/ament_index/resource_index
+[1.708s] creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/ament_index/resource_index/packages
+[1.709s] symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/build/localization_test/resource/localization_test -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/ament_index/resource_index/packages
+[1.709s] symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/build/localization_test/package.xml -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/localization_test
+[1.710s] creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/localization_test/launch
+[1.710s] symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/build/localization_test/launch/localization_test.launch.py -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/localization_test/launch
+[1.710s] creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/localization_test/config
+[1.710s] symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/build/localization_test/config/amcl.yaml -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/localization_test/config
+[1.711s] creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/localization_test/rviz
+[1.711s] symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/build/localization_test/rviz/localization.rviz -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/share/localization_test/rviz
+[1.756s] Invoked command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/build/localization_test' returned '0': PYTHONPATH=/home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/build/localization_test/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/localization_test/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/build/localization_test/build --no-deps symlink_data

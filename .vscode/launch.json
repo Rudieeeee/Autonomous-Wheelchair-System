@@ -1,0 +1,64 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Build and Run ROS2 Mapping Test",
+      "type": "node-terminal",
+      "request": "launch",
+      "preLaunchTask": "Build mapping_test",
+      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch mapping_test mapping_test.launch.py'"
+    },
+    {
+      "name": "Run ROS2 Mapping Test",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch mapping_test mapping_test.launch.py'"
+    },
+    {
+      "name": "Run ROS2 Mapping Test without RViz",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch mapping_test mapping_test.launch.py use_rviz:=false'"
+    },
+
+    {
+      "name": "Build and Run ROS2 Localization Test",
+      "type": "node-terminal",
+      "request": "launch",
+      "preLaunchTask": "Build localization_test",
+      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source install/setup.bash && ros2 launch localization_test localization_test.launch.py'"
+    },
+    {
+      "name": "Run ROS2 Localization Test",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source install/setup.bash && ros2 launch localization_test localization_test.launch.py'"
+    },
+    {
+      "name": "Run ROS2 Localization Test without RViz",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source install/setup.bash && ros2 launch localization_test localization_test.launch.py use_rviz:=false'"
+    },
+
+    {
+      "name": "Build and Run ROS2 Navigation Test",
+      "type": "node-terminal",
+      "request": "launch",
+      "preLaunchTask": "Build navigation_test",
+      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/NavigationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/setup.bash && source install/setup.bash && ros2 launch navigation_test navigation_test.launch.py'"
+    },
+    {
+      "name": "Run ROS2 Navigation Test",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/NavigationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/setup.bash && source install/setup.bash && ros2 launch navigation_test navigation_test.launch.py'"
+    },
+    {
+      "name": "Run ROS2 Navigation Test without RViz",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/NavigationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/setup.bash && source install/setup.bash && ros2 launch navigation_test navigation_test.launch.py use_rviz:=false'"
+    }
+  ]
+}
