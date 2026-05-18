@@ -1,0 +1,1 @@
+/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/launch/view_sllidar_a2m7_launch.py

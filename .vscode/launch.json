@@ -2,6 +2,45 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Build and Run ROS2 Mapping",
+      "type": "node-terminal",
+      "request": "launch",
+      "preLaunchTask": "Build mapping",
+      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/ttyUSB0 right_lidar_port:=/dev/ttyUSB1 arduino_port:=/dev/arduino_wheelchair'"
+    },
+    {
+      "name": "Run ROS2 Mapping",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/ttyUSB0 right_lidar_port:=/dev/ttyUSB1 arduino_port:=/dev/arduino_wheelchair'"
+    },
+    {
+      "name": "Run ROS2 Mapping without RViz",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/ttyUSB0 right_lidar_port:=/dev/ttyUSB1 arduino_port:=/dev/arduino_wheelchair use_rviz:=false'"
+    },
+    {
+      "name": "Run ROS2 Mapping and Auto Save Map",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/ttyUSB0 right_lidar_port:=/dev/ttyUSB1 arduino_port:=/dev/arduino_wheelchair auto_save_map:=true auto_save_delay:=120.0 save_map:=/home/rudrh/Autonomous-Wheelchair-System/Other-Files/GeneralData/Maps/test_map'"
+    },
+    {
+      "name": "Build and Run ROS2 Sensors",
+      "type": "node-terminal",
+      "request": "launch",
+      "preLaunchTask": "Build mapping",
+      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator sensors.launch.py left_lidar_port:=/dev/ttyUSB0 right_lidar_port:=/dev/ttyUSB1 arduino_port:=/dev/arduino_wheelchair'"
+    },
+    {
+      "name": "Run ROS2 Sensors",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator sensors.launch.py left_lidar_port:=/dev/ttyUSB0 right_lidar_port:=/dev/ttyUSB1 arduino_port:=/dev/arduino_wheelchair'"
+    },
+
+    {
       "name": "Build and Run ROS2 Mapping Test",
       "type": "node-terminal",
       "request": "launch",

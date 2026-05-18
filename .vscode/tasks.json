@@ -2,6 +2,101 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Build mapping",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --base-paths . sllidar_ros2"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Clean mapping build",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && rm -rf build install log"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Clean and Build mapping",
+      "type": "shell",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Clean mapping build",
+        "Build mapping"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run sensors launch",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator sensors.launch.py left_lidar_port:=/dev/ttyUSB0 right_lidar_port:=/dev/ttyUSB1 arduino_port:=/dev/arduino_wheelchair"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run mapping launch",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/ttyUSB0 right_lidar_port:=/dev/ttyUSB1 arduino_port:=/dev/arduino_wheelchair"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run mapping launch without RViz",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/ttyUSB0 right_lidar_port:=/dev/ttyUSB1 arduino_port:=/dev/arduino_wheelchair use_rviz:=false"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run mapping launch and auto save map",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/ttyUSB0 right_lidar_port:=/dev/ttyUSB1 arduino_port:=/dev/arduino_wheelchair auto_save_map:=true auto_save_delay:=120.0 save_map:=/home/rudrh/Autonomous-Wheelchair-System/Other-Files/GeneralData/Maps/test_map"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Save map manually",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && ros2 run nav2_map_server map_saver_cli -f /home/rudrh/Autonomous-Wheelchair-System/Other-Files/GeneralData/Maps/test_map"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Kill ROS mapping processes",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "pkill -f \"ros2|rviz2|slam_toolbox|sllidar|arduino_sensor_node|lidar_scan_merger|map_saver\" || true"
+      ],
+      "problemMatcher": []
+    },
+
+    {
       "label": "Build mapping_test",
       "type": "shell",
       "command": "bash",
@@ -9,10 +104,6 @@
         "-c",
         "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest && source /opt/ros/jazzy/setup.bash && colcon build --packages-select mapping_test --build-base build --install-base install"
       ],
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      },
       "problemMatcher": []
     },
     {

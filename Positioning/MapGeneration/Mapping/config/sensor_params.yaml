@@ -1,0 +1,53 @@
+arduino_sensor_node:
+  ros__parameters:
+    serial_port: "/dev/ttyACM0"
+    baud_rate: 115200
+    timer_period_s: 0.01
+
+    wheel_diameter_m: 0.35
+    magnets_per_wheel: 4
+    wheel_base_m: 0.55
+
+    odom_frame: "odom"
+    base_frame: "base_footprint"
+    imu_frame: "imu_link"
+
+    publish_odom: true
+    publish_tf: true
+    publish_imu: true
+
+    use_imu_yaw: true
+
+    left_tick_sign: 1.0
+    right_tick_sign: 1.0
+
+lidar_scan_merger:
+  ros__parameters:
+    left_scan_topic: "/scan_left"
+    right_scan_topic: "/scan_right"
+    merged_scan_topic: "/scan"
+
+    output_frame: "base_footprint"
+
+    output_angle_min_deg: -180.0
+    output_angle_max_deg: 180.0
+    output_angle_increment_deg: 0.5
+
+    output_range_min: 0.05
+    output_range_max: 12.0
+
+    publish_rate_hz: 20.0
+
+    left_x_m: 0.82
+    left_y_m: 0.27
+    left_yaw_deg: 0.0
+
+    right_x_m: 0.82
+    right_y_m: -0.27
+    right_yaw_deg: 0.0
+
+    left_blocked_start_deg: 45.2
+    left_blocked_end_deg: 180.0
+
+    right_blocked_start_deg: 180.0
+    right_blocked_end_deg: 314.8
