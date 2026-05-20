@@ -5,30 +5,45 @@ planner_server:
     planner_plugins: ["GridBased"]
 
     GridBased:
-      plugin: "nav2_navfn_planner::NavfnPlanner"
-      tolerance: 0.5
-      use_astar: false
-      allow_unknown: false
+      plugin: "nav2_smac_planner::SmacPlannerHybrid"
+      tolerance: 0.25                         # may be 0.25 meters away from the goal
+      allow_unknown: false                    # may not plan through spaces that are unknown
+      max_iterations: 1000000                 
+      max_on_approach_iterations: 1000
+      max_planning_time: 5.0                  # needs to be changed later to 1.5 seconds
 
+      motion_model_for_search: "DUBIN"        # change to REEDS_SHEPP to allow backwards driving
+      angle_quantization_bins: 72             # 360/72 = 5 degrees per turn //adjust of comp too heavy
+      minimum_turning_radius: 0.20            
+
+      reverse_penalty: 2.0
+      change_penalty: 0.2
+      non_straight_penalty: 1.2
+      cost_penalty: 2.0                       # penalties to make sure a smoother motion is prefered
+
+      analytic_expansion_ratio: 3.5
+      analytic_expansion_max_length: 3.0 
+      lookup_table_size: 20.0
+      smooth_path: true
 
 controller_server:
   ros__parameters:
-    use_sim_time: false
+    use_sim_time: false                               # when Gazebo use: TRUE
 
     controller_frequency: 10.0
 
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
-    min_theta_velocity_threshold: 0.001
+    min_theta_velocity_threshold: 0.001               # values at which they are considered to be 0
 
-    progress_checker_plugin: "progress_checker"
-    goal_checker_plugins: ["general_goal_checker"]
+    progress_checker_plugin: "progress_checker"       # string
+    goal_checker_plugins: ["general_goal_checker"]    # list of strings
     controller_plugins: ["FollowPath"]
 
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.01
-      movement_time_allowance: 120.0
+      required_movement_radius: 0.01                  # change later to 5cm for the wheelchair to be making "progress"
+      movement_time_allowance: 120.0                  # time it waits before registering failure --> reduce later
 
     general_goal_checker:
       stateful: true
@@ -37,35 +52,67 @@ controller_server:
       yaw_goal_tolerance: 0.25
 
     FollowPath:
-      plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+      plugin: "dwb_core::DWBLocalPlanner"             # samples possible velocity commands and chooses the best one based on critics
 
-      desired_linear_vel: 0.25
-      lookahead_dist: 0.6
-      min_lookahead_dist: 0.3
-      max_lookahead_dist: 0.9
-      lookahead_time: 1.5
+      debug_trajectory_details: false                 # If true, publishes detailed scoring info for each sampled trajectory
 
-      transform_tolerance: 0.2
 
-      use_velocity_scaled_lookahead_dist: false
-      min_approach_linear_velocity: 0.05
-      approach_velocity_scaling_dist: 0.6
+      min_vel_x: 0.0                                  # 0.0 means no reverse driving, use a negative value to allow reversing
+      min_vel_y: 0.0 
+                               
+      max_vel_x: 0.25                                 # M/s --> 0.9km/h increase for faster driving
+      max_vel_y: 0.0                                  
+      max_vel_theta: 0.5                              # max rotational velocity, increase for faster turning
 
-      use_collision_detection: true
-      max_allowed_time_to_collision_up_to_carrot: 1.0
+      min_speed_xy: 0.0                               # 0.0 so the wheelchair is allowed to stop
+      max_speed_xy: 0.25                              # should match max_vel_x for forward-only wheelchair
+      min_speed_theta: 0.0                            # min rotation speed
 
-      use_regulated_linear_velocity_scaling: true
-      use_cost_regulated_linear_velocity_scaling: true
-      regulated_linear_scaling_min_radius: 0.9
-      regulated_linear_scaling_min_speed: 0.05
+      acc_lim_x: 0.3                                  # Maximum forward acceleration in m/s²
+      acc_lim_y: 0.0    
+      acc_lim_theta: 0.8                              # rad/s²
 
-      use_rotate_to_heading: true
-      rotate_to_heading_angular_vel: 0.5
-      rotate_to_heading_min_angle: 0.785
-      max_angular_accel: 1.0
+      decel_lim_x: -0.3                               # more negative --> harder breaking m/s²
+      decel_lim_y: 0.0                                
+      decel_lim_theta: -0.8                           # rad/s²
 
-      allow_reversing: false
-      max_robot_pose_search_dist: 10.0
+      vx_samples: 20                                  # Number of forward velocity samples tests, Higher = better choice of speed, but more CPU load.
+      vy_samples: 1                                   # sideways not possible
+      vtheta_samples: 20          
+
+      sim_time: 1.5                                   # simulates each velocity command 1.5 s ahead; higher = more foresight, more CPU.
+      linear_granularity: 0.05                        # checks trajectory every 0.05 m; lower = more accurate, more CPU.
+      angular_granularity: 0.025                      # checks rotation every 0.025 rad; lower = more accurate, more CPU.
+      transform_tolerance: 0.2                        # Allows 0.2 s TF delay; increase if TF timing errors occur.
+
+      xy_goal_tolerance: 0.25                         # Goal accepted within 0.25 m
+      trans_stopped_velocity: 0.05                    # Below 0.05 m/s counts as stopped; higher = stops sooner.
+      short_circuit_trajectory_evaluation: true       # Stops scoring bad trajectories early; true = faster, less detailed.
+      stateful: true                                  # Keeps controller state near goal; true = smoother goal behaviour.
+
+      critics:                                       # Critics are scoring functions used to choose the best trajectory.
+        - RotateToGoal                               # Scores rotation near the goal.
+        - Oscillation                                # Penalizes unstable back-and-forth movement.
+        - BaseObstacle                               # Penalizes trajectories close to obstacles.
+        - GoalAlign                                  # Scores whether the wheelchair points toward the goal.
+        - PathAlign                                  # Scores whether the wheelchair aligns with the global path.
+        - PathDist                                   # Scores distance from the global path.
+        - GoalDist                                   # Scores distance to the goal.
+
+      BaseObstacle.scale: 0.02                       # Obstacle avoidance weight; higher = safer clearance, may block narrow spaces.
+
+      PathAlign.scale: 32.0                          # Path direction weight; higher = follows global path direction more strictly.
+      PathAlign.forward_point_distance: 0.1          # Uses point 0.1 m ahead for path alignment; higher = smoother, less tight.
+
+      GoalAlign.scale: 24.0                          # Goal-facing weight; higher = turns more toward the goal direction.
+      GoalAlign.forward_point_distance: 0.1          # Uses point 0.1 m ahead for goal alignment; higher = smoother final approach.
+
+      PathDist.scale: 32.0                           # Path distance weight; higher = stays closer to the global path.
+      GoalDist.scale: 24.0                           # Goal distance weight; higher = moves more directly toward the goal.
+
+      RotateToGoal.scale: 32.0                       # Final rotation weight; higher = prioritizes final heading more.
+      RotateToGoal.slowing_factor: 5.0               # Slows rotation near goal by factor 5.0; higher = slower final rotation.
+      RotateToGoal.lookahead_time: -1.0              # RotateToGoal lookahead; -1.0 = use default behavior.
 
 
 bt_navigator:
@@ -185,8 +232,8 @@ local_costmap:
       transform_tolerance: 0.5
 
       rolling_window: true
-      width: 4
-      height: 4
+      width: 3
+      height: 3
       resolution: 0.05
 
       robot_radius: 0.45
