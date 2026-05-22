@@ -17,7 +17,7 @@ void setup() {
     TWAI_MODE_NORMAL
   );
 
-  twai_timing_config_t t_config = TWAI_TIMING_CONFIG_125KBITS();
+  twai_timing_config_t t_config = TWAI_TIMING_CONFIG_1MBITS();
   twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
 
   if (twai_driver_install(&g_config, &t_config, &f_config) != ESP_OK) {

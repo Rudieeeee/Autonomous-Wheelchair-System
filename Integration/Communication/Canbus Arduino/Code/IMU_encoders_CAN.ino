@@ -25,10 +25,10 @@ volatile unsigned long lastRightInterruptTimeUs = 0;
 
 // Start with 5 ms debounce.
 // Your old 500000 us = 0.5 s, which is too slow for encoder ticks.
-const unsigned long debounceTimeUs = 5000;
+const unsigned long debounceTimeUs = 50000;
 
 // -------------------- CAN IDs --------------------
-const uint32_t JOYSTICK_CAN_ID = 0x02000400;
+const uint32_t JOYSTICK_CAN_ID = 0x82000000;
 const uint32_t STEP_CAN_ID     = 0x0A040000;
 const uint32_t LIGHTS_CAN_ID   = 0x0C000303;
 const uint32_t PROFILE_ID      = 0x051;

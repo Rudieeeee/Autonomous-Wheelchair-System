@@ -19,43 +19,37 @@ const int rightHallPin = 3;
 volatile long leftTicks = 0;
 volatile long rightTicks = 0;
 
-// Direction comes from CAN joystick
-// +1 = forward, -1 = backward, 0 = stopped/neutral
+// Direction from CAN joystick
+// +1 = forward, -1 = backward, 0 = neutral
 volatile int leftDirection = 0;
 volatile int rightDirection = 0;
 
+// -------------------- Hall debounce --------------------
 volatile unsigned long lastLeftInterruptTimeUs = 0;
 volatile unsigned long lastRightInterruptTimeUs = 0;
 
 // 5 ms debounce
-const unsigned long debounceTimeUs = 5000;
+const unsigned long debounceTimeUs = 50000;
 
 // -------------------- CAN joystick --------------------
-const uint32_t JOYSTICK_CAN_ID = 0x02000400;
+const uint32_t JOYSTICK_CAN_ID = 0x82000000;
 
-// Last decoded joystick values
+// Joystick values
 int joyX = 0;
 int joyY = 0;
-
-// Your joystick encoding:
-// 0x64 = +100
-// 0x80 = 0
-// 0x9C = -100
-const uint8_t RAW_ZERO = 0x80;
 
 const int deadband = 5;
 
 // -------------------- Serial output timing --------------------
-const unsigned long outputPeriodMs = 50;
+const unsigned long outputPeriodMs = 50;   // 20 Hz
 unsigned long lastOutputTimeMs = 0;
 
-// -------------------- Decode joystick byte --------------------
-int decodeJoystickByte(uint8_t raw)
-{
-  // raw 0x64 = +100
-  // raw 0x80 = 0
-  // raw 0x9C = -100
-  int value = (RAW_ZERO - (int)raw) * 100 / 28;
+// Decode:
+// 0x00 = 0
+// 0x64 = +100
+// 0x9C = -100
+int decodeJoystickByte(uint8_t raw) {
+  int value = (int8_t)raw;
 
   if (value > 100) value = 100;
   if (value < -100) value = -100;
@@ -67,38 +61,33 @@ int decodeJoystickByte(uint8_t raw)
   return value;
 }
 
-// -------------------- Update wheel directions from joystick --------------------
-void updateWheelDirectionsFromJoystick()
-{
+void updateWheelDirectionsFromJoystick() {
   int newLeftDirection = 0;
   int newRightDirection = 0;
 
   if (joyY > 0) {
-    // Forward: both wheels forward
+    // Forward
     newLeftDirection = +1;
     newRightDirection = +1;
   }
   else if (joyY < 0) {
-    // Backward: both wheels backward
+    // Backward
     newLeftDirection = -1;
     newRightDirection = -1;
   }
   else {
-    // Y = 0, rotate around own axis using X
+    // Y = 0, rotate around own axis based on X
     if (joyX > 0) {
-      // Turn right:
-      // left wheel forward, right wheel backward
+      // Turn right: left wheel forward, right wheel backward
       newLeftDirection = +1;
       newRightDirection = -1;
     }
     else if (joyX < 0) {
-      // Turn left:
-      // left wheel backward, right wheel forward
+      // Turn left: left wheel backward, right wheel forward
       newLeftDirection = -1;
       newRightDirection = +1;
     }
     else {
-      // Neutral
       newLeftDirection = 0;
       newRightDirection = 0;
     }
@@ -110,64 +99,55 @@ void updateWheelDirectionsFromJoystick()
   interrupts();
 }
 
-// -------------------- Read joystick CAN message --------------------
-void readJoystickCAN()
-{
+void readJoystickCAN() {
   if (!CAN.available()) {
     return;
   }
 
   CanMsg msg = CAN.read();
 
+  if (!msg.isExtendedId()) {
+    return;
+  }
+
   if (msg.id != JOYSTICK_CAN_ID) {
     return;
   }
 
-  // Expected CAN data format: XxYy
-  // data[0] = X label / unused
-  // data[1] = X value
-  // data[2] = Y label / unused
-  // data[3] = Y value
-  if (msg.data_length < 4) {
+  // New format:
+  // DLC = 2
+  // data[0] = X
+  // data[1] = Y
+  if (msg.data_length < 2) {
     return;
   }
 
-  uint8_t rawX = msg.data[1];
-  uint8_t rawY = msg.data[3];
-
-  joyX = decodeJoystickByte(rawX);
-  joyY = decodeJoystickByte(rawY);
+  joyX = decodeJoystickByte(msg.data[0]);
+  joyY = decodeJoystickByte(msg.data[1]);
 
   updateWheelDirectionsFromJoystick();
 }
 
-// -------------------- Left Hall interrupt --------------------
-void leftHallInterrupt()
-{
+// -------------------- Hall interrupts --------------------
+void leftHallInterrupt() {
   unsigned long nowUs = micros();
 
   if (nowUs - lastLeftInterruptTimeUs > debounceTimeUs) {
-    // Add or subtract depending on CAN joystick direction
     leftTicks += leftDirection;
     lastLeftInterruptTimeUs = nowUs;
   }
 }
 
-// -------------------- Right Hall interrupt --------------------
-void rightHallInterrupt()
-{
+void rightHallInterrupt() {
   unsigned long nowUs = micros();
 
   if (nowUs - lastRightInterruptTimeUs > debounceTimeUs) {
-    // Add or subtract depending on CAN joystick direction
     rightTicks += rightDirection;
     lastRightInterruptTimeUs = nowUs;
   }
 }
 
-// -------------------- Output data --------------------
-void outputData()
-{
+void outputData() {
   unsigned long nowMs = millis();
 
   if (nowMs - lastOutputTimeMs >= outputPeriodMs) {
@@ -192,47 +172,42 @@ void outputData()
     Serial.print("DATA,");
     Serial.print(nowMs);
     Serial.print(",");
-
     Serial.print(leftTicksCopy);
     Serial.print(",");
     Serial.print(rightTicksCopy);
     Serial.print(",");
-
     Serial.print(leftState);
     Serial.print(",");
     Serial.print(rightState);
     Serial.print(",");
-
     Serial.print(yawDeg, 3);
     Serial.print(",");
     Serial.print(pitchDeg, 3);
     Serial.print(",");
     Serial.print(rollDeg, 3);
     Serial.print(",");
-
     Serial.print(joyX);
     Serial.print(",");
     Serial.print(joyY);
     Serial.print(",");
-
     Serial.print(leftDirectionCopy);
     Serial.print(",");
     Serial.println(rightDirectionCopy);
   }
 }
 
-void setup()
-{
+void setup() {
   Serial.begin(115200);
   while (!Serial);
 
   Serial.println("STATUS,starting");
 
+  // CAN transceiver standby pin
   pinMode(STANDBY_PIN, OUTPUT);
   digitalWrite(STANDBY_PIN, LOW);
   delay(10);
 
-  // -------------------- Hall sensors --------------------
+  // Hall sensors
   pinMode(leftHallPin, INPUT_PULLUP);
   pinMode(rightHallPin, INPUT_PULLUP);
 
@@ -248,10 +223,8 @@ void setup()
     RISING
   );
 
-  // -------------------- I2C / BNO055 --------------------
-  // Arduino GIGA default I2C:
-  // SDA = D20
-  // SCL = D21
+  // BNO055 on Arduino GIGA default I2C:
+  // SDA = D20, SCL = D21
   Wire.begin();
   Wire.setClock(100000);
 
@@ -268,7 +241,7 @@ void setup()
   delay(1000);
   bno.setExtCrystalUse(true);
 
-  // -------------------- CAN --------------------
+  // CAN
   if (!CAN.begin(CanBitRate::BR_125k)) {
     Serial.println("STATUS,can_init_failed");
     while (1) {
@@ -277,15 +250,10 @@ void setup()
   }
 
   Serial.println("STATUS,can_begin_success");
-
   Serial.println("FORMAT,DATA,time_ms,left_ticks,right_ticks,left_state,right_state,yaw_deg,pitch_deg,roll_deg,joyX,joyY,left_dir,right_dir");
 }
 
-void loop()
-{
-  // Continuously update wheel direction from CAN joystick
+void loop() {
   readJoystickCAN();
-
-  // Output IMU + real signed encoder ticks
   outputData();
 }

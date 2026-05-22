@@ -1,6 +1,6 @@
 #include <Arduino_CAN.h>
 
-const uint32_t JOYSTICK_CAN_ID = 0x02000400;
+const uint32_t JOYSTICK_CAN_ID = 0x82000000;
 const uint32_t STEP_CAN_ID     = 0x0A040000;
 const uint32_t LIGHTS_CAN_ID   = 0x0C000303;
 const uint32_t PROFILE_ID      = 0x051;

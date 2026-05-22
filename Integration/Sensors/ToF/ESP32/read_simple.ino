@@ -1,56 +1,55 @@
+#include <Arduino.h>
 #include <Wire.h>
-#include <Adafruit_VL53L7CX.h>
+#include "DFRobot_MatrixLidar.h"
 
-#define I2C_SDA 5   // XIAO D4
-#define I2C_SCL 6   // XIAO D5
+#define I2C_SDA 5   // XIAO D4 = GPIO5
+#define I2C_SCL 6   // XIAO D5 = GPIO6
 
-Adafruit_VL53L7CX tof;
+DFRobot_MatrixLidar_I2C tof(0x33, &Wire);
+
+uint16_t distances[64];
 
 void setup() {
   Serial.begin(115200);
   delay(1500);
 
-  Serial.println("Starting VL53L7CX on XIAO ESP32-S3...");
+  Serial.println("Starting DFRobot Matrix ToF on XIAO ESP32-S3...");
 
   Wire.begin(I2C_SDA, I2C_SCL);
-  Wire.setClock(400000);
+  Wire.setClock(100000);
 
-  if (!tof.begin(0x29, &Wire)) {
-    Serial.println("STATUS,vl53l7cx_begin_failed");
-    Serial.println("STATUS,check_wiring_i2c_address_power");
-    while (1) {
-      delay(1000);
-    }
+  if (tof.begin() != 0) {
+    Serial.println("STATUS,begin_error");
+    while (1) delay(1000);
   }
 
-  Serial.println("STATUS,vl53l7cx_begin_success");
+  Serial.println("STATUS,begin_success");
 
-  tof.setResolution(8 * 8);        // 64 zones
-  tof.setRangingFrequency(10);     // 10 Hz
-  tof.startRanging();
+  // Do NOT call setRangingMode for now.
+  // Some firmware versions reject this command even though getAllData works.
 
   Serial.println("FORMAT,8x8_distance_mm");
 }
 
 void loop() {
-  VL53L7CX_ResultsData results;
+  uint8_t ret = tof.getAllData(distances);
 
-  if (tof.isDataReady()) {
-    if (tof.getRangingData(&results)) {
-
-      for (int row = 0; row < 8; row++) {
-        for (int col = 0; col < 8; col++) {
-          int i = row * 8 + col;
-
-          Serial.print(results.distance_mm[i]);
-          Serial.print("\t");
-        }
-        Serial.println();
-      }
-
-      Serial.println("----------------");
-    }
+  if (ret != 0) {
+    Serial.println("STATUS,getAllData_error");
+    delay(500);
+    return;
   }
 
-  delay(10);
+  for (uint8_t row = 0; row < 8; row++) {
+    for (uint8_t col = 0; col < 8; col++) {
+      uint8_t i = row * 8 + col;
+
+      Serial.print(distances[i]);
+      Serial.print("\t");
+    }
+    Serial.println();
+  }
+
+  Serial.println("------------------------------");
+  delay(100);
 }
