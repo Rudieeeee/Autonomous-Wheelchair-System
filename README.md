@@ -40,7 +40,8 @@ The system is divided into four main subsystems:
 - 📄 Gantt Chart: https://docs.google.com/spreadsheets/d/1LeIonz3t87s3dJxeFGJFFnhabDehzJCSFnnsxjkrOPM/edit?gid=1115838130#gid=1115838130
 - 📄 Wheelchair Measurements https://docs.google.com/spreadsheets/d/1bqGMkIiJ7xfXbivKcnknhoT9pYHNBYwShCx7t04MR1Q/edit?usp=sharing
 - 📄 Plan B https://www.overleaf.com/read/nyvbtqkbtnqg#3270e9
-
+- 📄 Verification https://www.overleaf.com/6864522186prfshsymjchx#0db520
+- 📄 Design Report https://www.overleaf.com/7936292377hkxznnmfkzhx#7a7eec
 ---
 
 ## Team

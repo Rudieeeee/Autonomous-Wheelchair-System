@@ -1,10 +1,8 @@
 import serial
 import time
 
-
 SERIAL_PORT = "/dev/ttyACM0"
 BAUD_RATE = 115200
-
 
 def main():
     ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
