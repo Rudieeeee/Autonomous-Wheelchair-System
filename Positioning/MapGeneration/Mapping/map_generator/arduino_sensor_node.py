@@ -276,7 +276,7 @@ class ArduinoSensorNode(Node):
         distance_m = (left_distance_m + right_distance_m) / 2.0
 
         heading_delta = normalize_angle(self.yaw_rad - previous_yaw_rad)
-        heading_mid = normalize_angle(previous_yaw_rad + heading_delta / 2.0)
+        heading_mid = normalize_angle(previous_yaw_rad + heading_delta)
 
         self.x += distance_m * math.cos(heading_mid)
         self.y += distance_m * math.sin(heading_mid)
