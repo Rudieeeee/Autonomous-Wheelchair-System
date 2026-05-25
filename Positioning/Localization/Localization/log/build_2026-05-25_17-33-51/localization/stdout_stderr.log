@@ -1,0 +1,28 @@
+running develop
+/usr/lib/python3/dist-packages/setuptools/command/easy_install.py:363: UserWarning: Unbuilt egg for pytest-repeat [unknown version] (/usr/lib/python3/dist-packages)
+  self.local_index = Environment(self.shadow_path + sys.path)
+running egg_info
+creating localization.egg-info
+writing localization.egg-info/PKG-INFO
+writing dependency_links to localization.egg-info/dependency_links.txt
+writing requirements to localization.egg-info/requires.txt
+writing top-level names to localization.egg-info/top_level.txt
+writing manifest file 'localization.egg-info/SOURCES.txt'
+reading manifest file 'localization.egg-info/SOURCES.txt'
+writing manifest file 'localization.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/lib/python3.12/site-packages/localization.egg-link (link to .)
+
+Installed /home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/Positioning/Localization/Localization/build/localization
+running symlink_data
+creating /home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/ament_index
+creating /home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/ament_index/resource_index
+creating /home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/ament_index/resource_index/packages
+symbolically linking /home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/Positioning/Localization/Localization/build/localization/resource/localization -> /home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/ament_index/resource_index/packages
+symbolically linking /home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/Positioning/Localization/Localization/build/localization/package.xml -> /home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/localization
+creating /home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/localization/launch
+symbolically linking /home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/Positioning/Localization/Localization/build/localization/launch/localization.launch.py -> /home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/localization/launch
+creating /home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/localization/config
+symbolically linking /home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/Positioning/Localization/Localization/build/localization/config/amcl.yaml -> /home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/localization/config
+creating /home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/localization/rviz
+symbolically linking /home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/Positioning/Localization/Localization/build/localization/rviz/localization.rviz -> /home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/localization/rviz
