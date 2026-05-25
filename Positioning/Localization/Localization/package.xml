@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>localization_test</name>
+  <name>localization</name>
   <version>0.0.1</version>
-  <description>Localization test package using a saved map, AMCL, and replayed LiDAR data.</description>
+  <description>Localization package using a saved map, AMCL, and LiDAR data.</description>
 
   <maintainer email="rudrh@todo.todo">rudrh</maintainer>
   <license>MIT</license>

@@ -1,1 +1,0 @@
-/home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/launch/localization_test.launch.py

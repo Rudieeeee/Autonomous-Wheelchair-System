@@ -1,7 +1,7 @@
 from glob import glob
 from setuptools import find_packages, setup
 
-package_name = 'localization_test'
+package_name = 'localization'
 
 setup(
     name=package_name,

@@ -4,6 +4,24 @@ from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[4]
+
+DEFAULT_MAP = (
+    PROJECT_ROOT
+    / 'Other-Files'
+    / 'GeneralData'
+    / 'Maps'
+    / 'my_map.yaml'
+)
+
+DEFAULT_LOG = (
+    PROJECT_ROOT
+    / 'Other-Files'
+    / 'GeneralData'
+    / 'lidar.txt'
+)
 
 
 def generate_launch_description():
@@ -15,13 +33,13 @@ def generate_launch_description():
     max_entries = LaunchConfiguration('max_entries')
 
     amcl_config = PathJoinSubstitution([
-        FindPackageShare('localization_test'),
+        FindPackageShare('localization'),
         'config',
         'amcl.yaml',
     ])
 
     rviz_config = PathJoinSubstitution([
-        FindPackageShare('localization_test'),
+        FindPackageShare('localization'),
         'rviz',
         'localization.rviz',
     ])
@@ -115,17 +133,12 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
             'map',
-            default_value=(
-                '/home/rudrh/Autonomous-Wheelchair-System/'
-                'Other-Files/GeneralData/Maps/my_map.yaml'
-            ),
-        ),
+            default_value=str(DEFAULT_MAP),
+     ),
+
         DeclareLaunchArgument(
             'log_file',
-            default_value=(
-                '/home/rudrh/Autonomous-Wheelchair-System/'
-                'Other-Files/GeneralData/lidar.txt'
-            ),
+            default_value=str(DEFAULT_LOG),
         ),
 
         DeclareLaunchArgument('rate_hz', default_value='10.0'),
