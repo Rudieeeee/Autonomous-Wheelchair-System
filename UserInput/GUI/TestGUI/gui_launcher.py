@@ -4,10 +4,10 @@ import subprocess
 import threading
 import tkinter as tk
 from tkinter import scrolledtext
+from pathlib import Path
 
 
 BASE_DIR = "/home/rudrh/Autonomous-Wheelchair-System"
-
 MAPPING_DIR = (
     "/home/rudrh/Autonomous-Wheelchair-System/"
     "Positioning/MapGeneration/MappingTest"
