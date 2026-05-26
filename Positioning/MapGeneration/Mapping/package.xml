@@ -17,9 +17,12 @@
 
   <exec_depend>python3-serial</exec_depend>
   <exec_depend>sllidar_ros2</exec_depend>
+  <exec_depend>ros2_laser_scan_merger</exec_depend>
+  <exec_depend>pointcloud_to_laserscan</exec_depend>
   <exec_depend>slam_toolbox</exec_depend>
   <exec_depend>rviz2</exec_depend>
   <exec_depend>nav2_map_server</exec_depend>
+  <exec_depend>robot_localization</exec_depend>
 
   <export>
     <build_type>ament_python</build_type>

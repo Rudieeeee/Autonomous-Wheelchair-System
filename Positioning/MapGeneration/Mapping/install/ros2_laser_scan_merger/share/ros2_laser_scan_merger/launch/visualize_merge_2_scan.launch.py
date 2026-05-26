@@ -1,0 +1,1 @@
+/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/ros2_laser_scan_merger/launch/visualize_merge_2_scan.launch.py

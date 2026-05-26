@@ -18,7 +18,7 @@ setup(
         ),
         (
             'share/' + package_name + '/launch',
-            glob('launch/*.launch.py'),
+            glob('launch/*.py'),
         ),
         (
             'share/' + package_name + '/config',
@@ -38,6 +38,7 @@ setup(
     entry_points={
         'console_scripts': [
             'arduino_sensor_node = map_generator.arduino_sensor_node:main',
+            'arduino_sensor_node2 = map_generator.arduino_sensor_node2:main',
             'lidar_scan_merger = map_generator.lidar_scan_merger:main',
         ],
     },

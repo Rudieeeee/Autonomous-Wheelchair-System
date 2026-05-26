@@ -1,1 +1,1 @@
-geometry_msgs:nav2_map_server:nav_msgs:python3-serial:rclpy:rviz2:sensor_msgs:slam_toolbox:sllidar_ros2:tf2_ros
+geometry_msgs:nav2_map_server:nav_msgs:pointcloud_to_laserscan:python3-serial:rclpy:robot_localization:ros2_laser_scan_merger:rviz2:sensor_msgs:slam_toolbox:sllidar_ros2:tf2_ros

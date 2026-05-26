@@ -41,7 +41,7 @@ int joyY = 0;
 const int deadband = 5;
 
 // -------------------- Serial output timing --------------------
-const unsigned long outputPeriodMs = 50;   // 20 Hz
+const unsigned long outputPeriodMs = 10;   // 100 Hz
 unsigned long lastOutputTimeMs = 0;
 
 // Decode:
@@ -184,20 +184,12 @@ void outputData() {
     Serial.print(",");
     Serial.print(pitchDeg, 3);
     Serial.print(",");
-    Serial.print(rollDeg, 3);
-    Serial.print(",");
-    Serial.print(joyX);
-    Serial.print(",");
-    Serial.print(joyY);
-    Serial.print(",");
-    Serial.print(leftDirectionCopy);
-    Serial.print(",");
-    Serial.println(rightDirectionCopy);
+    Serial.println(rollDeg, 3);
   }
 }
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(460800);
   while (!Serial);
 
   Serial.println("STATUS,starting");
@@ -250,7 +242,7 @@ void setup() {
   }
 
   Serial.println("STATUS,can_begin_success");
-  Serial.println("FORMAT,DATA,time_ms,left_ticks,right_ticks,left_state,right_state,yaw_deg,pitch_deg,roll_deg,joyX,joyY,left_dir,right_dir");
+  Serial.println("FORMAT,DATA,time_ms,left_ticks,right_ticks,left_state,right_state,yaw_deg,pitch_deg,roll_deg");
 }
 
 void loop() {

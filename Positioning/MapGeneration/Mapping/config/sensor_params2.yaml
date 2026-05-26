@@ -1,0 +1,28 @@
+arduino_sensor_node2:
+  ros__parameters:
+    serial_port: "/dev/ttyACM0"
+    baud_rate: 460800
+    timer_period_s: 0.005
+
+    wheel_diameter_m: 0.35
+    magnets_per_wheel: 12
+    wheel_base_m: 0.55
+
+    odom_frame: "odom"
+    base_frame: "base_footprint"
+    imu_frame: "imu_link"
+
+    wheel_odom_topic: "/wheel/odom"
+    imu_topic: "/imu/data"
+
+    publish_wheel_odom: true
+    publish_tf: false
+    publish_imu: true
+
+    left_tick_sign: 1.0
+    right_tick_sign: 1.0
+
+    invert_imu_yaw: false
+    invert_gyro_z: false
+
+    log_every_n: 50

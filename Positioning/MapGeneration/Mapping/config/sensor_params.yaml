@@ -31,23 +31,23 @@ lidar_scan_merger:
 
     output_angle_min_deg: -180.0
     output_angle_max_deg: 180.0
-    output_angle_increment_deg: 0.5
+    output_angle_increment_deg: 0.72
 
-    output_range_min: 0.05
+    output_range_min: 0.30
     output_range_max: 12.0
 
     publish_rate_hz: 20.0
 
-    left_x_m: 0.82
-    left_y_m: 0.27
+    left_x_m: 0.0
+    left_y_m: -0.01
     left_yaw_deg: 0.0
 
-    right_x_m: 0.82
-    right_y_m: -0.27
+    right_x_m: 0.0
+    right_y_m: 0.01
     right_yaw_deg: 0.0
 
     left_blocked_start_deg: 45.2
-    left_blocked_end_deg: 200.0
+    left_blocked_end_deg: 220.0
 
-    right_blocked_start_deg: 160.0
+    right_blocked_start_deg: 140.0
     right_blocked_end_deg: 314.8

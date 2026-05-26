@@ -302,13 +302,14 @@ class ArduinoSensorNode(Node):
 
         self.previous_data = data
 
-        self.get_logger().info(
-            f"x={self.x:.3f}, y={self.y:.3f}, "
-            f"yaw={math.degrees(self.yaw_rad):.2f} deg, "
-            f"v={linear_velocity_mps:.3f} m/s, "
-            f"w={angular_velocity_radps:.3f} rad/s, "
-            f"dL={delta_left_ticks}, dR={delta_right_ticks}"
-        )
+        # Debug log disabled to avoid slowing down odometry timing
+        # self.get_logger().info(
+        #     f"x={self.x:.3f}, y={self.y:.3f}, "
+        #     f"yaw={math.degrees(self.yaw_rad):.2f} deg, "
+        #     f"v={linear_velocity_mps:.3f} m/s, "
+        #     f"w={angular_velocity_radps:.3f} rad/s, "
+        #     f"dL={delta_left_ticks}, dR={delta_right_ticks}"
+        # )
 
     def publish_odom(
         self,

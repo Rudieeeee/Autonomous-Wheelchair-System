@@ -7,7 +7,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --base-paths . sllidar_ros2"
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --base-paths . sllidar_ros2 ros2_laser_scan_merger"
       ],
       "group": {
         "kind": "build",
@@ -91,7 +91,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "pkill -f \"ros2|rviz2|slam_toolbox|sllidar|arduino_sensor_node|lidar_scan_merger|map_saver\" || true"
+        "pkill -f \"ros2|rviz2|slam_toolbox|sllidar|arduino_sensor_node|arduino_sensor_node2|ekf_node|robot_localization|ros2_laser_scan_merger|pointcloud_to_laserscan|lidar_scan_merger|map_saver\" || true"
       ],
       "problemMatcher": []
     },

@@ -16,8 +16,8 @@ slam_toolbox:
     throttle_scans: 1
 
     transform_publish_period: 0.02
-    transform_timeout: 2.0
-    tf_buffer_duration: 60.0
+    transform_timeout: 0.2
+    tf_buffer_duration: 10.0
 
     map_update_interval: 1.0
 
