@@ -24,7 +24,7 @@ volatile unsigned long lastRightInterruptTimeUs = 0;
 
 const unsigned long debounceTimeUs = 50000;
 
-const uint32_t JOYSTICK_CAN_ID = 0x02000000;
+const uint32_t JOYSTICK_CAN_ID = 0x82000000;
 
 int joyX = 0;
 int joyY = 0;
