@@ -19,7 +19,7 @@ setup(
     zip_safe=True,
     maintainer='rudrh',
     maintainer_email='rudrh@todo.todo',
-    description='Localization test package using AMCL.',
+    description='Localization package using AMCL.',
     license='MIT',
     tests_require=['pytest'],
     entry_points={
