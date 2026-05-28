@@ -159,24 +159,31 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'map',
             default_value=str(DEFAULT_MAP),
+            description='Full path to the saved map YAML file.',
         ),
 
         DeclareLaunchArgument(
             'left_lidar_port',
             default_value='/dev/ttyUSB0',
+            description='Serial port for the left LiDAR.',
         ),
+
         DeclareLaunchArgument(
             'right_lidar_port',
             default_value='/dev/ttyUSB1',
+            description='Serial port for the right LiDAR.',
         ),
+
         DeclareLaunchArgument(
             'arduino_port',
             default_value='/dev/ttyACM0',
+            description='Serial port for the Arduino sensor node.',
         ),
 
         DeclareLaunchArgument(
             'use_rviz',
             default_value='true',
+            description='Start RViz if true.',
         ),
 
         sensors_launch,

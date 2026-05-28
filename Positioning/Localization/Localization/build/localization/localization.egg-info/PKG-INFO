@@ -1,7 +1,7 @@
 Metadata-Version: 2.1
 Name: localization
 Version: 0.0.1
-Summary: Localization test package using AMCL.
+Summary: Localization package using a saved map, AMCL, and LiDAR data.
 Maintainer: rudrh
 Maintainer-email: rudrh@todo.todo
 License: MIT

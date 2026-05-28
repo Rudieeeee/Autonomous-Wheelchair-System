@@ -14,7 +14,7 @@ slam_toolbox:
     mode: mapping
 
     # Map resolution in meters per cell
-    resolution: 0.05
+    resolution: 0.005
 
     # Laser settings
     max_laser_range: 50.0

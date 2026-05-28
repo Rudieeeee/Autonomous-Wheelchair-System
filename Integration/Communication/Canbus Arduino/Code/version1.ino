@@ -28,8 +28,8 @@ volatile int rightDirection = 0;
 volatile unsigned long lastLeftInterruptTimeUs = 0;
 volatile unsigned long lastRightInterruptTimeUs = 0;
 
-// 5 ms debounce
-const unsigned long debounceTimeUs = 50000;
+// 50 ms debounce
+const unsigned long debounceTimeUs = 10000;
 
 // -------------------- CAN joystick --------------------
 const uint32_t JOYSTICK_CAN_ID = 0x82000000;
@@ -51,8 +51,13 @@ unsigned long lastOutputTimeMs = 0;
 int decodeJoystickByte(uint8_t raw) {
   int value = (int8_t)raw;
 
-  if (value > 100) value = 100;
-  if (value < -100) value = -100;
+  if (value > 100) {
+    value = 100;
+  }
+
+  if (value < -100) {
+    value = -100;
+  }
 
   if (value > -deadband && value < deadband) {
     value = 0;
@@ -114,7 +119,7 @@ void readJoystickCAN() {
     return;
   }
 
-  // New format:
+  // Format:
   // DLC = 2
   // data[0] = X
   // data[1] = Y
@@ -156,8 +161,6 @@ void outputData() {
     noInterrupts();
     long leftTicksCopy = leftTicks;
     long rightTicksCopy = rightTicks;
-    int leftDirectionCopy = leftDirection;
-    int rightDirectionCopy = rightDirection;
     interrupts();
 
     int leftState = digitalRead(leftHallPin);
@@ -165,7 +168,16 @@ void outputData() {
 
     imu::Vector<3> eul = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
 
-    float yawDeg = eul.x();
+    // Original BNO055 fused yaw:
+    // float yawDeg = eul.x();
+
+    // Reversed / inverted fused yaw angle
+    float yawDeg = 360.0 - eul.x();
+
+    if (yawDeg >= 360.0) {
+      yawDeg -= 360.0;
+    }
+
     float rollDeg = eul.y();
     float pitchDeg = eul.z();
 
@@ -190,7 +202,7 @@ void outputData() {
 
 void setup() {
   Serial.begin(460800);
-  while (!Serial);
+  // while (!Serial);
 
   Serial.println("STATUS,starting");
 
@@ -223,6 +235,7 @@ void setup() {
   if (!bno.begin(OPERATION_MODE_NDOF)) {
     Serial.println("STATUS,bno_begin_failed");
     Serial.println("STATUS,check_wiring_or_i2c_address");
+
     while (1) {
       delay(1000);
     }
@@ -236,6 +249,7 @@ void setup() {
   // CAN
   if (!CAN.begin(CanBitRate::BR_125k)) {
     Serial.println("STATUS,can_init_failed");
+
     while (1) {
       delay(1000);
     }

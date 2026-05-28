@@ -1,0 +1,18 @@
+# Local secrets
+.env
+
+# Python virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Downloaded speech models
+models/
+
+# Audio/cache/output files
+*.wav
+*.mp3
+*.ogg
+*.log

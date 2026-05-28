@@ -228,6 +228,69 @@
         "source /opt/ros/jazzy/setup.bash && cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest && colcon build --packages-select mapping_test --build-base build --install-base install && source install/setup.bash && cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest && colcon build --packages-select localization_test --build-base build --install-base install && source install/setup.bash && cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/NavigationTest && colcon build --packages-select navigation_test --build-base build --install-base install"
       ],
       "problemMatcher": []
+    },
+    {
+      "label": "USBIPD Attach Wheelchair Devices",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "usbipd attach --wsl --busid 1-1; usbipd attach --wsl --busid 1-3; usbipd attach --wsl --busid 1-4"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Build localization",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && colcon build --symlink-install --packages-select localization"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Clean localization build",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization && rm -rf build install log"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Clean and Build localization",
+      "type": "shell",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Clean localization build",
+        "Build localization"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run localization launch",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && source install/setup.bash && ros2 launch localization localization.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run localization launch without RViz",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && source install/setup.bash && ros2 launch localization localization.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=false"
+      ],
+      "problemMatcher": []
     }
   ]
 }
