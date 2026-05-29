@@ -1,0 +1,26 @@
+running develop
+running egg_info
+creating navigation.egg-info
+writing navigation.egg-info/PKG-INFO
+writing dependency_links to navigation.egg-info/dependency_links.txt
+writing requirements to navigation.egg-info/requires.txt
+writing top-level names to navigation.egg-info/top_level.txt
+writing manifest file 'navigation.egg-info/SOURCES.txt'
+reading manifest file 'navigation.egg-info/SOURCES.txt'
+writing manifest file 'navigation.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation/install/navigation/lib/python3.12/site-packages/navigation.egg-link (link to .)
+
+Installed /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation/build/navigation
+running symlink_data
+creating /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation/install/navigation/share/ament_index
+creating /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation/install/navigation/share/ament_index/resource_index
+creating /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation/install/navigation/share/ament_index/resource_index/packages
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation/build/navigation/resource/navigation -> /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation/install/navigation/share/ament_index/resource_index/packages
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation/build/navigation/package.xml -> /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation/install/navigation/share/navigation
+creating /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation/install/navigation/share/navigation/launch
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation/build/navigation/launch/navigation.launch.py -> /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation/install/navigation/share/navigation/launch
+creating /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation/install/navigation/share/navigation/config
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation/build/navigation/config/nav2_params.yaml -> /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation/install/navigation/share/navigation/config
+creating /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation/install/navigation/share/navigation/rviz
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation/build/navigation/rviz/navigation.rviz -> /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation/install/navigation/share/navigation/rviz

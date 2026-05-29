@@ -87,7 +87,7 @@ def generate_launch_description():
         executable='static_transform_publisher',
         name='base_to_imu',
         arguments=[
-            '0.0', '0.0', '0.15',
+            '0.26', '0.0', '0.15',
             '0.0', '0.0', '0.0',
             'base_footprint', 'imu_link',
         ],

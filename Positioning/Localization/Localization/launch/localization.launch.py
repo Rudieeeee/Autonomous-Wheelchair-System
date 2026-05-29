@@ -22,7 +22,7 @@ DEFAULT_MAP = (
     / 'Other-Files'
     / 'GeneralData'
     / 'Maps'
-    / 'my_map.yaml'
+    / 'hall_h_map.yaml'
 )
 
 
@@ -193,3 +193,9 @@ def generate_launch_description():
         delayed_rviz,
         delayed_global_localization,
     ])
+
+
+
+#cd "/home/rudrh/Autonomous-Wheelchair-System/UserInput/Voice control & GUI"
+#source .venv/bin/activate
+#python3 main.py
