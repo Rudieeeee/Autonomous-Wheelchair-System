@@ -54,4 +54,4 @@ amcl:
     laser_likelihood_max_dist: 2.0
 
     # Beam skipping
-    do_beamskip: false
+    do_beamskip: true

@@ -283,6 +283,76 @@
       "problemMatcher": []
     },
     {
+      "label": "Build navigation",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/setup.bash && colcon build --symlink-install --packages-select navigation"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Clean navigation build",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation && rm -rf build install log"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Clean and Build navigation",
+      "type": "shell",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Clean navigation build",
+        "Build navigation"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Build localization and navigation",
+      "type": "shell",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Build localization",
+        "Build navigation"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Clean and Build localization and navigation",
+      "type": "shell",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Clean and Build localization",
+        "Clean and Build navigation"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run navigation launch",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/setup.bash && source install/setup.bash && ros2 launch navigation navigation.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run navigation launch without RViz",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/setup.bash && source install/setup.bash && ros2 launch navigation navigation.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=false"
+      ],
+      "problemMatcher": []
+    },
+    {
       "label": "Run localization launch without RViz",
       "type": "shell",
       "command": "bash",
