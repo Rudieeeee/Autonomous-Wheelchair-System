@@ -12,7 +12,7 @@ Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);
 
 // -------------------- Serial output timing --------------------
 // 20 ms = 50 Hz. This is good for EKF and SLAM.
-const unsigned long outputPeriodUs = 2500
+const unsigned long outputPeriodUs = 2500;
 unsigned long lastOutputTimeUs = 0;
 
 
@@ -23,7 +23,7 @@ void outputData() {
     return;
   }
 
-  lastOutputTimeMs = nowUs;
+  lastOutputTimeUs = nowUs;
 
  
 
@@ -56,7 +56,7 @@ void outputData() {
   bno.getCalibration(&calSys, &calGyro, &calAccel, &calMag);
 
   Serial.print("DATA,");
-  Serial.print(nowMs);
+  Serial.print(nowUs);
   Serial.print(",");
 
   Serial.print(gyroX, 6);
