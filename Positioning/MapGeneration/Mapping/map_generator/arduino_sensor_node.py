@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import math
+import threading
 import serial
 
 import rclpy
@@ -9,6 +10,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Quaternion, TransformStamped
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu
+from std_msgs.msg import Int16MultiArray
 from tf2_ros import TransformBroadcaster
 
 
@@ -22,7 +24,11 @@ def normalize_angle(angle_rad: float) -> float:
     return angle_rad
 
 
-def euler_to_quaternion(roll_rad: float, pitch_rad: float, yaw_rad: float) -> Quaternion:
+def euler_to_quaternion(
+    roll_rad: float,
+    pitch_rad: float,
+    yaw_rad: float,
+) -> Quaternion:
     cy = math.cos(yaw_rad * 0.5)
     sy = math.sin(yaw_rad * 0.5)
     cp = math.cos(pitch_rad * 0.5)
@@ -68,9 +74,15 @@ class ArduinoSensorNode(Node):
         self.declare_parameter("left_tick_sign", 1.0)
         self.declare_parameter("right_tick_sign", 1.0)
 
+        # New joystick command input.
+        self.declare_parameter("joystick_cmd_topic", "/joystick_cmd")
+        self.declare_parameter("enable_joystick_serial_output", True)
+
         self.serial_port_name = self.get_parameter("serial_port").value
         self.baud_rate = int(self.get_parameter("baud_rate").value)
-        self.timer_period_s = float(self.get_parameter("timer_period_s").value)
+        self.timer_period_s = float(
+            self.get_parameter("timer_period_s").value
+        )
 
         self.wheel_diameter_m = float(
             self.get_parameter("wheel_diameter_m").value
@@ -105,14 +117,30 @@ class ArduinoSensorNode(Node):
             self.get_parameter("right_tick_sign").value
         )
 
+        self.joystick_cmd_topic = self.get_parameter(
+            "joystick_cmd_topic"
+        ).value
+        self.enable_joystick_serial_output = bool(
+            self.get_parameter("enable_joystick_serial_output").value
+        )
+
         self.wheel_circumference_m = math.pi * self.wheel_diameter_m
         self.distance_per_tick_m = (
             self.wheel_circumference_m / self.magnets_per_wheel
         )
 
+        self.serial_lock = threading.Lock()
+
         self.odom_pub = self.create_publisher(Odometry, "/odom", 10)
         self.imu_pub = self.create_publisher(Imu, "/imu/data", 10)
         self.tf_broadcaster = TransformBroadcaster(self)
+
+        self.joystick_sub = self.create_subscription(
+            Int16MultiArray,
+            self.joystick_cmd_topic,
+            self.joystick_cmd_callback,
+            10,
+        )
 
         self.x = 0.0
         self.y = 0.0
@@ -126,6 +154,7 @@ class ArduinoSensorNode(Node):
                 self.serial_port_name,
                 self.baud_rate,
                 timeout=0.01,
+                write_timeout=0.01,
             )
         except serial.SerialException as error:
             self.get_logger().error(
@@ -144,6 +173,11 @@ class ArduinoSensorNode(Node):
         )
 
         self.get_logger().info(
+            f"Joystick command topic: {self.joystick_cmd_topic}, "
+            f"enabled={self.enable_joystick_serial_output}"
+        )
+
+        self.get_logger().info(
             f"wheel_diameter_m={self.wheel_diameter_m}, "
             f"wheel_circumference_m={self.wheel_circumference_m}, "
             f"magnets_per_wheel={self.magnets_per_wheel}, "
@@ -156,6 +190,32 @@ class ArduinoSensorNode(Node):
             self.timer_period_s,
             self.read_serial,
         )
+
+    def joystick_cmd_callback(self, msg: Int16MultiArray):
+        if not self.enable_joystick_serial_output:
+            return
+
+        if len(msg.data) < 2:
+            self.get_logger().warn(
+                f"Invalid joystick_cmd message: expected [x, y], got {msg.data}"
+            )
+            return
+
+        x = int(msg.data[0])
+        y = int(msg.data[1])
+
+        x = max(-100, min(100, x))
+        y = max(-100, min(100, y))
+
+        line = f"J,{x},{y}\n"
+
+        try:
+            with self.serial_lock:
+                self.serial_port.write(line.encode("ascii"))
+        except serial.SerialException as error:
+            self.get_logger().error(
+                f"Serial joystick write error: {error}"
+            )
 
     def parse_data_line(self, line: str):
         parts = line.split(",")
@@ -184,7 +244,8 @@ class ArduinoSensorNode(Node):
 
     def read_serial(self):
         try:
-            raw_line = self.serial_port.readline()
+            with self.serial_lock:
+                raw_line = self.serial_port.readline()
         except serial.SerialException as error:
             self.get_logger().error(f"Serial read error: {error}")
             return
@@ -302,15 +363,6 @@ class ArduinoSensorNode(Node):
 
         self.previous_data = data
 
-        # Debug log disabled to avoid slowing down odometry timing
-        # self.get_logger().info(
-        #     f"x={self.x:.3f}, y={self.y:.3f}, "
-        #     f"yaw={math.degrees(self.yaw_rad):.2f} deg, "
-        #     f"v={linear_velocity_mps:.3f} m/s, "
-        #     f"w={angular_velocity_radps:.3f} rad/s, "
-        #     f"dL={delta_left_ticks}, dR={delta_right_ticks}"
-        # )
-
     def publish_odom(
         self,
         stamp,
@@ -401,6 +453,15 @@ class ArduinoSensorNode(Node):
 
     def destroy_node(self):
         if hasattr(self, "serial_port") and self.serial_port.is_open:
+            try:
+                if self.enable_joystick_serial_output:
+                    with self.serial_lock:
+                        self.serial_port.write(b"J,0,0\n")
+                        self.serial_port.write(b"J,0,0\n")
+                        self.serial_port.write(b"J,0,0\n")
+            except Exception:
+                pass
+
             self.serial_port.close()
             self.get_logger().info("Serial port closed.")
 

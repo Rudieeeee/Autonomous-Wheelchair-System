@@ -1,0 +1,525 @@
+[0.021s] Invoking command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2 -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2
+[0.550s] -- The C compiler identification is GNU 13.3.0
+[3.113s] -- The CXX compiler identification is GNU 13.3.0
+[5.806s] -- Detecting C compiler ABI info
+[6.596s] -- Detecting C compiler ABI info - done
+[6.605s] -- Check for working C compiler: /usr/bin/cc - skipped
+[6.617s] -- Detecting C compile features
+[6.618s] -- Detecting C compile features - done
+[6.889s] -- Detecting CXX compiler ABI info
+[7.572s] -- Detecting CXX compiler ABI info - done
+[7.582s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[7.582s] -- Detecting CXX compile features
+[7.583s] -- Detecting CXX compile features - done
+[7.638s] -- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+[7.820s] -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+[7.935s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[8.026s] -- Found rclcpp: 28.1.18 (/opt/ros/jazzy/share/rclcpp/cmake)
+[8.506s] -- Found rosidl_generator_c: 4.6.7 (/opt/ros/jazzy/share/rosidl_generator_c/cmake)
+[8.533s] -- Found rosidl_generator_cpp: 4.6.7 (/opt/ros/jazzy/share/rosidl_generator_cpp/cmake)
+[8.579s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[8.618s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[8.777s] -- Found rmw_implementation_cmake: 7.3.3 (/opt/ros/jazzy/share/rmw_implementation_cmake/cmake)
+[8.785s] -- Found rmw_fastrtps_cpp: 8.4.3 (/opt/ros/jazzy/share/rmw_fastrtps_cpp/cmake)
+[8.937s] -- Found OpenSSL: /usr/lib/x86_64-linux-gnu/libcrypto.so (found version "3.0.13")  
+[9.555s] -- Found FastRTPS: /opt/ros/jazzy/include (Required is at least version "2.13") 
+[9.874s] -- Using RMW implementation 'rmw_fastrtps_cpp' as default
+[10.475s] -- Found sensor_msgs: 5.3.7 (/opt/ros/jazzy/share/sensor_msgs/cmake)
+[10.598s] -- Found std_srvs: 5.3.7 (/opt/ros/jazzy/share/std_srvs/cmake)
+[10.760s] -- Configuring done (10.7s)
+[10.787s] -- Generating done (0.0s)
+[10.794s] -- Build files have been written to: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2
+[10.806s] Invoked command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2 -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2
+[10.808s] Invoking command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --build /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2 -- -j20 -l20
+[10.882s] [ 10%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/arch/linux/net_socket.cpp.o[0m
+[10.882s] [ 10%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/src/sllidar_node.cpp.o[0m
+[10.882s] [ 15%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/arch/linux/timer.cpp.o[0m
+[10.884s] [ 25%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/arch/linux/net_serial.cpp.o[0m
+[10.884s] [ 25%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/dataunpacker/unpacker/handler_hqnode.cpp.o[0m
+[10.887s] [ 30%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_async_transceiver.cpp.o[0m
+[10.887s] [ 35%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_lidar_driver.cpp.o[0m
+[10.887s] [ 40%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/rplidar_driver.cpp.o[0m
+[10.888s] [ 45%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/dataunpacker/unpacker/handler_normalnode.cpp.o[0m
+[10.888s] [ 55%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/hal/thread.cpp.o[0m
+[10.889s] [ 55%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_serial_channel.cpp.o[0m
+[10.890s] [ 60%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_lidarprotocol_codec.cpp.o[0m
+[10.890s] [ 70%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/dataunpacker/unpacker/handler_capsules.cpp.o[0m
+[10.890s] [ 70%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_crc.cpp.o[0m
+[10.891s] [ 75%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/dataunpacker/dataunpacker.cpp.o[0m
+[10.894s] [ 80%] [32mBuilding CXX object CMakeFiles/sllidar_client.dir/src/sllidar_client.cpp.o[0m
+[10.894s] [ 85%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_tcp_channel.cpp.o[0m
+[10.897s] [ 90%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_udp_channel.cpp.o[0m
+[10.949s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:41[m[K,
+[10.949s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_crc.h:36[m[K,
+[10.949s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_crc.cpp:33[m[K:
+[10.949s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[10.949s]    66 |     sl_u8 data[[01;35m[K0[m[K];
+[10.950s]       |                [01;35m[K^[m[K
+[10.950s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[10.950s]   324 |     sl_u8  payload[[01;35m[K0[m[K];
+[10.950s]       |                    [01;35m[K^[m[K
+[11.430s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:41[m[K,
+[11.431s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_driver.h:54[m[K,
+[11.431s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_udp_channel.cpp:33[m[K:
+[11.431s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.431s]    66 |     sl_u8 data[[01;35m[K0[m[K];
+[11.432s]       |                [01;35m[K^[m[K
+[11.432s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.432s]   324 |     sl_u8  payload[[01;35m[K0[m[K];
+[11.432s]       |                    [01;35m[K^[m[K
+[11.439s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_udp_channel.cpp:[m[K In member function ‘[01m[Kvoid sl::UdpChannel::[01;32m[KsetStatus[m[K(_u32)[m[K’:
+[11.439s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_udp_channel.cpp:112:29:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Kflag[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.439s]   112 |         void setStatus([01;35m[K_u32 flag[m[K){}
+[11.439s]       |                        [01;35m[K~~~~~^~~~[m[K
+[11.465s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:41[m[K,
+[11.465s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_driver.h:54[m[K,
+[11.465s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_tcp_channel.cpp:33[m[K:
+[11.466s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.466s]    66 |     sl_u8 data[[01;35m[K0[m[K];
+[11.467s]       |                [01;35m[K^[m[K
+[11.469s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.470s]   324 |     sl_u8  payload[[01;35m[K0[m[K];
+[11.470s]       |                    [01;35m[K^[m[K
+[11.474s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:41[m[K,
+[11.474s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_driver.h:54[m[K,
+[11.475s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_serial_channel.cpp:33[m[K:
+[11.475s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.475s]    66 |     sl_u8 data[[01;35m[K0[m[K];
+[11.475s]       |                [01;35m[K^[m[K
+[11.476s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_tcp_channel.cpp:[m[K In member function ‘[01m[Kvoid sl::TcpChannel::[01;32m[KsetStatus[m[K(_u32)[m[K’:
+[11.476s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_tcp_channel.cpp:109:29:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Kflag[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.476s]   109 |         void setStatus([01;35m[K_u32 flag[m[K){}
+[11.476s]       |                        [01;35m[K~~~~~^~~~[m[K
+[11.476s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.476s]   324 |     sl_u8  payload[[01;35m[K0[m[K];
+[11.477s]       |                    [01;35m[K^[m[K
+[11.740s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_protocol.h:36[m[K,
+[11.740s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:39[m[K,
+[11.741s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sdkcommon.h:49[m[K,
+[11.742s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/rplidar_driver.cpp:33[m[K:
+[11.742s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.742s]    66 |     sl_u8 data[[01;35m[K0[m[K];
+[11.743s]       |                [01;35m[K^[m[K
+[11.743s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_cmd.h:36[m[K,
+[11.743s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:40[m[K:
+[11.743s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.743s]   324 |     sl_u8  payload[[01;35m[K0[m[K];
+[11.744s]       |                    [01;35m[K^[m[K
+[11.747s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:[m[K In member function ‘[01m[Kbool rp::arch::net::raw_serial::[01;32m[Kopen[m[K(const char*, uint32_t, uint32_t)[m[K’:
+[11.747s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:97:74:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Kflags[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.748s]    97 | bool raw_serial::open(const char * portname, uint32_t baudrate, [01;35m[Kuint32_t flags[m[K)
+[11.748s]       |                                                                 [01;35m[K~~~~~~~~~^~~~~[m[K
+[11.749s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:[m[K In member function ‘[01m[Kvirtual void rp::arch::net::raw_serial::[01;32m[Kflush[m[K(_u32)[m[K’:
+[11.749s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:281:30:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Kflags[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.749s]   281 | void raw_serial::flush( [01;35m[K_u32 flags[m[K)
+[11.749s]       |                         [01;35m[K~~~~~^~~~~[m[K
+[11.749s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:[m[K In member function ‘[01m[Kvirtual int rp::arch::net::raw_serial::[01;32m[Kwaitforsent[m[K(_u32, size_t*)[m[K’:
+[11.749s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:286:34:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Ktimeout[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.749s]   286 | int raw_serial::waitforsent([01;35m[K_u32 timeout[m[K, size_t * returned_size)
+[11.749s]       |                             [01;35m[K~~~~~^~~~~~~[m[K
+[11.750s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:[m[K In member function ‘[01m[Kvirtual int rp::arch::net::raw_serial::[01;32m[Kwaitforrecv[m[K(_u32, size_t*)[m[K’:
+[11.750s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:292:34:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Ktimeout[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.751s]   292 | int raw_serial::waitforrecv([01;35m[K_u32 timeout[m[K, size_t * returned_size)
+[11.751s]       |                             [01;35m[K~~~~~^~~~~~~[m[K
+[11.751s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_protocol.h:36[m[K,
+[11.751s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:39[m[K,
+[11.751s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/src/sdkcommon.h:49[m[K,
+[11.751s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/hal/thread.cpp:35[m[K:
+[11.751s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.751s]    66 |     sl_u8 data[[01;35m[K0[m[K];
+[11.751s]       |                [01;35m[K^[m[K
+[11.751s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_cmd.h:36[m[K,
+[11.751s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:40[m[K:
+[11.752s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.752s]   324 |     sl_u8  payload[[01;35m[K0[m[K];
+[11.753s]       |                    [01;35m[K^[m[K
+[11.753s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:[m[K In member function ‘[01m[Kvirtual void rp::arch::net::raw_serial::[01;32m[KcancelOperation[m[K()[m[K’:
+[11.753s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:427:5:[m[K [01;35m[Kwarning: [m[Kvalue computed is not used [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-value-Wunused-value]8;;[m[K]
+[11.753s]   427 |     [01;35m[K(int)::write(_selfpipe[1], "x", 1)[m[K;
+[11.753s]       |     [01;35m[K^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+[11.760s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_protocol.h:36[m[K,
+[11.761s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:39[m[K,
+[11.761s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/src/sdkcommon.h:49[m[K,
+[11.762s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunnpacker_commondef.h:41[m[K,
+[11.762s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_normalnode.cpp:39[m[K:
+[11.762s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.762s]    66 |     sl_u8 data[[01;35m[K0[m[K];
+[11.762s]       |                [01;35m[K^[m[K
+[11.763s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_protocol.h:36[m[K,
+[11.763s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:39[m[K,
+[11.763s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sdkcommon.h:49[m[K,
+[11.763s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:33[m[K:
+[11.763s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.763s]    66 |     sl_u8 data[[01;35m[K0[m[K];
+[11.763s]       |                [01;35m[K^[m[K
+[11.764s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_cmd.h:36[m[K,
+[11.764s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:40[m[K:
+[11.764s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.764s]   324 |     sl_u8  payload[[01;35m[K0[m[K];
+[11.766s]       |                    [01;35m[K^[m[K
+[11.766s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_cmd.h:36[m[K,
+[11.766s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:40[m[K:
+[11.767s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.767s]   324 |     sl_u8  payload[[01;35m[K0[m[K];
+[11.767s]       |                    [01;35m[K^[m[K
+[11.780s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_protocol.h:36[m[K,
+[11.780s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:39[m[K,
+[11.781s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/src/sdkcommon.h:49[m[K,
+[11.781s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunnpacker_commondef.h:41[m[K,
+[11.782s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_hqnode.cpp:39[m[K:
+[11.782s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.782s]    66 |     sl_u8 data[[01;35m[K0[m[K];
+[11.783s]       |                [01;35m[K^[m[K
+[11.783s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_cmd.h:36[m[K,
+[11.783s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:40[m[K:
+[11.784s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.784s]   324 |     sl_u8  payload[[01;35m[K0[m[K];
+[11.784s]       |                    [01;35m[K^[m[K
+[11.785s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_protocol.h:36[m[K,
+[11.785s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:39[m[K,
+[11.786s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/src/sdkcommon.h:49[m[K,
+[11.786s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunnpacker_commondef.h:41[m[K,
+[11.786s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_capsules.cpp:39[m[K:
+[11.786s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.787s]    66 |     sl_u8 data[[01;35m[K0[m[K];
+[11.787s]       |                [01;35m[K^[m[K
+[11.787s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_cmd.h:36[m[K,
+[11.787s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:40[m[K:
+[11.787s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.787s]   324 |     sl_u8  payload[[01;35m[K0[m[K];
+[11.787s]       |                    [01;35m[K^[m[K
+[11.789s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_protocol.h:36[m[K,
+[11.789s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:39[m[K,
+[11.790s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sdkcommon.h:49[m[K,
+[11.790s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidarprotocol_codec.cpp:35[m[K:
+[11.791s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.791s]    66 |     sl_u8 data[[01;35m[K0[m[K];
+[11.791s]       |                [01;35m[K^[m[K
+[11.791s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_cmd.h:36[m[K,
+[11.792s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:40[m[K:
+[11.792s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.792s]   324 |     sl_u8  payload[[01;35m[K0[m[K];
+[11.792s]       |                    [01;35m[K^[m[K
+[11.793s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_protocol.h:36[m[K,
+[11.793s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:39[m[K,
+[11.793s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/src/sdkcommon.h:49[m[K,
+[11.793s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/arch/linux/net_socket.cpp:10[m[K:
+[11.793s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.794s]    66 |     sl_u8 data[[01;35m[K0[m[K];
+[11.794s]       |                [01;35m[K^[m[K
+[11.794s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_cmd.h:36[m[K,
+[11.794s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:40[m[K:
+[11.794s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.794s]   324 |     sl_u8  payload[[01;35m[K0[m[K];
+[11.795s]       |                    [01;35m[K^[m[K
+[11.796s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_protocol.h:36[m[K,
+[11.796s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:39[m[K,
+[11.796s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/src/sdkcommon.h:49[m[K,
+[11.797s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunnpacker_commondef.h:41[m[K,
+[11.797s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.cpp:39[m[K:
+[11.797s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.797s]    66 |     sl_u8 data[[01;35m[K0[m[K];
+[11.797s]       |                [01;35m[K^[m[K
+[11.798s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_cmd.h:36[m[K,
+[11.798s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:40[m[K:
+[11.798s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.798s]   324 |     sl_u8  payload[[01;35m[K0[m[K];
+[11.799s]       |                    [01;35m[K^[m[K
+[11.799s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_protocol.h:36[m[K,
+[11.799s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:39[m[K,
+[11.799s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sdkcommon.h:49[m[K,
+[11.799s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_async_transceiver.cpp:35[m[K:
+[11.799s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.799s]    66 |     sl_u8 data[[01;35m[K0[m[K];
+[11.800s]       |                [01;35m[K^[m[K
+[11.800s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar_cmd.h:36[m[K,
+[11.800s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/rplidar.h:40[m[K:
+[11.800s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[11.800s]   324 |     sl_u8  payload[[01;35m[K0[m[K];
+[11.800s]       |                    [01;35m[K^[m[K
+[11.804s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/hal/thread.cpp:43[m[K:
+[11.804s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/src/arch/linux/thread.hpp:[m[K In static member function ‘[01m[Kstatic rp::hal::Thread rp::hal::Thread::[01;32m[Kcreate[m[K(thread_proc_t, void*)[m[K’:
+[11.804s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/src/arch/linux/thread.hpp:52:57:[m[K [01;35m[Kwarning: [m[Kcast between incompatible function types from ‘[01m[Kthread_proc_t[m[K’ {aka ‘[01m[Klong unsigned int (*)(void*)[m[K’} to ‘[01m[Kvoid* (*)(void*)[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wcast-function-type-Wcast-function-type]8;;[m[K]
+[11.804s]    52 |     pthread_create((pthread_t *)&newborn._handle, NULL, [01;35m[K(void * (*)(void *))proc[m[K, data);
+[11.804s]       |                                                         [01;35m[K^~~~~~~~~~~~~~~~~~~~~~~~[m[K
+[11.805s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/src/arch/linux/thread.hpp:[m[K In member function ‘[01m[Ku_result rp::hal::Thread::[01;32m[Kjoin[m[K(long unsigned int)[m[K’:
+[11.806s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/src/arch/linux/thread.hpp:176:37:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Ktimeout[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.806s]   176 | u_result Thread::join([01;35m[Kunsigned long timeout[m[K)
+[11.806s]       |                       [01;35m[K~~~~~~~~~~~~~~^~~~~~~[m[K
+[11.839s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/rplidar_driver.cpp:[m[K In member function ‘[01m[Ku_result rp::standalone::rplidar::RPlidarDriver::[01;32m[Kconnect[m[K(const char*, _u32, _u32)[m[K’:
+[11.840s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/rplidar_driver.cpp:67:77:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Kflag[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.840s]    67 |     u_result RPlidarDriver::connect(const char *path, _u32 portOrBaud, [01;35m[K_u32 flag[m[K)
+[11.840s]       |                                                                        [01;35m[K~~~~~^~~~[m[K
+[11.840s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/rplidar_driver.cpp:[m[K In member function ‘[01m[Ku_result rp::standalone::rplidar::RPlidarDriver::[01;32m[Kreset[m[K(_u32)[m[K’:
+[11.841s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/rplidar_driver.cpp:101:40:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Ktimeout[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.841s]   101 |     u_result RPlidarDriver::reset([01;35m[K_u32 timeout[m[K)
+[11.841s]       |                                   [01;35m[K~~~~~^~~~~~~[m[K
+[11.841s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/rplidar_driver.cpp:[m[K In member function ‘[01m[Ku_result rp::standalone::rplidar::RPlidarDriver::[01;32m[KgetScanDataWithInterval[m[K(rplidar_response_measurement_node_t*, size_t&)[m[K’:
+[11.841s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/rplidar_driver.cpp:180:91:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Knodebuffer[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.841s]   180 |     u_result RPlidarDriver::getScanDataWithInterval([01;35m[Krplidar_response_measurement_node_t * nodebuffer[m[K, size_t & count)
+[11.841s]       |                                                     [01;35m[K~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~[m[K
+[11.841s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/rplidar_driver.cpp:180:112:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Kcount[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.841s]   180 |     u_result RPlidarDriver::getScanDataWithInterval(rplidar_response_measurement_node_t * nodebuffer, [01;35m[Ksize_t & count[m[K)
+[11.841s]       |                                                                                                       [01;35m[K~~~~~~~~~^~~~~[m[K
+[11.863s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/src/arch/linux/arch_linux.h:42[m[K,
+[11.864s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/src/sdkcommon.h:41[m[K:
+[11.864s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/arch/linux/net_socket.cpp:[m[K In member function ‘[01m[Kvirtual u_result rp::arch::net::DGramSocketImpl::[01;32m[KsendTo[m[K(const rp::net::SocketAddress*, const void*, size_t)[m[K’:
+[11.865s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/arch/linux/net_socket.cpp:733:24:[m[K [01;35m[Kwarning: [m[Kcomparison of integer expressions of different signedness: ‘[01m[Kint[m[K’ and ‘[01m[Ksize_t[m[K’ {aka ‘[01m[Klong unsigned int[m[K’} [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wsign-compare-Wsign-compare]8;;[m[K]
+[11.865s]   733 |             assert([01;35m[Kans == len[m[K);
+[11.865s]       |                    [01;35m[K~~~~^~~~~~[m[K
+[11.937s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_capsules.cpp:40[m[K:
+[11.937s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:[m[K In member function ‘[01m[Kvirtual void sl::internal::LIDARSampleDataListener::[01;32m[KonCustomSampleDataDecoded[m[K(_u8, _u32, const void*, size_t)[m[K’:
+[11.937s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:52:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KansType[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.937s]    54 |         virtual void onCustomSampleDataDecoded([01;35m[K_u8 ansType[m[K, _u32 customCode, const void* data, size_t size) {}
+[11.937s]       |                                                [01;35m[K~~~~^~~~~~~[m[K
+[11.937s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:66:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KcustomCode[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.938s]    54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, [01;35m[K_u32 customCode[m[K, const void* data, size_t size) {}
+[11.938s]       |                                                             [01;35m[K~~~~~^~~~~~~~~~[m[K
+[11.939s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:90:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.939s]    54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, [01;35m[Kconst void* data[m[K, size_t size) {}
+[11.939s]       |                                                                              [01;35m[K~~~~~~~~~~~~^~~~[m[K
+[11.940s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:103:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Ksize[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.940s]    54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, [01;35m[Ksize_t size[m[K) {}
+[11.941s]       |                                                                                                [01;35m[K~~~~~~~^~~~[m[K
+[11.941s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:[m[K In member function ‘[01m[Kvirtual void sl::internal::LIDARSampleDataListener::[01;32m[KonDecodingError[m[K(int, _u8, const void*, size_t)[m[K’:
+[11.942s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:42:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KerrMsg[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.942s]    56 |         virtual void onDecodingError([01;35m[Kint errMsg[m[K, _u8 ansType, const void* payload, size_t size) {}
+[11.942s]       |                                      [01;35m[K~~~~^~~~~~[m[K
+[11.942s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:54:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KansType[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.942s]    56 |         virtual void onDecodingError(int errMsg, [01;35m[K_u8 ansType[m[K, const void* payload, size_t size) {}
+[11.943s]       |                                                  [01;35m[K~~~~^~~~~~~[m[K
+[11.943s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:75:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.943s]    56 |         virtual void onDecodingError(int errMsg, _u8 ansType, [01;35m[Kconst void* payload[m[K, size_t size) {}
+[11.943s]       |                                                               [01;35m[K~~~~~~~~~~~~^~~~~~~[m[K
+[11.943s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:91:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Ksize[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.944s]    56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, [01;35m[Ksize_t size[m[K) {}
+[11.944s]       |                                                                                    [01;35m[K~~~~~~~^~~~[m[K
+[11.944s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_normalnode.cpp:40[m[K:
+[11.944s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:[m[K In member function ‘[01m[Kvirtual void sl::internal::LIDARSampleDataListener::[01;32m[KonCustomSampleDataDecoded[m[K(_u8, _u32, const void*, size_t)[m[K’:
+[11.944s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:52:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KansType[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.944s]    54 |         virtual void onCustomSampleDataDecoded([01;35m[K_u8 ansType[m[K, _u32 customCode, const void* data, size_t size) {}
+[11.945s]       |                                                [01;35m[K~~~~^~~~~~~[m[K
+[11.945s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:66:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KcustomCode[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.945s]    54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, [01;35m[K_u32 customCode[m[K, const void* data, size_t size) {}
+[11.946s]       |                                                             [01;35m[K~~~~~^~~~~~~~~~[m[K
+[11.946s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:90:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.946s]    54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, [01;35m[Kconst void* data[m[K, size_t size) {}
+[11.946s]       |                                                                              [01;35m[K~~~~~~~~~~~~^~~~[m[K
+[11.946s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:103:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Ksize[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.946s]    54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, [01;35m[Ksize_t size[m[K) {}
+[11.946s]       |                                                                                                [01;35m[K~~~~~~~^~~~[m[K
+[11.946s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:[m[K In member function ‘[01m[Kvirtual void sl::internal::LIDARSampleDataListener::[01;32m[KonDecodingError[m[K(int, _u8, const void*, size_t)[m[K’:
+[11.947s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:42:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KerrMsg[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.947s]    56 |         virtual void onDecodingError([01;35m[Kint errMsg[m[K, _u8 ansType, const void* payload, size_t size) {}
+[11.947s]       |                                      [01;35m[K~~~~^~~~~~[m[K
+[11.947s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:54:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KansType[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.947s]    56 |         virtual void onDecodingError(int errMsg, [01;35m[K_u8 ansType[m[K, const void* payload, size_t size) {}
+[11.947s]       |                                                  [01;35m[K~~~~^~~~~~~[m[K
+[11.947s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:75:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.948s]    56 |         virtual void onDecodingError(int errMsg, _u8 ansType, [01;35m[Kconst void* payload[m[K, size_t size) {}
+[11.948s]       |                                                               [01;35m[K~~~~~~~~~~~~^~~~~~~[m[K
+[11.948s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:91:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Ksize[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.948s]    56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, [01;35m[Ksize_t size[m[K) {}
+[11.948s]       |                                                                                    [01;35m[K~~~~~~~^~~~[m[K
+[11.948s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_async_transceiver.cpp:44[m[K:
+[11.949s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_async_transceiver.h:[m[K In member function ‘[01m[Kvirtual void sl::internal::IAsyncProtocolCodec::[01;32m[KonChannelError[m[K(u_result)[m[K’:
+[11.949s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_async_transceiver.h:90:48:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KerrCode[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.949s]    90 |         virtual void   onChannelError([01;35m[Ku_result errCode[m[K) {}
+[11.949s]       |                                       [01;35m[K~~~~~~~~~^~~~~~~[m[K
+[11.949s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_hqnode.cpp:40[m[K:
+[11.949s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:[m[K In member function ‘[01m[Kvirtual void sl::internal::LIDARSampleDataListener::[01;32m[KonCustomSampleDataDecoded[m[K(_u8, _u32, const void*, size_t)[m[K’:
+[11.949s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:52:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KansType[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.950s]    54 |         virtual void onCustomSampleDataDecoded([01;35m[K_u8 ansType[m[K, _u32 customCode, const void* data, size_t size) {}
+[11.950s]       |                                                [01;35m[K~~~~^~~~~~~[m[K
+[11.950s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.cpp:40[m[K:
+[11.950s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:[m[K In member function ‘[01m[Kvirtual void sl::internal::LIDARSampleDataListener::[01;32m[KonCustomSampleDataDecoded[m[K(_u8, _u32, const void*, size_t)[m[K’:
+[11.950s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:52:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KansType[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.951s]    54 |         virtual void onCustomSampleDataDecoded([01;35m[K_u8 ansType[m[K, _u32 customCode, const void* data, size_t size) {}
+[11.951s]       |                                                [01;35m[K~~~~^~~~~~~[m[K
+[11.951s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:66:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KcustomCode[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.951s]    54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, [01;35m[K_u32 customCode[m[K, const void* data, size_t size) {}
+[11.951s]       |                                                             [01;35m[K~~~~~^~~~~~~~~~[m[K
+[11.951s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:90:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.951s]    54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, [01;35m[Kconst void* data[m[K, size_t size) {}
+[11.952s]       |                                                                              [01;35m[K~~~~~~~~~~~~^~~~[m[K
+[11.952s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:66:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KcustomCode[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.952s]    54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, [01;35m[K_u32 customCode[m[K, const void* data, size_t size) {}
+[11.953s]       |                                                             [01;35m[K~~~~~^~~~~~~~~~[m[K
+[11.953s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:90:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.953s]    54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, [01;35m[Kconst void* data[m[K, size_t size) {}
+[11.954s]       |                                                                              [01;35m[K~~~~~~~~~~~~^~~~[m[K
+[11.954s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:103:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Ksize[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.954s]    54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, [01;35m[Ksize_t size[m[K) {}
+[11.954s]       |                                                                                                [01;35m[K~~~~~~~^~~~[m[K
+[11.955s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:103:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Ksize[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.955s]    54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, [01;35m[Ksize_t size[m[K) {}
+[11.955s]       |                                                                                                [01;35m[K~~~~~~~^~~~[m[K
+[11.955s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:[m[K In member function ‘[01m[Kvirtual void sl::internal::LIDARSampleDataListener::[01;32m[KonDecodingError[m[K(int, _u8, const void*, size_t)[m[K’:
+[11.955s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:42:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KerrMsg[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.955s]    56 |         virtual void onDecodingError([01;35m[Kint errMsg[m[K, _u8 ansType, const void* payload, size_t size) {}
+[11.955s]       |                                      [01;35m[K~~~~^~~~~~[m[K
+[11.955s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:[m[K In member function ‘[01m[Kvirtual void sl::internal::LIDARSampleDataListener::[01;32m[KonDecodingError[m[K(int, _u8, const void*, size_t)[m[K’:
+[11.955s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:42:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KerrMsg[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.955s]    56 |         virtual void onDecodingError([01;35m[Kint errMsg[m[K, _u8 ansType, const void* payload, size_t size) {}
+[11.956s]       |                                      [01;35m[K~~~~^~~~~~[m[K
+[11.956s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:54:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KansType[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.956s]    56 |         virtual void onDecodingError(int errMsg, [01;35m[K_u8 ansType[m[K, const void* payload, size_t size) {}
+[11.956s]       |                                                  [01;35m[K~~~~^~~~~~~[m[K
+[11.956s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:54:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KansType[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.956s]    56 |         virtual void onDecodingError(int errMsg, [01;35m[K_u8 ansType[m[K, const void* payload, size_t size) {}
+[11.956s]       |                                                  [01;35m[K~~~~^~~~~~~[m[K
+[11.956s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:75:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.956s]    56 |         virtual void onDecodingError(int errMsg, _u8 ansType, [01;35m[Kconst void* payload[m[K, size_t size) {}
+[11.956s]       |                                                               [01;35m[K~~~~~~~~~~~~^~~~~~~[m[K
+[11.956s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:75:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.956s]    56 |         virtual void onDecodingError(int errMsg, _u8 ansType, [01;35m[Kconst void* payload[m[K, size_t size) {}
+[11.956s]       |                                                               [01;35m[K~~~~~~~~~~~~^~~~~~~[m[K
+[11.956s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:91:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Ksize[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.956s]    56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, [01;35m[Ksize_t size[m[K) {}
+[11.957s]       |                                                                                    [01;35m[K~~~~~~~^~~~[m[K
+[11.957s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:91:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Ksize[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.957s]    56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, [01;35m[Ksize_t size[m[K) {}
+[11.957s]       |                                                                                    [01;35m[K~~~~~~~^~~~[m[K
+[11.957s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_capsules.cpp:[m[K In member function ‘[01m[Kvoid sl::internal::unpacker::UnpackerHandler_DenseCapsuleNode::[01;32m[K_onScanNodeDenseCapsuleData[m[K(rplidar_response_dense_capsule_measurement_nodes_t&, sl::internal::LIDARSampleDataUnpackerInner*)[m[K’:
+[11.957s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_capsules.cpp:763:30:[m[K [01;35m[Kwarning: [m[Ktype qualifiers ignored on cast result type [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wignored-qualifiers-Wignored-qualifiers]8;;[m[K]
+[11.957s]   763 |             const int dist = [01;35m[Kstatic_cast<const int>(_cached_previous_dense_capsuledata.cabins[pos].distance)[m[K;
+[11.957s]       |                              [01;35m[K^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+[11.966s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidarprotocol_codec.cpp:49[m[K:
+[11.966s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_async_transceiver.h:[m[K In member function ‘[01m[Kvirtual void sl::internal::IAsyncProtocolCodec::[01;32m[KonChannelError[m[K(u_result)[m[K’:
+[11.966s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_async_transceiver.h:90:48:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KerrCode[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.966s]    90 |         virtual void   onChannelError([01;35m[Ku_result errCode[m[K) {}
+[11.967s]       |                                       [01;35m[K~~~~~~~~~^~~~~~~[m[K
+[11.969s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:50[m[K:
+[11.969s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:[m[K In member function ‘[01m[Kvirtual void sl::internal::LIDARSampleDataListener::[01;32m[KonCustomSampleDataDecoded[m[K(_u8, _u32, const void*, size_t)[m[K’:
+[11.969s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:52:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KansType[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.969s]    54 |         virtual void onCustomSampleDataDecoded([01;35m[K_u8 ansType[m[K, _u32 customCode, const void* data, size_t size) {}
+[11.969s]       |                                                [01;35m[K~~~~^~~~~~~[m[K
+[11.969s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:66:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KcustomCode[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.970s]    54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, [01;35m[K_u32 customCode[m[K, const void* data, size_t size) {}
+[11.970s]       |                                                             [01;35m[K~~~~~^~~~~~~~~~[m[K
+[11.970s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:90:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.970s]    54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, [01;35m[Kconst void* data[m[K, size_t size) {}
+[11.970s]       |                                                                              [01;35m[K~~~~~~~~~~~~^~~~[m[K
+[11.971s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:103:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Ksize[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.971s]    54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, [01;35m[Ksize_t size[m[K) {}
+[11.971s]       |                                                                                                [01;35m[K~~~~~~~^~~~[m[K
+[11.971s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:[m[K In member function ‘[01m[Kvirtual void sl::internal::LIDARSampleDataListener::[01;32m[KonDecodingError[m[K(int, _u8, const void*, size_t)[m[K’:
+[11.971s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:42:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KerrMsg[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.972s]    56 |         virtual void onDecodingError([01;35m[Kint errMsg[m[K, _u8 ansType, const void* payload, size_t size) {}
+[11.972s]       |                                      [01;35m[K~~~~^~~~~~[m[K
+[11.972s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:54:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KansType[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.972s]    56 |         virtual void onDecodingError(int errMsg, [01;35m[K_u8 ansType[m[K, const void* payload, size_t size) {}
+[11.972s]       |                                                  [01;35m[K~~~~^~~~~~~[m[K
+[11.972s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:75:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.973s]    56 |         virtual void onDecodingError(int errMsg, _u8 ansType, [01;35m[Kconst void* payload[m[K, size_t size) {}
+[11.973s]       |                                                               [01;35m[K~~~~~~~~~~~~^~~~~~~[m[K
+[11.973s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:91:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Ksize[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.973s]    56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, [01;35m[Ksize_t size[m[K) {}
+[11.973s]       |                                                                                    [01;35m[K~~~~~~~^~~~[m[K
+[11.981s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:51[m[K:
+[11.981s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_async_transceiver.h:[m[K In member function ‘[01m[Kvirtual void sl::internal::IAsyncProtocolCodec::[01;32m[KonChannelError[m[K(u_result)[m[K’:
+[11.982s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_async_transceiver.h:90:48:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KerrCode[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[11.982s]    90 |         virtual void   onChannelError([01;35m[Ku_result errCode[m[K) {}
+[11.982s]       |                                       [01;35m[K~~~~~~~~~^~~~~~~[m[K
+[12.016s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:[m[K In member function ‘[01m[Kvirtual sl_result sl::SlamtecLidarDriver::[01;32m[Kreset[m[K(sl_u32)[m[K’:
+[12.016s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:511:32:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KtimeoutInMs[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[12.016s]   511 |         sl_result reset([01;35m[Ksl_u32 timeoutInMs = DEFAULT_TIMEOUT[m[K)
+[12.016s]       |                         [01;35m[K~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+[12.021s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:[m[K In member function ‘[01m[Kvirtual sl_result sl::SlamtecLidarDriver::[01;32m[KstartScan[m[K(bool, bool, sl_u32, sl::LidarScanMode*)[m[K’:
+[12.021s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:586:69:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Koptions[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[12.021s]   586 |         sl_result startScan(bool force, bool useTypicalScan, [01;35m[Ksl_u32 options = 0[m[K, LidarScanMode* outUsedScanMode = nullptr)
+[12.022s]       |                                                              [01;35m[K~~~~~~~^~~~~~~~~~~[m[K
+[12.024s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:[m[K In member function ‘[01m[Kvirtual sl_result sl::SlamtecLidarDriver::[01;32m[Kstop[m[K(sl_u32)[m[K’:
+[12.024s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:763:31:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Ktimeout[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[12.024s]   763 |         sl_result stop([01;35m[Ksl_u32 timeout = DEFAULT_TIMEOUT[m[K)
+[12.024s]       |                        [01;35m[K~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+[12.026s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:[m[K In member function ‘[01m[Kvirtual sl_result sl::SlamtecLidarDriver::[01;32m[KgetFrequency[m[K(const sl::LidarScanMode&, const sl_lidar_response_measurement_node_hq_t*, size_t, float&)[m[K’:
+[12.026s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:880:110:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Knodes[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[12.027s]   880 |         sl_result getFrequency(const LidarScanMode& scanMode, [01;35m[Kconst sl_lidar_response_measurement_node_hq_t* nodes[m[K, size_t count, float& frequency)
+[12.027s]       |                                                               [01;35m[K~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~[m[K
+[12.029s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:[m[K In member function ‘[01m[Kvirtual sl_result sl::SlamtecLidarDriver::[01;32m[KgetMotorInfo[m[K(sl::LidarMotorInfo&, sl_u32)[m[K’:
+[12.029s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:1023:66:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KtimeoutInMs[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[12.029s]  1023 |         sl_result getMotorInfo(LidarMotorInfo &motorInfo, [01;35m[Ksl_u32 timeoutInMs[m[K)
+[12.029s]       |                                                           [01;35m[K~~~~~~~^~~~~~~~~~~[m[K
+[12.030s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:[m[K In member function ‘[01m[Ku_result sl::SlamtecLidarDriver::[01;32m[KgetScanModeCount[m[K(sl_u16&, sl_u32)[m[K’:
+[12.030s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:1199:61:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[KtimeoutInMs[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[12.030s]  1199 |         u_result getScanModeCount(sl_u16& modeCount, [01;35m[Ksl_u32 timeoutInMs = DEFAULT_TIMEOUT[m[K)
+[12.030s]       |                                                      [01;35m[K~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+[12.097s] /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp: In instantiation of ‘[01m[Kvoid sl::RawSampleNodeHolder<T>::[01;32m[KpushNode[m[K(_u64, const T*) [35m[K[with T = sl_lidar_response_measurement_node_hq_t; _u64 = long unsigned int][m[K[m[K’:
+[12.097s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:1648:42:[m[K   required from here
+[12.098s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:202:28:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Ktimestamp_uS[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+[12.098s]   202 |         void pushNode([01;35m[K_u64 timestamp_uS[m[K, const T* node)
+[12.098s]       |                       [01;35m[K~~~~~^~~~~~~~~~~~[m[K
+[12.222s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:[m[K At global scope:
+[12.223s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:83:17:[m[K [01;35m[Kwarning: [m[K‘[01m[Kvoid sl::[01;32m[Kconvert[m[K(const sl_lidar_response_measurement_node_hq_t&, sl_lidar_response_measurement_node_t&)[m[K’ defined but not used [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-function-Wunused-function]8;;[m[K]
+[12.223s]    83 |     static void [01;35m[Kconvert[m[K(const sl_lidar_response_measurement_node_hq_t& from, sl_lidar_response_measurement_node_t& to)
+[12.223s]       |                 [01;35m[K^~~~~~~[m[K
+[12.223s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:75:17:[m[K [01;35m[Kwarning: [m[K‘[01m[Kvoid sl::[01;32m[Kconvert[m[K(const sl_lidar_response_measurement_node_t&, sl_lidar_response_measurement_node_hq_t&)[m[K’ defined but not used [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-function-Wunused-function]8;;[m[K]
+[12.223s]    75 |     static void [01;35m[Kconvert[m[K(const sl_lidar_response_measurement_node_t& from, sl_lidar_response_measurement_node_hq_t& to)
+[12.223s]       |                 [01;35m[K^~~~~~~[m[K
+[12.223s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:70:17:[m[K [01;35m[Kwarning: [m[K‘[01m[Kvoid sl::[01;32m[KprintDeprecationWarn[m[K(const char*, const char*)[m[K’ defined but not used [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-function-Wunused-function]8;;[m[K]
+[12.223s]    70 |     static void [01;35m[KprintDeprecationWarn[m[K(const char* fn, const char* replacement)
+[12.223s]       |                 [01;35m[K^~~~~~~~~~~~~~~~~~~~[m[K
+[14.195s] In file included from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:41[m[K,
+[14.195s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_driver.h:54[m[K,
+[14.195s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar.h:36[m[K,
+[14.196s]                  from [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/src/sllidar_node.cpp:38[m[K:
+[14.196s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kdata[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[14.196s]    66 |     sl_u8 data[[01;35m[K0[m[K];
+[14.196s]       |                [01;35m[K^[m[K
+[14.196s] [01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20:[m[K [01;35m[Kwarning: [m[KISO C++ forbids zero-size array ‘[01m[Kpayload[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wpedantic-Wpedantic]8;;[m[K]
+[14.196s]   324 |     sl_u8  payload[[01;35m[K0[m[K];
+[14.196s]       |                    [01;35m[K^[m[K
+[17.840s] [ 95%] [32m[1mLinking CXX executable sllidar_node[0m
+[18.621s] [ 95%] Built target sllidar_node
+[20.121s] [100%] [32m[1mLinking CXX executable sllidar_client[0m
+[20.839s] [100%] Built target sllidar_client
+[20.853s] Invoked command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --build /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2 -- -j20 -l20
+[20.866s] Invoking command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --install /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2
+[20.875s] -- Install configuration: ""
+[20.875s] -- Execute custom install script
+[20.877s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/sllidar_a1_launch.py
+[20.887s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/sllidar_a2m12_launch .py
+[20.897s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/sllidar_a2m7_launch.py
+[20.909s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/sllidar_a2m8_launch.py
+[20.919s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/sllidar_a3_launch.py
+[20.930s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/sllidar_c1_launch.py
+[20.940s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/sllidar_s1_launch.py
+[20.952s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/sllidar_s1_tcp_launch.py
+[20.961s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/sllidar_s2_launch.py
+[20.972s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/sllidar_s2e_launch.py
+[20.983s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/sllidar_s3_launch.py
+[20.995s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/sllidar_t1_launch.py
+[21.007s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_a1_launch.py
+[21.018s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_a2m12_launch.py
+[21.028s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_a2m7_launch.py
+[21.038s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_a2m8_launch.py
+[21.048s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_a3_launch.py
+[21.057s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_c1_launch.py
+[21.068s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_s1_launch.py
+[21.080s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_s1_tcp_launch.py
+[21.091s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_s2_launch.py
+[21.103s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_s2e_launch.py
+[21.114s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_s3_launch.py
+[21.125s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_t1_launch.py
+[21.135s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/rviz/sllidar_ros2.rviz
+[21.147s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/lib/sllidar_ros2/sllidar_node
+[21.157s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/lib/sllidar_ros2/sllidar_client
+[21.169s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/ament_index/resource_index/package_run_dependencies/sllidar_ros2
+[21.180s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/ament_index/resource_index/parent_prefix_path/sllidar_ros2
+[21.190s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/environment/ament_prefix_path.sh
+[21.201s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/environment/ament_prefix_path.dsv
+[21.212s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/environment/path.sh
+[21.224s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/environment/path.dsv
+[21.234s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/local_setup.bash
+[21.245s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/local_setup.sh
+[21.255s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/local_setup.zsh
+[21.265s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/local_setup.dsv
+[21.275s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/package.dsv
+[21.287s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/ament_index/resource_index/packages/sllidar_ros2
+[21.298s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/cmake/ament_cmake_export_dependencies-extras.cmake
+[21.311s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/cmake/ament_cmake_export_include_directories-extras.cmake
+[21.322s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/cmake/sllidar_ros2Config.cmake
+[21.334s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/cmake/sllidar_ros2Config-version.cmake
+[21.344s] -- Symlinking: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/package.xml
+[21.357s] Invoked command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --install /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2

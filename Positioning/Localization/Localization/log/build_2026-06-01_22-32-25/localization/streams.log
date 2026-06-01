@@ -1,0 +1,29 @@
+[0.985s] Invoking command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/build/localization': PYTHONPATH=/home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/build/localization/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/build/localization/build --no-deps symlink_data
+[1.354s] running develop
+[1.565s] running egg_info
+[1.565s] creating localization.egg-info
+[1.587s] writing localization.egg-info/PKG-INFO
+[1.588s] writing dependency_links to localization.egg-info/dependency_links.txt
+[1.588s] writing requirements to localization.egg-info/requires.txt
+[1.588s] writing top-level names to localization.egg-info/top_level.txt
+[1.588s] writing manifest file 'localization.egg-info/SOURCES.txt'
+[1.629s] reading manifest file 'localization.egg-info/SOURCES.txt'
+[1.629s] writing manifest file 'localization.egg-info/SOURCES.txt'
+[1.652s] running build_ext
+[1.652s] Creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/lib/python3.12/site-packages/localization.egg-link (link to .)
+[1.652s] 
+[1.652s] Installed /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/build/localization
+[1.653s] running symlink_data
+[1.653s] creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/ament_index
+[1.653s] creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/ament_index/resource_index
+[1.653s] creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/ament_index/resource_index/packages
+[1.654s] symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/build/localization/resource/localization -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/ament_index/resource_index/packages
+[1.654s] symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/build/localization/package.xml -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/localization
+[1.654s] creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/localization/launch
+[1.654s] symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/build/localization/launch/localization.launch.py -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/localization/launch
+[1.655s] creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/localization/config
+[1.655s] symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/build/localization/config/amcl.yaml -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/localization/config
+[1.655s] creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/localization/maps
+[1.656s] creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/localization/rviz
+[1.656s] symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/build/localization/rviz/localization.rviz -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/share/localization/rviz
+[1.688s] Invoked command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/build/localization' returned '0': PYTHONPATH=/home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/build/localization/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/localization/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/build/localization/build --no-deps symlink_data

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import serial
 import time
 import numpy as np
@@ -5,10 +7,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.signal import welch, detrend, find_peaks
 
-PORT = "COM10"          # Change this: e.g. "/dev/ttyACM0" on Linux
+PORT = "/dev/ttyACM0"
 BAUD = 460800
-LOG_SECONDS = 60       # record duration
-FS_EXPECTED = 400.0     # your Arduino outputs every 20 ms = 50 Hz
+LOG_SECONDS = 60
 
 columns = [
     "time_ms",
@@ -19,31 +20,52 @@ columns = [
 ]
 
 filename = f"bno055_log_{int(time.time())}.csv"
-
 rows = []
 
 print(f"Logging from {PORT} for {LOG_SECONDS} seconds...")
 
-with serial.Serial(PORT, BAUD, timeout=1) as ser:
-    start = time.time()
+try:
+    with serial.Serial(PORT, BAUD, timeout=1) as ser:
+        time.sleep(2.0)
+        ser.reset_input_buffer()
 
-    while time.time() - start < LOG_SECONDS:
-        line = ser.readline().decode(errors="ignore").strip()
+        start = time.time()
 
-        if not line.startswith("DATA,"):
-            print(line)
-            continue
+        while time.time() - start < LOG_SECONDS:
+            line = ser.readline().decode(errors="ignore").strip()
 
-        parts = line.split(",")
+            if not line:
+                continue
 
-        if len(parts) != 15:
-            continue
+            if not line.startswith("DATA,"):
+                print(line)
+                continue
 
-        try:
-            values = [float(x) for x in parts[1:]]
-            rows.append(values)
-        except ValueError:
-            continue
+            parts = line.split(",")
+
+            if len(parts) != 15:
+                print(f"Skipping malformed line: {line}")
+                continue
+
+            try:
+                values = [float(x) for x in parts[1:]]
+                rows.append(values)
+            except ValueError:
+                print(f"Skipping invalid numbers: {line}")
+                continue
+
+except serial.SerialException as e:
+    print()
+    print(f"Serial error: {e}")
+    print("Check the port with:")
+    print("  ls /dev/ttyACM* /dev/ttyUSB*")
+    raise SystemExit(1)
+
+if len(rows) < 8:
+    print()
+    print(f"Only received {len(rows)} valid DATA rows.")
+    print("No analysis was done.")
+    raise SystemExit(1)
 
 df = pd.DataFrame(rows, columns=columns)
 df.to_csv(filename, index=False)
@@ -54,16 +76,37 @@ print(f"Saved {len(df)} samples to {filename}")
 # Timing analysis
 # -----------------------------
 
-t = df["time_ms"].to_numpy() / 1000.0
+t_raw = df["time_ms"].to_numpy()
+t_raw = t_raw - t_raw[0]
+
+raw_duration = t_raw[-1]
+
+# Auto-detect timestamp unit.
+# If your Arduino uses micros(), this fixes the wrong 0.080 Hz result.
+if raw_duration > LOG_SECONDS * 10000:
+    print("Detected timestamp unit: microseconds")
+    t = t_raw / 1_000_000.0
+elif raw_duration > LOG_SECONDS * 10:
+    print("Detected timestamp unit: milliseconds")
+    t = t_raw / 1000.0
+else:
+    print("Detected timestamp unit: seconds")
+    t = t_raw
+
 dt = np.diff(t)
+dt = dt[dt > 0]
+
+if len(dt) == 0:
+    print("Could not calculate timing because timestamps did not increase.")
+    raise SystemExit(1)
 
 fs_measured = 1.0 / np.mean(dt)
 
 print()
 print("Timing:")
 print(f"Measured sample rate: {fs_measured:.3f} Hz")
-print(f"Mean dt: {np.mean(dt)*1000:.3f} ms")
-print(f"Std dt jitter: {np.std(dt)*1000:.3f} ms")
+print(f"Mean dt: {np.mean(dt) * 1000:.3f} ms")
+print(f"Std dt jitter: {np.std(dt) * 1000:.3f} ms")
 
 # -----------------------------
 # Derived vibration signals
@@ -97,34 +140,53 @@ signals = {
 
 def analyze_signal(name, x, fs):
     x = np.asarray(x)
+
+    if len(x) < 8:
+        print()
+        print(f"Strong frequency peaks for {name}:")
+        print("  Not enough samples.")
+        return
+
     x = x - np.mean(x)
     x = detrend(x)
+
+    nperseg = min(1024, len(x))
 
     freqs, psd = welch(
         x,
         fs=fs,
-        nperseg=min(1024, len(x)),
+        nperseg=nperseg,
         scaling="density"
     )
 
-    # Ignore DC and very low drift
     mask = freqs > 0.5
-
-    peak_indices, properties = find_peaks(
-        psd[mask],
-        prominence=np.max(psd[mask]) * 0.05
-    )
-
-    peak_freqs = freqs[mask][peak_indices]
-    peak_values = psd[mask][peak_indices]
-
-    order = np.argsort(peak_values)[::-1]
 
     print()
     print(f"Strong frequency peaks for {name}:")
 
-    for i in order[:5]:
-        print(f"  {peak_freqs[i]:.2f} Hz")
+    if not np.any(mask):
+        print("  No frequency range above 0.5 Hz available.")
+    else:
+        psd_masked = psd[mask]
+
+        if len(psd_masked) == 0 or np.max(psd_masked) <= 0:
+            print("  No clear peaks found.")
+        else:
+            peak_indices, properties = find_peaks(
+                psd_masked,
+                prominence=np.max(psd_masked) * 0.05
+            )
+
+            peak_freqs = freqs[mask][peak_indices]
+            peak_values = psd_masked[peak_indices]
+
+            if len(peak_freqs) == 0:
+                print("  No clear peaks found.")
+            else:
+                order = np.argsort(peak_values)[::-1]
+
+                for i in order[:5]:
+                    print(f"  {peak_freqs[i]:.2f} Hz")
 
     plt.figure()
     plt.semilogy(freqs, psd)
@@ -135,6 +197,7 @@ def analyze_signal(name, x, fs):
     plt.tight_layout()
     plt.savefig(f"psd_{name}.png", dpi=150)
     plt.close()
+
 
 for name, x in signals.items():
     analyze_signal(name, x, fs_measured)
@@ -171,4 +234,12 @@ plt.close()
 
 print()
 print("Analysis complete.")
-print("Look at psd_accel_mag.png, psd_gyro_mag.png, psd_yaw_deg.png, psd_pitch_deg.png, psd_roll_deg.png")
+print("Generated files:")
+print(f"  {filename}")
+print("  acceleration_time.png")
+print("  orientation_time.png")
+print("  psd_accel_mag.png")
+print("  psd_gyro_mag.png")
+print("  psd_yaw_deg.png")
+print("  psd_pitch_deg.png")
+print("  psd_roll_deg.png")

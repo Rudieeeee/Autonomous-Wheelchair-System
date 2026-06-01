@@ -24,6 +24,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'cmd_vel_to_joystick = navigation.cmd_vel_to_joystick:main',
         ],
     },
 )

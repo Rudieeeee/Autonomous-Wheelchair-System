@@ -1,0 +1,222 @@
+[0.567s] DEBUG:colcon:Command line arguments: ['/usr/bin/colcon', 'build', '--symlink-install', '--base-paths', '.', 'sllidar_ros2', 'ros2_laser_scan_merger']
+[0.568s] DEBUG:colcon:Parsed command line arguments: Namespace(log_base=None, log_level=None, verb_name='build', build_base='build', install_base='install', merge_install=False, symlink_install=True, test_result_base=None, continue_on_error=False, executor='parallel', parallel_workers=20, event_handlers=None, ignore_user_meta=False, metas=['./colcon.meta'], base_paths=['.', 'sllidar_ros2', 'ros2_laser_scan_merger'], packages_ignore=None, packages_ignore_regex=None, paths=None, packages_up_to=None, packages_up_to_regex=None, packages_above=None, packages_above_and_dependencies=None, packages_above_depth=None, packages_select_by_dep=None, packages_skip_by_dep=None, packages_skip_up_to=None, packages_select_build_failed=False, packages_skip_build_finished=False, packages_select_test_failures=False, packages_skip_test_passed=False, packages_select=None, packages_skip=None, packages_select_regex=None, packages_skip_regex=None, packages_start=None, packages_end=None, allow_overriding=[], cmake_args=None, cmake_target=None, cmake_target_skip_unavailable=False, cmake_clean_cache=False, cmake_clean_first=False, cmake_force_configure=False, ament_cmake_args=None, catkin_cmake_args=None, catkin_skip_building_tests=False, verb_parser=<colcon_defaults.argument_parser.defaults.DefaultArgumentsDecorator object at 0x7a067a374ec0>, verb_extension=<colcon_core.verb.build.BuildVerb object at 0x7a067a374d40>, main=<bound method BuildVerb.main of <colcon_core.verb.build.BuildVerb object at 0x7a067a374d40>>)
+[0.659s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) check parameters
+[0.659s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) check parameters
+[0.660s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) check parameters
+[0.660s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) check parameters
+[0.660s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) discover
+[0.660s] INFO:colcon.colcon_core.package_discovery:Crawling recursively for packages in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping', '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2', '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/ros2_laser_scan_merger'
+[0.660s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ignore', 'ignore_ament_install']
+[0.660s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore'
+[0.660s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore_ament_install'
+[0.660s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_pkg']
+[0.660s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_pkg'
+[0.660s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_meta']
+[0.660s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_meta'
+[0.660s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ros']
+[0.660s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ros'
+[0.712s] DEBUG:colcon.colcon_core.package_identification:Package '.' with type 'ros.ament_python' and name 'map_generator'
+[0.712s] Level 1:colcon.colcon_core.package_identification:_identify(sllidar_ros2) by extensions ['ignore', 'ignore_ament_install']
+[0.712s] Level 1:colcon.colcon_core.package_identification:_identify(sllidar_ros2) by extension 'ignore'
+[0.713s] Level 1:colcon.colcon_core.package_identification:_identify(sllidar_ros2) by extension 'ignore_ament_install'
+[0.713s] Level 1:colcon.colcon_core.package_identification:_identify(sllidar_ros2) by extensions ['colcon_pkg']
+[0.713s] Level 1:colcon.colcon_core.package_identification:_identify(sllidar_ros2) by extension 'colcon_pkg'
+[0.713s] Level 1:colcon.colcon_core.package_identification:_identify(sllidar_ros2) by extensions ['colcon_meta']
+[0.713s] Level 1:colcon.colcon_core.package_identification:_identify(sllidar_ros2) by extension 'colcon_meta'
+[0.713s] Level 1:colcon.colcon_core.package_identification:_identify(sllidar_ros2) by extensions ['ros']
+[0.713s] Level 1:colcon.colcon_core.package_identification:_identify(sllidar_ros2) by extension 'ros'
+[0.715s] DEBUG:colcon.colcon_core.package_identification:Package 'sllidar_ros2' with type 'ros.ament_cmake' and name 'sllidar_ros2'
+[0.715s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_laser_scan_merger) by extensions ['ignore', 'ignore_ament_install']
+[0.715s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_laser_scan_merger) by extension 'ignore'
+[0.715s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_laser_scan_merger) by extension 'ignore_ament_install'
+[0.715s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_laser_scan_merger) by extensions ['colcon_pkg']
+[0.716s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_laser_scan_merger) by extension 'colcon_pkg'
+[0.716s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_laser_scan_merger) by extensions ['colcon_meta']
+[0.716s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_laser_scan_merger) by extension 'colcon_meta'
+[0.716s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_laser_scan_merger) by extensions ['ros']
+[0.716s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_laser_scan_merger) by extension 'ros'
+[0.718s] DEBUG:colcon.colcon_core.package_identification:Package 'ros2_laser_scan_merger' with type 'ros.ament_cmake' and name 'ros2_laser_scan_merger'
+[0.718s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) using defaults
+[0.756s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) check parameters
+[0.756s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) discover
+[0.762s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 439 installed packages in /opt/ros/jazzy
+[0.763s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) using defaults
+[0.821s] Level 5:colcon.colcon_core.verb:set package 'ros2_laser_scan_merger' build argument 'cmake_args' from command line to 'None'
+[0.821s] Level 5:colcon.colcon_core.verb:set package 'ros2_laser_scan_merger' build argument 'cmake_target' from command line to 'None'
+[0.821s] Level 5:colcon.colcon_core.verb:set package 'ros2_laser_scan_merger' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.821s] Level 5:colcon.colcon_core.verb:set package 'ros2_laser_scan_merger' build argument 'cmake_clean_cache' from command line to 'False'
+[0.821s] Level 5:colcon.colcon_core.verb:set package 'ros2_laser_scan_merger' build argument 'cmake_clean_first' from command line to 'False'
+[0.821s] Level 5:colcon.colcon_core.verb:set package 'ros2_laser_scan_merger' build argument 'cmake_force_configure' from command line to 'False'
+[0.821s] Level 5:colcon.colcon_core.verb:set package 'ros2_laser_scan_merger' build argument 'ament_cmake_args' from command line to 'None'
+[0.821s] Level 5:colcon.colcon_core.verb:set package 'ros2_laser_scan_merger' build argument 'catkin_cmake_args' from command line to 'None'
+[0.821s] Level 5:colcon.colcon_core.verb:set package 'ros2_laser_scan_merger' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.821s] DEBUG:colcon.colcon_core.verb:Building package 'ros2_laser_scan_merger' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/ros2_laser_scan_merger', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger', 'merge_install': False, 'path': '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/ros2_laser_scan_merger', 'symlink_install': True, 'test_result_base': None}
+[0.821s] Level 5:colcon.colcon_core.verb:set package 'sllidar_ros2' build argument 'cmake_args' from command line to 'None'
+[0.821s] Level 5:colcon.colcon_core.verb:set package 'sllidar_ros2' build argument 'cmake_target' from command line to 'None'
+[0.821s] Level 5:colcon.colcon_core.verb:set package 'sllidar_ros2' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.821s] Level 5:colcon.colcon_core.verb:set package 'sllidar_ros2' build argument 'cmake_clean_cache' from command line to 'False'
+[0.822s] Level 5:colcon.colcon_core.verb:set package 'sllidar_ros2' build argument 'cmake_clean_first' from command line to 'False'
+[0.822s] Level 5:colcon.colcon_core.verb:set package 'sllidar_ros2' build argument 'cmake_force_configure' from command line to 'False'
+[0.822s] Level 5:colcon.colcon_core.verb:set package 'sllidar_ros2' build argument 'ament_cmake_args' from command line to 'None'
+[0.822s] Level 5:colcon.colcon_core.verb:set package 'sllidar_ros2' build argument 'catkin_cmake_args' from command line to 'None'
+[0.822s] Level 5:colcon.colcon_core.verb:set package 'sllidar_ros2' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.822s] DEBUG:colcon.colcon_core.verb:Building package 'sllidar_ros2' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2', 'merge_install': False, 'path': '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2', 'symlink_install': True, 'test_result_base': None}
+[0.822s] Level 5:colcon.colcon_core.verb:set package 'map_generator' build argument 'cmake_args' from command line to 'None'
+[0.822s] Level 5:colcon.colcon_core.verb:set package 'map_generator' build argument 'cmake_target' from command line to 'None'
+[0.822s] Level 5:colcon.colcon_core.verb:set package 'map_generator' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.822s] Level 5:colcon.colcon_core.verb:set package 'map_generator' build argument 'cmake_clean_cache' from command line to 'False'
+[0.822s] Level 5:colcon.colcon_core.verb:set package 'map_generator' build argument 'cmake_clean_first' from command line to 'False'
+[0.822s] Level 5:colcon.colcon_core.verb:set package 'map_generator' build argument 'cmake_force_configure' from command line to 'False'
+[0.822s] Level 5:colcon.colcon_core.verb:set package 'map_generator' build argument 'ament_cmake_args' from command line to 'None'
+[0.822s] Level 5:colcon.colcon_core.verb:set package 'map_generator' build argument 'catkin_cmake_args' from command line to 'None'
+[0.822s] Level 5:colcon.colcon_core.verb:set package 'map_generator' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.822s] DEBUG:colcon.colcon_core.verb:Building package 'map_generator' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator', 'merge_install': False, 'path': '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping', 'symlink_install': True, 'test_result_base': None}
+[0.822s] INFO:colcon.colcon_core.executor:Executing jobs using 'parallel' executor
+[0.824s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete
+[0.824s] INFO:colcon.colcon_ros.task.ament_cmake.build:Building ROS package in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/ros2_laser_scan_merger' with build type 'ament_cmake'
+[0.824s] INFO:colcon.colcon_cmake.task.cmake.build:Building CMake package in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/ros2_laser_scan_merger'
+[0.832s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_core.shell.bat': Not used on non-Windows systems
+[0.832s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.832s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.837s] INFO:colcon.colcon_ros.task.ament_cmake.build:Building ROS package in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2' with build type 'ament_cmake'
+[0.837s] INFO:colcon.colcon_cmake.task.cmake.build:Building CMake package in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2'
+[0.838s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.838s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.849s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/ros2_laser_scan_merger': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/ros2_laser_scan_merger -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger
+[0.858s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2 -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2
+[11.643s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/sllidar_ros2 -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2
+[11.645s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --build /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2 -- -j20 -l20
+[21.691s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --build /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2 -- -j20 -l20
+[21.703s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --install /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2
+[22.193s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(sllidar_ros2)
+[22.194s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --install /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2
+[22.217s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2' for CMake module files
+[22.217s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2' for CMake config files
+[22.218s] Level 1:colcon.colcon_core.shell:create_environment_hook('sllidar_ros2', 'cmake_prefix_path')
+[22.218s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/hook/cmake_prefix_path.ps1'
+[22.219s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/hook/cmake_prefix_path.dsv'
+[22.220s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/hook/cmake_prefix_path.sh'
+[22.222s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/lib'
+[22.222s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/bin'
+[22.222s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/lib/pkgconfig/sllidar_ros2.pc'
+[22.223s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/lib/python3.12/site-packages'
+[22.223s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/bin'
+[22.223s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/package.ps1'
+[22.225s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/package.dsv'
+[22.226s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/package.sh'
+[22.227s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/package.bash'
+[22.228s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/package.zsh'
+[22.230s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/colcon-core/packages/sllidar_ros2)
+[22.231s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(sllidar_ros2)
+[22.231s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2' for CMake module files
+[22.232s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2' for CMake config files
+[22.232s] Level 1:colcon.colcon_core.shell:create_environment_hook('sllidar_ros2', 'cmake_prefix_path')
+[22.232s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/hook/cmake_prefix_path.ps1'
+[22.233s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/hook/cmake_prefix_path.dsv'
+[22.233s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/hook/cmake_prefix_path.sh'
+[22.234s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/lib'
+[22.234s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/bin'
+[22.234s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/lib/pkgconfig/sllidar_ros2.pc'
+[22.234s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/lib/python3.12/site-packages'
+[22.235s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/bin'
+[22.235s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/package.ps1'
+[22.236s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/package.dsv'
+[22.236s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/package.sh'
+[22.237s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/package.bash'
+[22.237s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/sllidar_ros2/package.zsh'
+[22.237s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2/share/colcon-core/packages/sllidar_ros2)
+[195.329s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/ros2_laser_scan_merger' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/ros2_laser_scan_merger -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger
+[195.331s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/ros2_laser_scan_merger': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --build /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/ros2_laser_scan_merger -- -j20 -l20
+[210.874s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/ros2_laser_scan_merger' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --build /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/ros2_laser_scan_merger -- -j20 -l20
+[210.876s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/ros2_laser_scan_merger': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --install /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/ros2_laser_scan_merger
+[211.108s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(ros2_laser_scan_merger)
+[211.108s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/ros2_laser_scan_merger' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --install /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/ros2_laser_scan_merger
+[211.109s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger' for CMake module files
+[211.110s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger' for CMake config files
+[211.110s] Level 1:colcon.colcon_core.shell:create_environment_hook('ros2_laser_scan_merger', 'cmake_prefix_path')
+[211.110s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/share/ros2_laser_scan_merger/hook/cmake_prefix_path.ps1'
+[211.111s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/share/ros2_laser_scan_merger/hook/cmake_prefix_path.dsv'
+[211.112s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/share/ros2_laser_scan_merger/hook/cmake_prefix_path.sh'
+[211.112s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/lib'
+[211.112s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/bin'
+[211.112s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/lib/pkgconfig/ros2_laser_scan_merger.pc'
+[211.113s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/lib/python3.12/site-packages'
+[211.113s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/bin'
+[211.113s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/share/ros2_laser_scan_merger/package.ps1'
+[211.114s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/share/ros2_laser_scan_merger/package.dsv'
+[211.115s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/share/ros2_laser_scan_merger/package.sh'
+[211.115s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/share/ros2_laser_scan_merger/package.bash'
+[211.115s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/share/ros2_laser_scan_merger/package.zsh'
+[211.116s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/share/colcon-core/packages/ros2_laser_scan_merger)
+[211.117s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(ros2_laser_scan_merger)
+[211.117s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger' for CMake module files
+[211.117s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger' for CMake config files
+[211.118s] Level 1:colcon.colcon_core.shell:create_environment_hook('ros2_laser_scan_merger', 'cmake_prefix_path')
+[211.118s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/share/ros2_laser_scan_merger/hook/cmake_prefix_path.ps1'
+[211.119s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/share/ros2_laser_scan_merger/hook/cmake_prefix_path.dsv'
+[211.119s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/share/ros2_laser_scan_merger/hook/cmake_prefix_path.sh'
+[211.120s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/lib'
+[211.120s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/bin'
+[211.120s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/lib/pkgconfig/ros2_laser_scan_merger.pc'
+[211.120s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/lib/python3.12/site-packages'
+[211.121s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/bin'
+[211.121s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/share/ros2_laser_scan_merger/package.ps1'
+[211.122s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/share/ros2_laser_scan_merger/package.dsv'
+[211.122s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/share/ros2_laser_scan_merger/package.sh'
+[211.123s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/share/ros2_laser_scan_merger/package.bash'
+[211.123s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/share/ros2_laser_scan_merger/package.zsh'
+[211.124s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger/share/colcon-core/packages/ros2_laser_scan_merger)
+[211.124s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping' with build type 'ament_python'
+[211.124s] Level 1:colcon.colcon_core.shell:create_environment_hook('map_generator', 'ament_prefix_path')
+[211.125s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/hook/ament_prefix_path.ps1'
+[211.127s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/hook/ament_prefix_path.dsv'
+[211.127s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/hook/ament_prefix_path.sh'
+[211.128s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[211.128s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[211.742s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping'
+[211.742s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[211.742s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[213.475s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator': AMENT_PREFIX_PATH=/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2:/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2:/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger:${CMAKE_PREFIX_PATH} PYTHONPATH=/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/build --no-deps symlink_data
+[214.143s] Level 1:colcon.colcon_core.shell:create_environment_hook('map_generator', 'pythonpath_develop')
+[214.143s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/share/map_generator/hook/pythonpath_develop.ps1'
+[214.144s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator' returned '0': AMENT_PREFIX_PATH=/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2:/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/sllidar_ros2:/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/ros2_laser_scan_merger:${CMAKE_PREFIX_PATH} PYTHONPATH=/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/build --no-deps symlink_data
+[214.145s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/share/map_generator/hook/pythonpath_develop.dsv'
+[214.145s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/share/map_generator/hook/pythonpath_develop.sh'
+[214.146s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator' for CMake module files
+[214.147s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator' for CMake config files
+[214.147s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/lib'
+[214.147s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/bin'
+[214.147s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/lib/pkgconfig/map_generator.pc'
+[214.148s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/lib/python3.12/site-packages'
+[214.148s] Level 1:colcon.colcon_core.shell:create_environment_hook('map_generator', 'pythonpath')
+[214.148s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/hook/pythonpath.ps1'
+[214.149s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/hook/pythonpath.dsv'
+[214.149s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/hook/pythonpath.sh'
+[214.150s] Level 1:colcon.colcon_core.environment:checking '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/bin'
+[214.150s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(map_generator)
+[214.150s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/package.ps1'
+[214.151s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/package.dsv'
+[214.151s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/package.sh'
+[214.152s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/package.bash'
+[214.152s] INFO:colcon.colcon_core.shell:Creating package script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/package.zsh'
+[214.152s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/colcon-core/packages/map_generator)
+[214.153s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:closing loop
+[214.154s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:loop closed
+[214.154s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete finished with '0'
+[214.154s] DEBUG:colcon.colcon_core.event_reactor:joining thread
+[214.364s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.notify_send': Could not find 'notify-send'
+[214.365s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.terminal_notifier': Not used on non-Darwin systems
+[214.365s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.win32': Not used on non-Windows systems
+[214.365s] INFO:colcon.colcon_notification.desktop_notification:Sending desktop notification using 'notify2'
+[214.382s] DEBUG:colcon.colcon_notification.desktop_notification.notify2:Failed to initialize notify2: org.freedesktop.DBus.Error.ServiceUnknown: The name org.freedesktop.Notifications was not provided by any .service files
+[214.382s] DEBUG:colcon.colcon_core.event_reactor:joined thread
+[214.383s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/local_setup.ps1'
+[214.385s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/_local_setup_util_ps1.py'
+[214.387s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.ps1'
+[214.389s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/local_setup.sh'
+[214.390s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/_local_setup_util_sh.py'
+[214.390s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.sh'
+[214.392s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/local_setup.bash'
+[214.393s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash'
+[214.396s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/local_setup.zsh'
+[214.398s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.zsh'

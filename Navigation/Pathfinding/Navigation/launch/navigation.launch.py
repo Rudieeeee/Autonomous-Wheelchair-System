@@ -31,8 +31,6 @@ def generate_launch_description():
         'navigation.rviz',
     ])
 
-    # New localization launch:
-    # This starts sensors, map_server, AMCL, and localization lifecycle manager.
     localization_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             FindPackageShare('localization'),
@@ -94,6 +92,36 @@ def generate_launch_description():
         ],
     )
 
+    cmd_vel_to_joystick = Node(
+        package='navigation',
+        executable='cmd_vel_to_joystick',
+        name='cmd_vel_to_joystick',
+        output='screen',
+        parameters=[
+            {
+                'cmd_vel_topic': '/cmd_vel',
+                'joystick_topic': '/joystick_cmd',
+
+                # From your Nav2 YAML:
+                # velocity_smoother max_velocity: [0.25, 0.0, 0.5]
+                'max_linear_speed': 0.25,
+                'max_angular_speed': 0.5,
+
+                # Change if direction is reversed
+                'invert_x': False,
+                'invert_y': False,
+
+                # Safety/settings
+                'deadzone_percent': 3,
+                'timeout_seconds': 0.5,
+                'publish_rate_hz': 20.0,
+
+                # If no /cmd_vel publisher exists, publish nothing
+                'send_nothing_without_cmd_vel_publisher': True,
+            }
+        ],
+    )
+
     lifecycle_manager_navigation = Node(
         package='nav2_lifecycle_manager',
         executable='lifecycle_manager',
@@ -120,6 +148,7 @@ def generate_launch_description():
         name='rviz',
         output='screen',
         arguments=['-d', rviz_config],
+        condition=None,
     )
 
     delayed_navigation = TimerAction(
@@ -130,6 +159,7 @@ def generate_launch_description():
             bt_navigator,
             behavior_server,
             velocity_smoother,
+            cmd_vel_to_joystick,
             lifecycle_manager_navigation,
         ],
     )
@@ -167,7 +197,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'arduino_port',
             default_value='/dev/arduino_wheelchair',
-            description='Serial port for the Arduino sensor node.',
+            description='Serial port for the Arduino sensor node and serial joystick output.',
         ),
 
         DeclareLaunchArgument(
