@@ -452,18 +452,21 @@ class ArduinoSensorNode(Node):
         self.imu_pub.publish(imu_msg)
 
     def destroy_node(self):
+        # Important:
+        # Do NOT send J,0,0 during shutdown.
+        # Sending serial data while the launch file is closing can make the
+        # Arduino think that a real joystick command was received.
         if hasattr(self, "serial_port") and self.serial_port.is_open:
             try:
-                if self.enable_joystick_serial_output:
-                    with self.serial_lock:
-                        self.serial_port.write(b"J,0,0\n")
-                        self.serial_port.write(b"J,0,0\n")
-                        self.serial_port.write(b"J,0,0\n")
-            except Exception:
-                pass
-
-            self.serial_port.close()
-            self.get_logger().info("Serial port closed.")
+                with self.serial_lock:
+                    self.serial_port.close()
+                self.get_logger().info(
+                    "Serial port closed without sending shutdown command."
+                )
+            except Exception as error:
+                self.get_logger().warn(
+                    f"Error while closing serial port: {error}"
+                )
 
         super().destroy_node()
 

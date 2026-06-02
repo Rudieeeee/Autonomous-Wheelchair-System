@@ -111,13 +111,49 @@ def generate_launch_description():
                 'invert_x': False,
                 'invert_y': False,
 
-                # Safety/settings
+                # Normal safety/settings
                 'deadzone_percent': 3,
                 'timeout_seconds': 0.5,
                 'publish_rate_hz': 20.0,
 
                 # If no /cmd_vel publisher exists, publish nothing
                 'send_nothing_without_cmd_vel_publisher': True,
+
+                # AMCL safety gate
+                # Normal Nav2 movement is only allowed when /amcl_pose is accurate.
+                'require_accurate_amcl': True,
+                'amcl_pose_topic': '/amcl_pose',
+
+                # Covariance limits:
+                # sqrt(0.04) = 0.20 m position standard deviation
+                'max_x_covariance': 0.04,
+                'max_y_covariance': 0.04,
+
+                # sqrt(0.03) = 0.173 rad = about 10 degrees
+                'max_yaw_covariance': 0.03,
+
+                # Require multiple good AMCL messages before allowing Nav2 movement
+                'min_good_amcl_messages': 5,
+
+                # Increased from 1.0 to 10.0 because AMCL may not publish every second
+                # when the robot is standing still.
+                'amcl_timeout_seconds': 10.0,
+
+                # Command sent while AMCL is uncertain.
+                # You requested [64, 0].
+                # This will only be sent if the full laser scan is clear.
+                'amcl_block_joystick_x': 64,
+                'amcl_block_joystick_y': 0,
+
+                # Obstacle safety gate for the AMCL-uncertain command
+                'use_obstacle_gate': True,
+                'scan_topic': '/scan',
+
+                # Check the complete laser scan, not only the front sector
+                'full_scan_stop_distance_m': 0.45,
+
+                # If scan data is older than this, send [0, 0]
+                'scan_timeout_seconds': 0.5,
             }
         ],
     )
@@ -177,7 +213,7 @@ def generate_launch_description():
             'map',
             default_value=(
                 '/home/rudrh/Autonomous-Wheelchair-System/'
-                'Other-Files/GeneralData/Maps/hall_h_map.yaml'
+                'Other-Files/GeneralData/Maps/hall_l_map.yaml'
             ),
             description='Full path to the saved map YAML file.',
         ),

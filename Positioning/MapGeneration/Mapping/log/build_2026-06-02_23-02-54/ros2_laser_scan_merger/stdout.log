@@ -25,26 +25,6 @@
 -- Using RMW implementation 'rmw_fastrtps_cpp' as default
 -- Found sensor_msgs: 5.3.7 (/opt/ros/jazzy/share/sensor_msgs/cmake)
 -- Found pcl_conversions: 2.6.4 (/opt/ros/jazzy/share/pcl_conversions/cmake)
-[33mCMake Warning (dev) at /usr/lib/x86_64-linux-gnu/cmake/pcl/Modules/FindFLANN.cmake:45 (find_package):
-  Policy CMP0144 is not set: find_package uses upper-case <PACKAGENAME>_ROOT
-  variables.  Run "cmake --help-policy CMP0144" for policy details.  Use the
-  cmake_policy command to set the policy and suppress this warning.
-
-  CMake variable FLANN_ROOT is set to:
-
-    /usr
-
-  For compatibility, find_package is ignoring the variable, but code in a
-  .cmake module might still use it.
-Call Stack (most recent call first):
-  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:261 (find_package)
-  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:306 (find_flann)
-  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:570 (find_external_library)
-  /opt/ros/jazzy/share/pcl_conversions/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
-  /opt/ros/jazzy/share/pcl_conversions/cmake/pcl_conversionsConfig.cmake:41 (include)
-  CMakeLists.txt:23 (find_package)
-This warning is for project developers.  Use -Wno-dev to suppress it.
-[0m
 -- Found flann version 1.9.2
 -- Found OpenMP_CXX: -fopenmp (found version "4.5") 
 -- Found OpenMP: TRUE (found version "4.5") found components: CXX 
@@ -90,18 +70,6 @@ This warning is for project developers.  Use -Wno-dev to suppress it.
 -- Found Eigen3: TRUE (found version "3.4.0") 
 -- Ensuring Eigen3 include directory is part of orocos-kdl CMake target
 -- Found Boost: /usr/lib/x86_64-linux-gnu/cmake/Boost-1.83.0/BoostConfig.cmake (found version "1.83.0") found components: system 
-[33mCMake Warning (dev) at CMakeLists.txt:29 (find_package):
-  Policy CMP0074 is not set: find_package uses <PackageName>_ROOT variables.
-  Run "cmake --help-policy CMP0074" for policy details.  Use the cmake_policy
-  command to set the policy and suppress this warning.
-
-  CMake variable PCL_ROOT is set to:
-
-    /usr
-
-  For compatibility, CMake is ignoring the variable.
-This warning is for project developers.  Use -Wno-dev to suppress it.
-[0m
 -- Found ament_lint_auto: 0.17.5 (/opt/ros/jazzy/share/ament_lint_auto/cmake)
 -- Added test 'copyright' to check source files copyright and LICENSE
 -- Added test 'cppcheck' to perform static code analysis on C / C++ code
@@ -116,17 +84,10 @@ This warning is for project developers.  Use -Wno-dev to suppress it.
 -- Added test 'uncrustify' to check C / C++ code style
 -- Configured uncrustify additional arguments: 
 -- Added test 'xmllint' to check XML markup files
--- Configuring done (194.3s)
+-- Configuring done (113.3s)
 -- Generating done (0.1s)
 -- Build files have been written to: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/ros2_laser_scan_merger
 [ 50%] [32mBuilding CXX object CMakeFiles/ros2_laser_scan_merger.dir/src/main.cpp.o[0m
-[01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/ros2_laser_scan_merger/src/main.cpp:[m[K In member function ‘[01m[Kvoid scanMerger::[01;32m[Kupdate_point_cloud_rgb[m[K()[m[K’:
-[01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/ros2_laser_scan_merger/src/main.cpp:76:57:[m[K [01;35m[Kwarning: [m[Kcomparison of integer expressions of different signedness: ‘[01m[Kint[m[K’ and ‘[01m[Kstd::vector<float>::size_type[m[K’ {aka ‘[01m[Klong unsigned int[m[K’} [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wsign-compare-Wsign-compare]8;;[m[K]
-   76 |       for (float i = temp_min_; i <= temp_max_ && [01;35m[Kcount < laser1_->ranges.size()[m[K;
-      |                                                   [01;35m[K~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~[m[K
-[01m[K/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/ros2_laser_scan_merger/src/main.cpp:158:57:[m[K [01;35m[Kwarning: [m[Kcomparison of integer expressions of different signedness: ‘[01m[Kint[m[K’ and ‘[01m[Kstd::vector<float>::size_type[m[K’ {aka ‘[01m[Klong unsigned int[m[K’} [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wsign-compare-Wsign-compare]8;;[m[K]
-  158 |       for (float i = temp_min_; i <= temp_max_ && [01;35m[Kcount < laser2_->ranges.size()[m[K;
-      |                                                   [01;35m[K~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~[m[K
 [100%] [32m[1mLinking CXX executable ros2_laser_scan_merger[0m
 [100%] Built target ros2_laser_scan_merger
 -- Install configuration: ""

@@ -1,0 +1,7 @@
+image: hall_l_map.pgm
+mode: trinary
+resolution: 0.050
+origin: [-1.770, -5.156, 0]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.196

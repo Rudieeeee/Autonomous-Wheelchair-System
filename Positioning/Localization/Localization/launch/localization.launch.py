@@ -22,7 +22,7 @@ DEFAULT_MAP = (
     / 'Other-Files'
     / 'GeneralData'
     / 'Maps'
-    / 'hall_h_map.yaml'
+    / 'hall_l_map.yaml'
 )
 
 
