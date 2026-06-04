@@ -10,7 +10,7 @@
 
 const int STANDBY_PIN = 7;
 
-const int leftHallPin = 2;
+const int leftHallPin = 4;
 const int rightHallPin = 3;
 
 // ============================================================
@@ -41,46 +41,64 @@ float lastRollDeg = 0.0f;
 // ============================================================
 
 // Real joystick frame read from wheelchair CAN.
-// Your old sensor code used this full value with extended flag included.
-const uint32_t READ_JOYSTICK_CAN_ID = 0x82000000;
+const uint32_t READ_JOYSTICK_CAN_ID_1 = 0x82000300;
+const uint32_t READ_JOYSTICK_CAN_ID_2 = 0x82000000;
 
 // Joystick frame to inject.
-// When sending with CanExtendedId(), use clean 29-bit ID.
-const uint32_t SEND_JOYSTICK_CAN_ID = 0x0200400;
+const uint32_t SEND_JOYSTICK_CAN_ID = 0x82000300;
 
-// Profile frame.
-const uint32_t PROFILE_ID = 0x051;
+// Error / knockout frame.
+const uint32_t ERROR_CAN_ID = 0x8C000300;
 
-// Error frame:
-// 0C000300#0000000000000000
-const uint32_t ERROR_CAN_ID = 0x0C000100;
+// Heartbeat frame.
+const uint32_t HEARTBEAT_CAN_ID = 0x83C30F0F;
 
-// Optional speed/profile frame.
-// Disabled by default in loop.
-const uint32_t STEP_CAN_ID = 0x0A040400;
+// Serial frame.
+const uint32_t SERIAL_CAN_ID = 0x8000000E;
+
+// ============================================================
+// CAN Data
+// ============================================================
+
+uint8_t heartbeatData[7] = {
+  0x87, 0x87, 0x87, 0x87, 0x87, 0x87, 0x87
+};
+
+uint8_t serialCanData[8] = {
+  0x15, 0xC0, 0x0D, 0xE7,
+  0x00, 0x00, 0x00, 0x00
+};
+
+uint8_t errorData[8] = {
+  0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00
+};
 
 // ============================================================
 // Timing
 // ============================================================
 
 const unsigned long SENSOR_OUTPUT_PERIOD_MS = 10;
-const unsigned long JOYSTICK_SEND_PERIOD_MS = 10;
-const unsigned long STEP_SEND_PERIOD_MS = 684;
+
+const unsigned long JOYSTICK_SEND_PERIOD_MS   = 10;
+const unsigned long HEARTBEAT_SEND_PERIOD_MS  = 100;
+const unsigned long SERIAL_CAN_SEND_PERIOD_MS = 500;
 
 const unsigned long SERIAL_TIMEOUT_MS = 300;
 const unsigned long SERIAL_SIGN_TIMEOUT_MS = 300;
 const unsigned long REAL_JOY_SIGN_TIMEOUT_MS = 500;
 
-const unsigned long PROFILE_TO_ERROR_DELAY_MS = 50;
+const unsigned long STARTUP_WAIT_MS = 5000;
 
 unsigned long lastSensorOutputMs = 0;
 unsigned long lastJoystickSendMs = 0;
-unsigned long lastStepSendMs = 0;
+unsigned long lastHeartbeatSendMs = 0;
+unsigned long lastSerialCanSendMs = 0;
 
 unsigned long lastSerialCommandMs = 0;
 unsigned long lastRealJoystickMs = 0;
 
-unsigned long profileSentMs = 0;
+unsigned long startupWaitStartMs = 0;
 
 // ============================================================
 // Encoder state
@@ -115,9 +133,6 @@ int realJoyY = 0;
 uint8_t joyXByte = 0x00;
 uint8_t joyYByte = 0x00;
 
-// Optional speed byte.
-uint8_t speedByte = 0x00;
-
 const int deadband = 5;
 
 // ============================================================
@@ -125,13 +140,11 @@ const int deadband = 5;
 // ============================================================
 
 bool canSeen = false;
-bool profileSent = false;
+bool hasReceivedSerialCommand = false;
+
+bool waitingStartupDelay = false;
 bool errorSent = false;
 bool injectionEnabled = false;
-
-// New important flag:
-// Error frame is only allowed after an actual serial J,x,y command was read.
-bool hasReceivedSerialCommand = false;
 
 // ============================================================
 // Serial parser
@@ -307,9 +320,15 @@ void setSerialJoystickCommand(int x, int y) {
 
   lastSerialCommandMs = millis();
 
-  // This is the key flag.
-  // The error frame is only allowed after this becomes true.
   hasReceivedSerialCommand = true;
+
+  // Start startup delay only after CAN has already been seen.
+  if (canSeen && !waitingStartupDelay && !errorSent) {
+    waitingStartupDelay = true;
+    startupWaitStartMs = millis();
+
+    Serial.println("STATUS,serial_received_startup_wait_5s");
+  }
 
   updateEncoderDirectionSource();
 }
@@ -349,14 +368,30 @@ void readCANBus() {
   while (CAN.available()) {
     CanMsg msg = CAN.read();
 
-    // Any CAN frame means bus is alive.
+    // First step: only detect that CAN exists.
     if (!canSeen) {
       canSeen = true;
       Serial.println("STATUS,can_traffic_detected");
+      Serial.println("STATUS,waiting_for_laptop_serial");
+
+      // If laptop serial was already received before CAN,
+      // start the 5 second wait now.
+      if (hasReceivedSerialCommand && !waitingStartupDelay && !errorSent) {
+        waitingStartupDelay = true;
+        startupWaitStartMs = millis();
+
+        Serial.println("STATUS,serial_already_received_startup_wait_5s");
+      }
     }
 
     // Real joystick CAN frame for encoder sign fallback.
-    if (msg.isExtendedId() && msg.id == READ_JOYSTICK_CAN_ID && msg.data_length >= 2) {
+    // Real joystick CAN frame for encoder sign fallback.
+    // Accept either joystick ID for reading only.
+    if (
+      msg.isExtendedId() &&
+      (msg.id == READ_JOYSTICK_CAN_ID_1 || msg.id == READ_JOYSTICK_CAN_ID_2) &&
+      msg.data_length >= 2
+    ) {
       realJoyX = decodeJoystickByte(msg.data[0]);
       realJoyY = decodeJoystickByte(msg.data[1]);
 
@@ -426,46 +461,30 @@ void readSerialJoystick() {
 // ============================================================
 
 void handleStartupSequence() {
+  // Do nothing until CAN traffic has been seen.
   if (!canSeen) {
     return;
   }
 
-  if (!profileSent) {
-    uint8_t profileData[4] = {
-      0x84, 0x00, 0x00, 0x01
-    };
-
-    CanMsg profileMsg(
-      CanStandardId(PROFILE_ID),
-      4,
-      profileData
-    );
-
-    CAN.write(profileMsg);
-
-    profileSent = true;
-    profileSentMs = millis();
-
-    Serial.println("STATUS,profile_sent");
-    Serial.println("STATUS,waiting_for_serial_before_error");
-    return;
-  }
-
-  // Important:
-  // Do not send the error frame until a real serial J,x,y command is received.
+  // Do nothing until laptop serial command J,x,y has been received.
   if (!hasReceivedSerialCommand) {
     return;
   }
 
-  if (profileSent && !errorSent) {
+  // Start 5 second wait once.
+  if (!waitingStartupDelay && !errorSent) {
+    waitingStartupDelay = true;
+    startupWaitStartMs = millis();
+
+    Serial.println("STATUS,startup_wait_5s_started");
+    return;
+  }
+
+  // After 5 seconds, send error frame once.
+  if (waitingStartupDelay && !errorSent) {
     unsigned long nowMs = millis();
 
-    if (nowMs - profileSentMs >= PROFILE_TO_ERROR_DELAY_MS) {
-      uint8_t errorData[8] = {
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00
-      };
-
+    if (nowMs - startupWaitStartMs >= STARTUP_WAIT_MS) {
       CanMsg errorMsg(
         CanExtendedId(ERROR_CAN_ID),
         8,
@@ -475,10 +494,16 @@ void handleStartupSequence() {
       CAN.write(errorMsg);
 
       errorSent = true;
+      waitingStartupDelay = false;
       injectionEnabled = true;
 
-      Serial.println("STATUS,error_sent_after_serial_received");
-      Serial.println("STATUS,joystick_injection_enabled");
+      unsigned long startMs = millis();
+      lastJoystickSendMs = startMs;
+      lastHeartbeatSendMs = startMs;
+      lastSerialCanSendMs = startMs;
+
+      Serial.println("STATUS,error_sent");
+      Serial.println("STATUS,joystick_serial_heartbeat_enabled");
     }
   }
 }
@@ -525,30 +550,48 @@ void sendJoystickCAN() {
   CAN.write(joystickMsg);
 }
 
-void sendStepCANOptional() {
+void sendHeartbeatCAN() {
   if (!injectionEnabled) {
     return;
   }
 
   unsigned long nowMs = millis();
 
-  if (nowMs - lastStepSendMs < STEP_SEND_PERIOD_MS) {
+  if (nowMs - lastHeartbeatSendMs < HEARTBEAT_SEND_PERIOD_MS) {
     return;
   }
 
-  lastStepSendMs = nowMs;
+  lastHeartbeatSendMs = nowMs;
 
-  uint8_t stepData[1] = {
-    speedByte
-  };
-
-  CanMsg stepMsg(
-    CanExtendedId(STEP_CAN_ID),
-    1,
-    stepData
+  CanMsg heartbeatMsg(
+    CanExtendedId(HEARTBEAT_CAN_ID),
+    7,
+    heartbeatData
   );
 
-  CAN.write(stepMsg);
+  CAN.write(heartbeatMsg);
+}
+
+void sendSerialCAN() {
+  if (!injectionEnabled) {
+    return;
+  }
+
+  unsigned long nowMs = millis();
+
+  if (nowMs - lastSerialCanSendMs < SERIAL_CAN_SEND_PERIOD_MS) {
+    return;
+  }
+
+  lastSerialCanSendMs = nowMs;
+
+  CanMsg serialMsg(
+    CanExtendedId(SERIAL_CAN_ID),
+    8,
+    serialCanData
+  );
+
+  CAN.write(serialMsg);
 }
 
 // ============================================================
@@ -752,26 +795,24 @@ void setup() {
 // ============================================================
 
 void loop() {
-  // Keep reading wheelchair CAN.
+  // 1. First keep reading wheelchair CAN.
   readCANBus();
 
-  // Keep reading ROS/Python serial command:
+  // 2. Then read ROS/Python serial command:
   // J,x,y
   readSerialJoystick();
 
-  // After first CAN traffic:
-  // send profile once.
-  // send error only after serial J,x,y has been received.
+  // 3. Startup sequence:
+  // CAN seen -> serial received -> wait 5 seconds -> send error once.
   handleStartupSequence();
 
-  // Send injected joystick command every 10 ms after startup sequence.
+  // 4. After error:
+  // keep sending joystick, serial CAN frame, heartbeat.
   sendJoystickCAN();
+  sendSerialCAN();
+  sendHeartbeatCAN();
 
-  // Optional:
-  // Keep disabled first. Enable only if your wheelchair still needs it.
-  // sendStepCANOptional();
-
-  // Always print sensor data every 10 ms.
+  // 5. Always print sensor data every 10 ms.
   // If BNO failed, yaw/pitch/roll are 0.000.
   outputData();
 }
