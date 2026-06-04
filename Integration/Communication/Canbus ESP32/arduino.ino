@@ -18,11 +18,10 @@ unsigned long node_last_seen[4] = {0, 0, 0, 0};
 bool tof_alive[8] = {false}; // Array for all 8 ToFs (Index 0-7)
 
 // live_matrix mapping:
-// 0: T1, 1: T2, 2: T3 (Node 1 - Front)
-// 3: T4, 4: T5, 5: T6 (Node 3 - Front)
+// 0: T1, 1: T2, 2: T3 (Node 1 - Front Left)
+// 3: T4, 4: T5, 5: T6 (Node 3 - Front Right)
 // 6: T7, 7: T8        (Node 2 - Rear)
 uint16_t live_matrix[8][8]; 
-uint32_t framesReceived = 0;
 
 void printMenu() {
   Serial.println("\n=======================================================");
@@ -144,7 +143,7 @@ void loop() {
     }
     else if (rxId >= 0x401 && rxId <= 0x403) {
       uint8_t nodeIdx = rxId - 0x400;
-      node_last_seen[nodeIdx] = millis();
+      if (nodeIdx <= 3) node_last_seen[nodeIdx] = millis();
 
       if (len >= 4) {
         if (rxId == 0x401) { tof_alive[0] = rxBuf[1]; tof_alive[1] = rxBuf[2]; tof_alive[2] = rxBuf[3]; }

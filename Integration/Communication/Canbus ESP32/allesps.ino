@@ -6,7 +6,7 @@
 
 // ================= NODE CONFIGURATION =================
 // CHANGE THIS NUMBER TO 1, 2, OR 3 BEFORE FLASHING EACH ESP32!
-#define ACTIVE_NODE 1
+#define ACTIVE_NODE 3
 
 // ================= CAN =================
 #define CAN_TX_PIN GPIO_NUM_43
@@ -26,9 +26,9 @@
   #define NUM_TOFS 3
 #elif ACTIVE_NODE == 2
   #define NODE_ID 0x402
-  #define ID_TOF_A 0x170 // Rear ToFs have lower priority IDs
+  #define ID_TOF_A 0x170 // Rear ToFs (Lower Priority ID)
   #define ID_TOF_B 0x180
-  #define ID_TOF_C 0x000 // Unused
+  #define ID_TOF_C 0x000 
   #define NUM_TOFS 2
 #elif ACTIVE_NODE == 3
   #define NODE_ID 0x403
@@ -56,7 +56,6 @@ unsigned long lastUpdate = 0;
 uint16_t d1[64], d2[64], d3[64];
 float f1[64], f2[64], f3[64];
 bool init1=false, init2=false, init3=false;
-bool sA_ok = false, sB_ok = false, sC_ok = false;
 
 uint16_t b1[64], b2[64], b3[64];
 bool calibrated = false;
@@ -66,6 +65,7 @@ uint32_t s1[64], s2[64], s3[64];
 uint16_t calib_samples = 0;
 unsigned long calib_start_time = 0;
 
+// Restored: Your dynamic non-blocking ping!
 bool checkI2C(uint8_t address) {
   Wire.beginTransmission(address);
   return (Wire.endTransmission() == 0);
@@ -159,9 +159,10 @@ void setup() {
   Wire.setClock(400000); 
   Wire.setTimeout(10); 
   
-  if (checkI2C(0x31) && tofA.begin() == 0) sA_ok = true;
-  if (checkI2C(0x32) && tofB.begin() == 0) sB_ok = true;
-  if (NUM_TOFS == 3 && checkI2C(0x33) && tofC.begin() == 0) sC_ok = true;
+  // We call begin() to init them, but we DO NOT lock them out if they are slow to boot!
+  tofA.begin();
+  tofB.begin();
+  if (NUM_TOFS == 3) tofC.begin();
 }
 
 void loop() {
@@ -175,7 +176,11 @@ void loop() {
     else if (system_mode > 0 && rx_msg.identifier == ID_MASTER_PING) {
       twai_message_t tx_msg = rx_msg; tx_msg.identifier = NODE_ID;
       tx_msg.data_length_code = 4; tx_msg.data[0] = system_mode;
-      tx_msg.data[1] = sA_ok ? 1 : 0; tx_msg.data[2] = sB_ok ? 1 : 0; tx_msg.data[3] = sC_ok ? 1 : 0; 
+      
+      // Dynamic Ping: Always checks reality in real-time
+      tx_msg.data[1] = checkI2C(0x31) ? 1 : 0; 
+      tx_msg.data[2] = checkI2C(0x32) ? 1 : 0; 
+      tx_msg.data[3] = (NUM_TOFS == 3 && checkI2C(0x33)) ? 1 : 0; 
       twai_transmit(&tx_msg, pdMS_TO_TICKS(5));
     }
   }
@@ -184,9 +189,9 @@ void loop() {
     lastUpdate = millis();
     
     if (calibrating) {
-      if (sA_ok && tofA.getAllData(d1) == 0) { for(int i=0; i<64; i++) s1[i] += (d1[i]==0?4000:(uint32_t)(d1[i]*cos(vertical_angles[i/8]*PI/180.0))); }
-      if (sB_ok && tofB.getAllData(d2) == 0) { for(int i=0; i<64; i++) s2[i] += (d2[i]==0?4000:(uint32_t)(d2[i]*cos(vertical_angles[i/8]*PI/180.0))); }
-      if (NUM_TOFS == 3 && sC_ok && tofC.getAllData(d3) == 0) { for(int i=0; i<64; i++) s3[i] += (d3[i]==0?4000:(uint32_t)(d3[i]*cos(vertical_angles[i/8]*PI/180.0))); }
+      if (checkI2C(0x31) && tofA.getAllData(d1) == 0) { for(int i=0; i<64; i++) s1[i] += (d1[i]==0?4000:(uint32_t)(d1[i]*cos(vertical_angles[i/8]*PI/180.0))); }
+      if (checkI2C(0x32) && tofB.getAllData(d2) == 0) { for(int i=0; i<64; i++) s2[i] += (d2[i]==0?4000:(uint32_t)(d2[i]*cos(vertical_angles[i/8]*PI/180.0))); }
+      if (NUM_TOFS == 3 && checkI2C(0x33) && tofC.getAllData(d3) == 0) { for(int i=0; i<64; i++) s3[i] += (d3[i]==0?4000:(uint32_t)(d3[i]*cos(vertical_angles[i/8]*PI/180.0))); }
       calib_samples++;
 
       if (millis() - calib_start_time >= 5000) {
@@ -195,9 +200,9 @@ void loop() {
           calibrated = true;
           
           // Send baseline data to Master right before "Done" signal
-          if (sA_ok) transmitBaselineMap(b1, ID_TOF_A);
-          if (sB_ok) transmitBaselineMap(b2, ID_TOF_B);
-          if (NUM_TOFS == 3 && sC_ok) transmitBaselineMap(b3, ID_TOF_C);
+          if (checkI2C(0x31)) transmitBaselineMap(b1, ID_TOF_A);
+          if (checkI2C(0x32)) transmitBaselineMap(b2, ID_TOF_B);
+          if (NUM_TOFS == 3 && checkI2C(0x33)) transmitBaselineMap(b3, ID_TOF_C);
         }
         calibrating = false;
         twai_message_t done_msg; done_msg.identifier = ID_CALIB_STAT; done_msg.extd = 0; done_msg.rtr = 0; done_msg.data_length_code = 1; done_msg.data[0] = 2;
@@ -205,9 +210,10 @@ void loop() {
       }
     }
     else {
-      if (sA_ok) processAndTransmitMatrix(tofA, d1, f1, init1, ID_TOF_A, b1);
-      if (sB_ok) processAndTransmitMatrix(tofB, d2, f2, init2, ID_TOF_B, b2);
-      if (NUM_TOFS == 3 && sC_ok) processAndTransmitMatrix(tofC, d3, f3, init3, ID_TOF_C, b3);
+      // Dynamic Execution: Only fetch data if the hardware ping says it's physically there
+      if (checkI2C(0x31)) processAndTransmitMatrix(tofA, d1, f1, init1, ID_TOF_A, b1);
+      if (checkI2C(0x32)) processAndTransmitMatrix(tofB, d2, f2, init2, ID_TOF_B, b2);
+      if (NUM_TOFS == 3 && checkI2C(0x33)) processAndTransmitMatrix(tofC, d3, f3, init3, ID_TOF_C, b3);
     }
   }
 }
