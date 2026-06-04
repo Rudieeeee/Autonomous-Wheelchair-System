@@ -2,6 +2,7 @@
 
 import math
 import threading
+import time
 import serial
 
 import rclpy
@@ -57,6 +58,15 @@ class ArduinoSensorNode(Node):
         self.declare_parameter("baud_rate", 115200)
         self.declare_parameter("timer_period_s", 0.01)
 
+        # Restart safety:
+        # When the launch is stopped, the Arduino can keep sending DATA lines.
+        # On the next start, old unread serial lines can still be in the OS/USB buffer.
+        # Clearing the serial buffers and skipping a few fresh lines prevents stale
+        # data from becoming the new odometry reference.
+        self.declare_parameter("clear_serial_buffers_on_start", True)
+        self.declare_parameter("serial_startup_delay_s", 2.0)
+        self.declare_parameter("startup_skip_lines", 20)
+
         self.declare_parameter("wheel_diameter_m", 0.35)
         self.declare_parameter("magnets_per_wheel", 12)
         self.declare_parameter("wheel_base_m", 0.55)
@@ -82,6 +92,15 @@ class ArduinoSensorNode(Node):
         self.baud_rate = int(self.get_parameter("baud_rate").value)
         self.timer_period_s = float(
             self.get_parameter("timer_period_s").value
+        )
+        self.clear_serial_buffers_on_start = bool(
+            self.get_parameter("clear_serial_buffers_on_start").value
+        )
+        self.serial_startup_delay_s = float(
+            self.get_parameter("serial_startup_delay_s").value
+        )
+        self.startup_skip_lines = int(
+            self.get_parameter("startup_skip_lines").value
         )
 
         self.wheel_diameter_m = float(
@@ -162,6 +181,22 @@ class ArduinoSensorNode(Node):
             )
             raise error
 
+        if self.clear_serial_buffers_on_start:
+            if self.serial_startup_delay_s > 0.0:
+                time.sleep(self.serial_startup_delay_s)
+
+            try:
+                with self.serial_lock:
+                    self.serial_port.reset_input_buffer()
+                    self.serial_port.reset_output_buffer()
+                self.get_logger().info(
+                    "Serial input/output buffers cleared after startup."
+                )
+            except serial.SerialException as error:
+                self.get_logger().warn(
+                    f"Could not clear serial buffers: {error}"
+                )
+
         self.get_logger().info(
             f"Connected to {self.serial_port_name} at {self.baud_rate} baud"
         )
@@ -183,7 +218,10 @@ class ArduinoSensorNode(Node):
             f"magnets_per_wheel={self.magnets_per_wheel}, "
             f"distance_per_tick_m={self.distance_per_tick_m}, "
             f"wheel_base_m={self.wheel_base_m}, "
-            f"use_imu_yaw={self.use_imu_yaw}"
+            f"use_imu_yaw={self.use_imu_yaw}, "
+            f"clear_serial_buffers_on_start={self.clear_serial_buffers_on_start}, "
+            f"serial_startup_delay_s={self.serial_startup_delay_s}, "
+            f"startup_skip_lines={self.startup_skip_lines}"
         )
 
         self.timer = self.create_timer(
@@ -256,6 +294,10 @@ class ArduinoSensorNode(Node):
         line = raw_line.decode("utf-8", errors="ignore").strip()
 
         if not line:
+            return
+
+        if self.startup_skip_lines > 0:
+            self.startup_skip_lines -= 1
             return
 
         if not line.startswith("DATA"):

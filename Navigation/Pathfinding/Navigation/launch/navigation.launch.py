@@ -213,7 +213,7 @@ def generate_launch_description():
             'map',
             default_value=(
                 '/home/rudrh/Autonomous-Wheelchair-System/'
-                'Other-Files/GeneralData/Maps/hall_l_map.yaml'
+                'Other-Files/GeneralData/Maps/hall_m_map.yaml'
             ),
             description='Full path to the saved map YAML file.',
         ),

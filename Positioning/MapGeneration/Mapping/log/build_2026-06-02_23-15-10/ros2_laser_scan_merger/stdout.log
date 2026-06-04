@@ -84,7 +84,7 @@
 -- Added test 'uncrustify' to check C / C++ code style
 -- Configured uncrustify additional arguments: 
 -- Added test 'xmllint' to check XML markup files
--- Configuring done (113.3s)
+-- Configuring done (138.3s)
 -- Generating done (0.1s)
 -- Build files have been written to: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/ros2_laser_scan_merger
 [ 50%] [32mBuilding CXX object CMakeFiles/ros2_laser_scan_merger.dir/src/main.cpp.o[0m

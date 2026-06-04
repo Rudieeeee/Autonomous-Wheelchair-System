@@ -25,26 +25,26 @@
 -- Using RMW implementation 'rmw_fastrtps_cpp' as default
 -- Found sensor_msgs: 5.3.7 (/opt/ros/jazzy/share/sensor_msgs/cmake)
 -- Found std_srvs: 5.3.7 (/opt/ros/jazzy/share/std_srvs/cmake)
--- Configuring done (6.0s)
+-- Configuring done (5.3s)
 -- Generating done (0.0s)
 -- Build files have been written to: /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/sllidar_ros2
-[  5%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/arch/linux/net_socket.cpp.o[0m
-[ 10%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/dataunpacker/unpacker/handler_capsules.cpp.o[0m
-[ 15%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/dataunpacker/unpacker/handler_hqnode.cpp.o[0m
-[ 20%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/src/sllidar_node.cpp.o[0m
-[ 25%] [32mBuilding CXX object CMakeFiles/sllidar_client.dir/src/sllidar_client.cpp.o[0m
-[ 30%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/arch/linux/timer.cpp.o[0m
-[ 35%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/dataunpacker/dataunpacker.cpp.o[0m
-[ 40%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/arch/linux/net_serial.cpp.o[0m
-[ 45%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_lidar_driver.cpp.o[0m
-[ 50%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/dataunpacker/unpacker/handler_normalnode.cpp.o[0m
-[ 55%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_async_transceiver.cpp.o[0m
-[ 60%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/rplidar_driver.cpp.o[0m
-[ 65%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_serial_channel.cpp.o[0m
+[ 10%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/arch/linux/timer.cpp.o[0m
+[ 10%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/arch/linux/net_serial.cpp.o[0m
+[ 15%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/dataunpacker/unpacker/handler_capsules.cpp.o[0m
+[ 20%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/rplidar_driver.cpp.o[0m
+[ 25%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/dataunpacker/unpacker/handler_normalnode.cpp.o[0m
+[ 30%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_async_transceiver.cpp.o[0m
+[ 40%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_crc.cpp.o[0m
+[ 45%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/src/sllidar_node.cpp.o[0m
+[ 45%] [32mBuilding CXX object CMakeFiles/sllidar_client.dir/src/sllidar_client.cpp.o[0m
+[ 55%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/dataunpacker/dataunpacker.cpp.o[0m
+[ 55%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/dataunpacker/unpacker/handler_hqnode.cpp.o[0m
+[ 60%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/hal/thread.cpp.o[0m
+[ 65%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_lidar_driver.cpp.o[0m
+[ 70%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/arch/linux/net_socket.cpp.o[0m
 [ 75%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_lidarprotocol_codec.cpp.o[0m
-[ 75%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/hal/thread.cpp.o[0m
-[ 80%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_tcp_channel.cpp.o[0m
-[ 85%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_crc.cpp.o[0m
+[ 80%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_serial_channel.cpp.o[0m
+[ 85%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_tcp_channel.cpp.o[0m
 [ 90%] [32mBuilding CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_udp_channel.cpp.o[0m
 [ 95%] [32m[1mLinking CXX executable sllidar_node[0m
 [ 95%] Built target sllidar_node
