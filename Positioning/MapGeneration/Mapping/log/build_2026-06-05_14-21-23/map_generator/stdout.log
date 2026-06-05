@@ -1,0 +1,39 @@
+running develop
+running egg_info
+creating map_generator.egg-info
+writing map_generator.egg-info/PKG-INFO
+writing dependency_links to map_generator.egg-info/dependency_links.txt
+writing entry points to map_generator.egg-info/entry_points.txt
+writing requirements to map_generator.egg-info/requires.txt
+writing top-level names to map_generator.egg-info/top_level.txt
+writing manifest file 'map_generator.egg-info/SOURCES.txt'
+reading manifest file 'map_generator.egg-info/SOURCES.txt'
+writing manifest file 'map_generator.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/lib/python3.12/site-packages/map-generator.egg-link (link to .)
+Installing arduino_sensor_node script to /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/lib/map_generator
+Installing arduino_sensor_node2 script to /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/lib/map_generator
+Installing lidar_scan_merger script to /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/lib/map_generator
+Installing map_carmen_logger script to /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/lib/map_generator
+
+Installed /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator
+running symlink_data
+creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/ament_index
+creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/ament_index/resource_index
+creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/ament_index/resource_index/packages
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/resource/map_generator -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/ament_index/resource_index/packages
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/package.xml -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator
+creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/launch
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/launch/mapping.launch.py -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/launch
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/launch/sensors.launch2.py -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/launch
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/launch/lidars_merger.launch.py -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/launch
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/launch/sensors.launch.py -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/launch
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/launch/mapping.launch2.py -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/launch
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/launch/mapping_with_log.launch.py -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/launch
+creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/config
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/config/slam_toolbox.yaml -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/config
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/config/sensor_params.yaml -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/config
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/config/ekf.yaml -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/config
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/config/sensor_params2.yaml -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/config
+creating /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/rviz
+symbolically linking /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/map_generator/rviz/mapping.rviz -> /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/map_generator/share/map_generator/rviz

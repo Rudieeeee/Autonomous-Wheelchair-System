@@ -6,174 +6,194 @@
       "type": "node-terminal",
       "request": "launch",
       "preLaunchTask": "Build mapping",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
     },
     {
       "name": "Build and Run ROS2 Mapping EKF",
       "type": "node-terminal",
       "request": "launch",
       "preLaunchTask": "Build mapping",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch2.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch2.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
     },
     {
       "name": "Run ROS2 Lidars Merger",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator lidars_merger.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator lidars_merger.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar'"
     },
     {
       "name": "Run ROS2 Mapping",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
     },
     {
       "name": "Run ROS2 Mapping EKF",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch2.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch2.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
     },
     {
       "name": "Run ROS2 Mapping without RViz",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=false'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=false'"
     },
     {
       "name": "Run ROS2 Mapping EKF without RViz",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch2.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=false'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch2.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=false'"
     },
     {
       "name": "Run ROS2 Mapping and Auto Save Map",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair auto_save_map:=true auto_save_delay:=5.0 save_map:=/home/rudrh/Autonomous-Wheelchair-System/Other-Files/GeneralData/Maps/test_map'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair auto_save_map:=true auto_save_delay:=5.0 save_map:=\"${workspaceFolder}/Other-Files/GeneralData/Maps/test_map\"'"
     },
     {
       "name": "Run ROS2 Mapping EKF and Auto Save Map",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch2.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair auto_save_map:=true auto_save_period:=5.0 save_map:=/home/rudrh/Autonomous-Wheelchair-System/Other-Files/GeneralData/Maps/hall_m_map'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch2.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair auto_save_map:=true auto_save_period:=5.0 save_map:=\"${workspaceFolder}/Other-Files/GeneralData/Maps/tellegen_map\"'"
     },
     {
       "name": "Build and Run ROS2 Sensors",
       "type": "node-terminal",
       "request": "launch",
       "preLaunchTask": "Build mapping",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator sensors.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator sensors.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
     },
     {
       "name": "Run ROS2 Sensors EKF",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator sensors.launch2.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator sensors.launch2.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
     },
     {
       "name": "Run ROS2 Sensors",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator sensors.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator sensors.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
     },
-
     {
       "name": "Build and Run ROS2 Mapping Test",
       "type": "node-terminal",
       "request": "launch",
       "preLaunchTask": "Build mapping_test",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch mapping_test mapping_test.launch.py'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/MappingTest\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch mapping_test mapping_test.launch.py'"
     },
     {
       "name": "Run ROS2 Mapping Test",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch mapping_test mapping_test.launch.py'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/MappingTest\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch mapping_test mapping_test.launch.py'"
     },
     {
       "name": "Run ROS2 Mapping Test without RViz",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch mapping_test mapping_test.launch.py use_rviz:=false'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/MappingTest\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch mapping_test mapping_test.launch.py use_rviz:=false'"
     },
-
     {
       "name": "Build and Run ROS2 Localization Test",
       "type": "node-terminal",
       "request": "launch",
       "preLaunchTask": "Build localization_test",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source install/setup.bash && ros2 launch localization_test localization_test.launch.py'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/Localization/LocalizationTest\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/MappingTest/install/setup.bash\" && source install/setup.bash && ros2 launch localization_test localization_test.launch.py'"
     },
     {
       "name": "Run ROS2 Localization Test",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source install/setup.bash && ros2 launch localization_test localization_test.launch.py'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/Localization/LocalizationTest\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/MappingTest/install/setup.bash\" && source install/setup.bash && ros2 launch localization_test localization_test.launch.py'"
     },
     {
       "name": "Run ROS2 Localization Test without RViz",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source install/setup.bash && ros2 launch localization_test localization_test.launch.py use_rviz:=false'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/Localization/LocalizationTest\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/MappingTest/install/setup.bash\" && source install/setup.bash && ros2 launch localization_test localization_test.launch.py use_rviz:=false'"
     },
-
     {
       "name": "Build and Run ROS2 Navigation Test",
       "type": "node-terminal",
       "request": "launch",
       "preLaunchTask": "Build navigation_test",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/NavigationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/setup.bash && source install/setup.bash && ros2 launch navigation_test navigation_test.launch.py'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Navigation/Pathfinding/NavigationTest\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/MappingTest/install/setup.bash\" && source \"${workspaceFolder}/Positioning/Localization/LocalizationTest/install/setup.bash\" && source install/setup.bash && ros2 launch navigation_test navigation_test.launch.py'"
     },
     {
       "name": "Run ROS2 Navigation Test",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/NavigationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/setup.bash && source install/setup.bash && ros2 launch navigation_test navigation_test.launch.py'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Navigation/Pathfinding/NavigationTest\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/MappingTest/install/setup.bash\" && source \"${workspaceFolder}/Positioning/Localization/LocalizationTest/install/setup.bash\" && source install/setup.bash && ros2 launch navigation_test navigation_test.launch.py'"
     },
     {
       "name": "Run ROS2 Navigation Test without RViz",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/NavigationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/setup.bash && source install/setup.bash && ros2 launch navigation_test navigation_test.launch.py use_rviz:=false'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Navigation/Pathfinding/NavigationTest\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/MappingTest/install/setup.bash\" && source \"${workspaceFolder}/Positioning/Localization/LocalizationTest/install/setup.bash\" && source install/setup.bash && ros2 launch navigation_test navigation_test.launch.py use_rviz:=false'"
     },
     {
       "name": "Build and Run ROS2 Localization",
       "type": "node-terminal",
       "request": "launch",
       "preLaunchTask": "Build localization",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && source install/setup.bash && ros2 launch localization localization.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/Localization/Localization\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && source install/setup.bash && ros2 launch localization localization.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
     },
     {
       "name": "Run ROS2 Localization",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && source install/setup.bash && ros2 launch localization localization.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/Localization/Localization\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && source install/setup.bash && ros2 launch localization localization.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
     },
     {
       "name": "Build and Run ROS2 Navigation",
       "type": "node-terminal",
       "request": "launch",
       "preLaunchTask": "Build localization and navigation",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/setup.bash && source install/setup.bash && ros2 launch navigation navigation.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Navigation/Pathfinding/Navigation\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && source \"${workspaceFolder}/Positioning/Localization/Localization/install/setup.bash\" && source install/setup.bash && ros2 launch navigation navigation.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
     },
     {
       "name": "Run ROS2 Navigation",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/setup.bash && source install/setup.bash && ros2 launch navigation navigation.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Navigation/Pathfinding/Navigation\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && source \"${workspaceFolder}/Positioning/Localization/Localization/install/setup.bash\" && source install/setup.bash && ros2 launch navigation navigation.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair'"
     },
     {
       "name": "Run ROS2 Navigation without RViz",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/setup.bash && source install/setup.bash && ros2 launch navigation navigation.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=false'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Navigation/Pathfinding/Navigation\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && source \"${workspaceFolder}/Positioning/Localization/Localization/install/setup.bash\" && source install/setup.bash && ros2 launch navigation navigation.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=false'"
+    },
+    {
+      "name": "Run ROS2 Navigation while Mapping",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bash -c 'cd \"${workspaceFolder}/Navigation/Pathfinding/Navigation\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && source install/setup.bash && ros2 launch navigation navigation_mapping.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=true'"
+    },
+    {
+      "name": "Run ROS2 Navigation while Mapping without RViz",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bash -c 'cd \"${workspaceFolder}/Navigation/Pathfinding/Navigation\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && source install/setup.bash && ros2 launch navigation navigation_mapping.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=false'"
+    },
+    {
+      "name": "Run ROS2 Navigation while Mapping and Auto Save Map",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bash -c 'cd \"${workspaceFolder}/Navigation/Pathfinding/Navigation\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && source install/setup.bash && ros2 launch navigation navigation_mapping.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=true auto_save_map:=true auto_save_period:=30.0 save_map:=\"${workspaceFolder}/Other-Files/GeneralData/Maps/live_nav_map\"'"
+    },
+    {
+      "name": "Run ROS2 Mapping with Log",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping_with_log.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=true log_file:=/home/rudrh/Autonomous-Wheelchair-System/Other-Files/GeneralData/Logs/mapping_log.txt'"
     },
     {
       "name": "Run ROS2 Localization without RViz",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && source install/setup.bash && ros2 launch localization localization.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=false'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/Localization/Localization\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && source install/setup.bash && ros2 launch localization localization.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=false'"
     }
-
   ]
 }

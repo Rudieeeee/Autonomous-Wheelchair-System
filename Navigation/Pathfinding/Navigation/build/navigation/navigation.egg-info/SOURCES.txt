@@ -1,10 +1,13 @@
 package.xml
 setup.cfg
 setup.py
+config/nav2_mapping_params.yaml
 config/nav2_params.yaml
 launch/navigation.launch.py
+launch/navigation_mapping.launch.py
 navigation/__init__.py
 navigation/cmd_vel_to_joystick.py
+navigation/cmd_vel_to_joystick_mapping.py
 navigation.egg-info/PKG-INFO
 navigation.egg-info/SOURCES.txt
 navigation.egg-info/dependency_links.txt

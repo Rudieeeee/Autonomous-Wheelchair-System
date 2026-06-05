@@ -104,12 +104,12 @@ def generate_launch_description():
             'log_file',
             default_value=(
                 '/home/rudrh/Autonomous-Wheelchair-System/'
-                'Other-Files/GeneralData/lidar.txt'
+                'Other-Files/GeneralData/Logs/mapping_log.txt'
             ),
         ),
-        DeclareLaunchArgument('rate_hz', default_value='50.0'),
-        DeclareLaunchArgument('angle_min', default_value='-1.5707963268'),
-        DeclareLaunchArgument('angle_max', default_value='1.5707963268'),
+        DeclareLaunchArgument('rate_hz', default_value='10.0'),
+        DeclareLaunchArgument('angle_min', default_value='-3.06201518195'),
+        DeclareLaunchArgument('angle_max', default_value='3.06201518195'),
         DeclareLaunchArgument('range_min', default_value='0.1'),
         DeclareLaunchArgument('range_max', default_value='50.0'),
 

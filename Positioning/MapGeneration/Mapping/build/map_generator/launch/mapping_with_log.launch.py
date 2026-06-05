@@ -1,0 +1,1 @@
+/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/launch/mapping_with_log.launch.py

@@ -7,7 +7,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --base-paths . sllidar_ros2 ros2_laser_scan_merger"
+        "cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --base-paths . sllidar_ros2 ros2_laser_scan_merger"
       ],
       "group": {
         "kind": "build",
@@ -21,7 +21,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && rm -rf build install log"
+        "cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && rm -rf build install log"
       ],
       "problemMatcher": []
     },
@@ -41,7 +41,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator sensors.launch.py left_lidar_port:=/dev/ttyUSB0 right_lidar_port:=/dev/ttyUSB1 arduino_port:=/dev/arduino_wheelchair"
+        "cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator sensors.launch.py left_lidar_port:=/dev/ttyUSB0 right_lidar_port:=/dev/ttyUSB1 arduino_port:=/dev/arduino_wheelchair"
       ],
       "problemMatcher": []
     },
@@ -51,7 +51,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/ttyUSB0 right_lidar_port:=/dev/ttyUSB1 arduino_port:=/dev/arduino_wheelchair"
+        "cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/ttyUSB0 right_lidar_port:=/dev/ttyUSB1 arduino_port:=/dev/arduino_wheelchair"
       ],
       "problemMatcher": []
     },
@@ -61,7 +61,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/ttyUSB0 right_lidar_port:=/dev/ttyUSB1 arduino_port:=/dev/arduino_wheelchair use_rviz:=false"
+        "cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/ttyUSB0 right_lidar_port:=/dev/ttyUSB1 arduino_port:=/dev/arduino_wheelchair use_rviz:=false"
       ],
       "problemMatcher": []
     },
@@ -71,7 +71,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/ttyUSB0 right_lidar_port:=/dev/ttyUSB1 arduino_port:=/dev/arduino_wheelchair auto_save_map:=true auto_save_delay:=5.0 save_map:=/home/rudrh/Autonomous-Wheelchair-System/Other-Files/GeneralData/Maps/test_map"
+        "cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch.py left_lidar_port:=/dev/ttyUSB0 right_lidar_port:=/dev/ttyUSB1 arduino_port:=/dev/arduino_wheelchair auto_save_map:=true auto_save_delay:=5.0 save_map:=\"${workspaceFolder}/Other-Files/GeneralData/Maps/test_map\""
       ],
       "problemMatcher": []
     },
@@ -81,7 +81,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && ros2 run nav2_map_server map_saver_cli -f /home/rudrh/Autonomous-Wheelchair-System/Other-Files/GeneralData/Maps/test_map"
+        "source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && ros2 run nav2_map_server map_saver_cli -f \"${workspaceFolder}/Other-Files/GeneralData/Maps/test_map\""
       ],
       "problemMatcher": []
     },
@@ -95,14 +95,13 @@
       ],
       "problemMatcher": []
     },
-
     {
       "label": "Build mapping_test",
       "type": "shell",
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest && source /opt/ros/jazzy/setup.bash && colcon build --packages-select mapping_test --build-base build --install-base install"
+        "cd \"${workspaceFolder}/Positioning/MapGeneration/MappingTest\" && source /opt/ros/jazzy/setup.bash && colcon build --packages-select mapping_test --build-base build --install-base install"
       ],
       "problemMatcher": []
     },
@@ -112,7 +111,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch mapping_test mapping_test.launch.py"
+        "cd \"${workspaceFolder}/Positioning/MapGeneration/MappingTest\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch mapping_test mapping_test.launch.py"
       ],
       "problemMatcher": []
     },
@@ -122,7 +121,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch mapping_test mapping_test.launch.py use_rviz:=false"
+        "cd \"${workspaceFolder}/Positioning/MapGeneration/MappingTest\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch mapping_test mapping_test.launch.py use_rviz:=false"
       ],
       "problemMatcher": []
     },
@@ -132,18 +131,17 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest && rm -rf build install log"
+        "cd \"${workspaceFolder}/Positioning/MapGeneration/MappingTest\" && rm -rf build install log"
       ],
       "problemMatcher": []
     },
-
     {
       "label": "Build localization_test",
       "type": "shell",
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && colcon build --packages-select localization_test --build-base build --install-base install"
+        "cd \"${workspaceFolder}/Positioning/Localization/LocalizationTest\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/MappingTest/install/setup.bash\" && colcon build --packages-select localization_test --build-base build --install-base install"
       ],
       "problemMatcher": []
     },
@@ -153,7 +151,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source install/setup.bash && ros2 launch localization_test localization_test.launch.py"
+        "cd \"${workspaceFolder}/Positioning/Localization/LocalizationTest\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/MappingTest/install/setup.bash\" && source install/setup.bash && ros2 launch localization_test localization_test.launch.py"
       ],
       "problemMatcher": []
     },
@@ -163,7 +161,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source install/setup.bash && ros2 launch localization_test localization_test.launch.py use_rviz:=false"
+        "cd \"${workspaceFolder}/Positioning/Localization/LocalizationTest\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/MappingTest/install/setup.bash\" && source install/setup.bash && ros2 launch localization_test localization_test.launch.py use_rviz:=false"
       ],
       "problemMatcher": []
     },
@@ -173,18 +171,17 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest && rm -rf build install log"
+        "cd \"${workspaceFolder}/Positioning/Localization/LocalizationTest\" && rm -rf build install log"
       ],
       "problemMatcher": []
     },
-
     {
       "label": "Build navigation_test",
       "type": "shell",
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/NavigationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/setup.bash && colcon build --packages-select navigation_test --build-base build --install-base install"
+        "cd \"${workspaceFolder}/Navigation/Pathfinding/NavigationTest\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/MappingTest/install/setup.bash\" && source \"${workspaceFolder}/Positioning/Localization/LocalizationTest/install/setup.bash\" && colcon build --packages-select navigation_test --build-base build --install-base install"
       ],
       "problemMatcher": []
     },
@@ -194,7 +191,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/NavigationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/setup.bash && source install/setup.bash && ros2 launch navigation_test navigation_test.launch.py"
+        "cd \"${workspaceFolder}/Navigation/Pathfinding/NavigationTest\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/MappingTest/install/setup.bash\" && source \"${workspaceFolder}/Positioning/Localization/LocalizationTest/install/setup.bash\" && source install/setup.bash && ros2 launch navigation_test navigation_test.launch.py"
       ],
       "problemMatcher": []
     },
@@ -204,7 +201,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/NavigationTest && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest/install/setup.bash && source install/setup.bash && ros2 launch navigation_test navigation_test.launch.py use_rviz:=false"
+        "cd \"${workspaceFolder}/Navigation/Pathfinding/NavigationTest\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/MappingTest/install/setup.bash\" && source \"${workspaceFolder}/Positioning/Localization/LocalizationTest/install/setup.bash\" && source install/setup.bash && ros2 launch navigation_test navigation_test.launch.py use_rviz:=false"
       ],
       "problemMatcher": []
     },
@@ -214,18 +211,17 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/NavigationTest && rm -rf build install log"
+        "cd \"${workspaceFolder}/Navigation/Pathfinding/NavigationTest\" && rm -rf build install log"
       ],
       "problemMatcher": []
     },
-
     {
       "label": "Build all test packages",
       "type": "shell",
       "command": "bash",
       "args": [
         "-c",
-        "source /opt/ros/jazzy/setup.bash && cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest && colcon build --packages-select mapping_test --build-base build --install-base install && source install/setup.bash && cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/LocalizationTest && colcon build --packages-select localization_test --build-base build --install-base install && source install/setup.bash && cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/NavigationTest && colcon build --packages-select navigation_test --build-base build --install-base install"
+        "source /opt/ros/jazzy/setup.bash && cd \"${workspaceFolder}/Positioning/MapGeneration/MappingTest\" && colcon build --packages-select mapping_test --build-base build --install-base install && source install/setup.bash && cd \"${workspaceFolder}/Positioning/Localization/LocalizationTest\" && colcon build --packages-select localization_test --build-base build --install-base install && source install/setup.bash && cd \"${workspaceFolder}/Navigation/Pathfinding/NavigationTest\" && colcon build --packages-select navigation_test --build-base build --install-base install"
       ],
       "problemMatcher": []
     },
@@ -248,7 +244,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && colcon build --symlink-install --packages-select localization"
+        "cd \"${workspaceFolder}/Positioning/Localization/Localization\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && colcon build --symlink-install --packages-select localization"
       ],
       "problemMatcher": []
     },
@@ -258,7 +254,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization && rm -rf build install log"
+        "cd \"${workspaceFolder}/Positioning/Localization/Localization\" && rm -rf build install log"
       ],
       "problemMatcher": []
     },
@@ -278,7 +274,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && source install/setup.bash && ros2 launch localization localization.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair"
+        "cd \"${workspaceFolder}/Positioning/Localization/Localization\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && source install/setup.bash && ros2 launch localization localization.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair"
       ],
       "problemMatcher": []
     },
@@ -288,7 +284,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/setup.bash && colcon build --symlink-install --packages-select navigation"
+        "cd \"${workspaceFolder}/Navigation/Pathfinding/Navigation\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && source \"${workspaceFolder}/Positioning/Localization/Localization/install/setup.bash\" && colcon build --symlink-install --packages-select navigation"
       ],
       "problemMatcher": []
     },
@@ -298,7 +294,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation && rm -rf build install log"
+        "cd \"${workspaceFolder}/Navigation/Pathfinding/Navigation\" && rm -rf build install log"
       ],
       "problemMatcher": []
     },
@@ -338,7 +334,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/setup.bash && source install/setup.bash && ros2 launch navigation navigation.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair"
+        "cd \"${workspaceFolder}/Navigation/Pathfinding/Navigation\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && source \"${workspaceFolder}/Positioning/Localization/Localization/install/setup.bash\" && source install/setup.bash && ros2 launch navigation navigation.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair"
       ],
       "problemMatcher": []
     },
@@ -348,7 +344,81 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/setup.bash && source install/setup.bash && ros2 launch navigation navigation.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=false"
+        "cd \"${workspaceFolder}/Navigation/Pathfinding/Navigation\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && source \"${workspaceFolder}/Positioning/Localization/Localization/install/setup.bash\" && source install/setup.bash && ros2 launch navigation navigation.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=false"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Build navigation with mapping",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "source /opt/ros/jazzy/setup.bash && cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && colcon build --symlink-install && source install/setup.bash && cd \"${workspaceFolder}/Navigation/Pathfinding/Navigation\" && colcon build --symlink-install"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build navigation mapping only",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd \"${workspaceFolder}/Navigation/Pathfinding/Navigation\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && colcon build --symlink-install --packages-select navigation"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run navigation while mapping",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd \"${workspaceFolder}/Navigation/Pathfinding/Navigation\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && source install/setup.bash && ros2 launch navigation navigation_mapping.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=true"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run navigation while mapping without RViz",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd \"${workspaceFolder}/Navigation/Pathfinding/Navigation\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && source install/setup.bash && ros2 launch navigation navigation_mapping.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=false"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run navigation while mapping and auto save map",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd \"${workspaceFolder}/Navigation/Pathfinding/Navigation\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && source install/setup.bash && ros2 launch navigation navigation_mapping.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=true auto_save_map:=true auto_save_period:=30.0 save_map:=\"${workspaceFolder}/Other-Files/GeneralData/Maps/live_nav_map\""
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Save live navigation mapping map manually",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && ros2 run nav2_map_server map_saver_cli -f \"${workspaceFolder}/Other-Files/GeneralData/Maps/live_nav_map\" --ros-args -p map_subscribe_transient_local:=true"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Kill ROS navigation mapping processes",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "pkill -f \"ros2|rviz2|slam_toolbox|planner_server|controller_server|bt_navigator|behavior_server|velocity_smoother|lifecycle_manager|cmd_vel_to_joystick|sllidar|arduino_sensor_node|ros2_laser_scan_merger|pointcloud_to_laserscan|map_saver\" || true"
       ],
       "problemMatcher": []
     },
@@ -358,7 +428,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization && source /opt/ros/jazzy/setup.bash && source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && source install/setup.bash && ros2 launch localization localization.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=false"
+        "cd \"${workspaceFolder}/Positioning/Localization/Localization\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && source install/setup.bash && ros2 launch localization localization.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=false"
       ],
       "problemMatcher": []
     }
