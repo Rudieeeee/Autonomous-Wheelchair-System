@@ -1,1 +1,0 @@
-/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/launch/sensors.launch2.py

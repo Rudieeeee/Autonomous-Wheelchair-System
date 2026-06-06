@@ -1,2 +1,0 @@
-[console_scripts]
-replay_carmen_log = mapping_test.replay_carmen_log:main

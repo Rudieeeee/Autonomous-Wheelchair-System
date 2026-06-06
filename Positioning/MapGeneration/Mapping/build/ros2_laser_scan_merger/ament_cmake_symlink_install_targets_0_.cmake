@@ -1,1 +1,0 @@
-ament_cmake_symlink_install_targets("TARGET_FILES" "/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/build/ros2_laser_scan_merger/ros2_laser_scan_merger" "TARGETS" "ros2_laser_scan_merger" "DESTINATION" "lib/ros2_laser_scan_merger")

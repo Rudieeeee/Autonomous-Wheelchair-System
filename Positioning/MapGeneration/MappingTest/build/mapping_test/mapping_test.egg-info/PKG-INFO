@@ -1,7 +1,0 @@
-Metadata-Version: 2.1
-Name: mapping-test
-Version: 0.0.1
-Summary: Mapping test package for replaying CARMEN LiDAR logs.
-Maintainer: rudrh
-Maintainer-email: rudrh@todo.todo
-License: MIT

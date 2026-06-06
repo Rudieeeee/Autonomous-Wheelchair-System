@@ -1,7 +1,0 @@
-Metadata-Version: 2.1
-Name: map-generator
-Version: 0.0.1
-Summary: Live map generation package for dual RPLIDAR, Arduino odometry, IMU and SLAM Toolbox.
-Maintainer: rudrh
-Maintainer-email: rudrh@todo.todo
-License: MIT

@@ -1,1 +1,0 @@
-/home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/MappingTest/build/mapping_test/launch/mapping_test.launch.py
