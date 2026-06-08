@@ -23,11 +23,13 @@ import ast
 import json
 import math
 import os
+import shlex
 import signal
 import subprocess
 import sys
 import queue
 import threading
+from pathlib import Path
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
@@ -75,45 +77,87 @@ from PyQt6.QtWidgets import (
 )
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+MAPPING_WS = PROJECT_ROOT / "Positioning" / "MapGeneration" / "Mapping"
+LOCALIZATION_WS = PROJECT_ROOT / "Positioning" / "Localization" / "Localization"
+NAVIGATION_WS = PROJECT_ROOT / "Navigation" / "Pathfinding" / "Navigation"
+ROS_SETUP = Path("/opt/ros/jazzy/setup.bash")
+LEFT_LIDAR_PORT = "/dev/left_lidar"
+RIGHT_LIDAR_PORT = "/dev/right_lidar"
+ARDUINO_PORT = "/dev/arduino_wheelchair"
+
+def q(value):
+    return shlex.quote(str(value))
+
+def source(path):
+    return f"source {q(path)}"
+
 # ─── ROS2 system launch commands ──────────────────────────────────────────────
 _MAPPING_CMD = (
-    "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping && "
-    "source /opt/ros/jazzy/setup.bash && "
-    "source install/setup.bash && "
+    f"cd {q(MAPPING_WS)} && "
+    f"{source(ROS_SETUP)} && "
+    f"{source(MAPPING_WS / 'install' / 'setup.bash')} && "
     "ros2 launch map_generator mapping.launch.py "
-    "left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair"
+    f"left_lidar_port:={q(LEFT_LIDAR_PORT)} "
+    f"right_lidar_port:={q(RIGHT_LIDAR_PORT)} "
+    f"arduino_port:={q(ARDUINO_PORT)}"
 )
 _LOCALIZATION_CMD = (
-    "cd /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization && "
-    "source /opt/ros/jazzy/setup.bash && "
-    "source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && "
-    "source install/setup.bash && "
+    f"cd {q(LOCALIZATION_WS)} && "
+    f"{source(ROS_SETUP)} && "
+    f"{source(MAPPING_WS / 'install' / 'setup.bash')} && "
+    f"{source(LOCALIZATION_WS / 'install' / 'setup.bash')} && "
     "ros2 launch localization localization.launch.py "
-    "left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair"
+    f"left_lidar_port:={q(LEFT_LIDAR_PORT)} "
+    f"right_lidar_port:={q(RIGHT_LIDAR_PORT)} "
+    f"arduino_port:={q(ARDUINO_PORT)}"
 )
 _NAVIGATION_CMD = (
-    "cd /home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/Navigation && "
-    "source /opt/ros/jazzy/setup.bash && "
-    "source /home/rudrh/Autonomous-Wheelchair-System/Positioning/MapGeneration/Mapping/install/setup.bash && "
-    "source /home/rudrh/Autonomous-Wheelchair-System/Positioning/Localization/Localization/install/setup.bash && "
-    "source install/setup.bash && "
+    f"cd {q(NAVIGATION_WS)} && "
+    f"{source(ROS_SETUP)} && "
+    f"{source(MAPPING_WS / 'install' / 'setup.bash')} && "
+    f"{source(LOCALIZATION_WS / 'install' / 'setup.bash')} && "
+    f"{source(NAVIGATION_WS / 'install' / 'setup.bash')} && "
     "ros2 launch navigation navigation.launch.py "
-    "left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair"
+    f"left_lidar_port:={q(LEFT_LIDAR_PORT)} "
+    f"right_lidar_port:={q(RIGHT_LIDAR_PORT)} "
+    f"arduino_port:={q(ARDUINO_PORT)}"
+)
+_NAVIGATION_MAPPING_CMD = (
+    f"cd {q(NAVIGATION_WS)} && "
+    f"{source(ROS_SETUP)} && "
+    f"{source(MAPPING_WS / 'install' / 'setup.bash')} && "
+    f"{source(NAVIGATION_WS / 'install' / 'setup.bash')} && "
+    "ros2 launch navigation navigation_mapping.launch.py "
+    f"left_lidar_port:={q(LEFT_LIDAR_PORT)} "
+    f"right_lidar_port:={q(RIGHT_LIDAR_PORT)} "
+    f"arduino_port:={q(ARDUINO_PORT)} "
+    "use_rviz:=true"
+)
+_MAPPING_WITH_LOG_CMD = (
+    f"cd {q(MAPPING_WS)} && "
+    f"{source(ROS_SETUP)} && "
+    f"{source(MAPPING_WS / 'install' / 'setup.bash')} && "
+    "ros2 launch map_generator mapping_with_log.launch.py "
+    f"left_lidar_port:={q(LEFT_LIDAR_PORT)} "
+    f"right_lidar_port:={q(RIGHT_LIDAR_PORT)} "
+    f"arduino_port:={q(ARDUINO_PORT)} "
+    "use_rviz:=true "
+    f"log_file:={q(PROJECT_ROOT / 'Other-Files' / 'GeneralData' / 'Logs' / 'mapping_log.txt')}"
 )
 
 # ─── Developer tool commands ──────────────────────────────────────────────────
 # TOF: actual calibration is firmware-triggered via CAN ID 0x011 on the ESP32.
 # From the PC side, the closest thing is reading live sensor data via ToF.py.
 _TOF_CALIB_CMD = (
-    "python3 /home/rudrh/Autonomous-Wheelchair-System/"
-    "Integration/Sensors/ToF/ToF.py"
+    f"python3 {q(PROJECT_ROOT / 'Integration' / 'Sensors' / 'ToF' / 'ToF.py')}"
 )
 
 # IMU: calibration runs automatically in firmware setup() on the Arduino/BNO055.
 # No Python entry point exists — this just prints an explanation to the log.
 _IMU_CALIB_CMD = (
-    "echo 'IMU calibration is handled by the Arduino firmware (BNO055 setup).'"
-    " && echo 'Check getCalStatus() in DFRobot_BNO055.cpp for calibration state.'"
+    "echo 'IMU calibration is handled by the Arduino firmware (BNO055 setup).' "
+    "&& echo 'Check getCalStatus() in DFRobot_BNO055.cpp for calibration state.'"
 )
 
 # CANBUS: read-only status check — shows whether the can0 interface is up.
@@ -121,8 +165,7 @@ _CANBUS_CMD = "sudo ip link show can0"
 
 # Sensor readouts: live 8x8 ToF matrix visualised as ASCII/matplotlib plot.
 _SENSOR_CMD = (
-    "python3 /home/rudrh/Autonomous-Wheelchair-System/"
-    "Integration/Sensors/ToF/ToF_ascii_plot.py"
+    f"python3 {q(PROJECT_ROOT / 'Integration' / 'Sensors' / 'ToF' / 'ToF_ascii_plot.py')}"
 )
 
 
@@ -679,8 +722,8 @@ class PathLayer(QWidget):
     """Transparent child of MapOverlay that draws the Nav2 planned path.
 
     Updated via set_path() whenever the ROS2 bridge fires on_path with a new
-    list of (ros_x, ros_y) tuples.  No animation timer — repaints on data
-    change only.  Stacked below MarkerLayer so waypoint markers stay on top.
+    list of (ros_x, ros_y) tuples.  Animated at 25 fps so the begin/end dots
+    pulse.  Stacked below MarkerLayer so waypoint markers stay on top.
     """
 
     def __init__(self, overlay: "MapOverlay"):
@@ -689,6 +732,15 @@ class PathLayer(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._overlay = overlay
         self._path_points: list = []    # list of (ros_x, ros_y) tuples
+        self._phase = 0.0
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._tick)
+        self._timer.start(40)           # 25 fps — smooth pulse without burning CPU
+
+    def _tick(self) -> None:
+        self._phase = (self._phase + 0.09) % (2 * math.pi)
+        if self._path_points:
+            self.update()
 
     def set_path(self, points: list) -> None:
         """Replace the displayed path.  Pass an empty list to clear."""
@@ -710,38 +762,117 @@ class PathLayer(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        # Build the path once — shared by both draw passes.
+        t     = self._phase
+        pulse = (math.sin(t) + 1) / 2  # 0 → 1, smooth
+
+        # Build the path once — shared by all draw passes.
         qt_path = QPainterPath()
         qt_path.moveTo(coords[0])
         for pt in coords[1:]:
             qt_path.lineTo(pt)
 
-        # Glow pass — wide, semi-transparent blue halo.
-        glow_pen = QPen(QColor(80, 170, 255, 55))
-        glow_pen.setWidthF(9.0)
-        glow_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-        glow_pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-        painter.setPen(glow_pen)
+        # Outer glow — wide, very faint cyan halo.
+        glow_outer = QPen(QColor(0, 220, 255, 30))
+        glow_outer.setWidthF(20.0)
+        glow_outer.setCapStyle(Qt.PenCapStyle.RoundCap)
+        glow_outer.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        painter.setPen(glow_outer)
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawPath(qt_path)
 
-        # Main line — accent blue, matches the rest of the Jarvis palette.
-        line_pen = QPen(QColor(80, 170, 255, 210))
-        line_pen.setWidthF(2.5)
+        # Inner glow — tighter, brighter cyan ring.
+        glow_inner = QPen(QColor(0, 220, 255, 80))
+        glow_inner.setWidthF(8.0)
+        glow_inner.setCapStyle(Qt.PenCapStyle.RoundCap)
+        glow_inner.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        painter.setPen(glow_inner)
+        painter.drawPath(qt_path)
+
+        # Main line — bright sci-fi cyan.
+        line_pen = QPen(QColor(0, 230, 255, 235))
+        line_pen.setWidthF(3.5)
         line_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         line_pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
         painter.setPen(line_pen)
         painter.drawPath(qt_path)
 
-        # Start dot — green, matching the PoseDot colour so it reads as "from here".
-        painter.setBrush(QBrush(QColor(100, 240, 140)))
-        painter.setPen(QPen(QColor(255, 255, 255, 200), 1.5))
-        painter.drawEllipse(coords[0], 4.5, 4.5)
+        # ── Begin dot ────────────────────────────────────────────────────────
+        cx0, cy0 = coords[0].x(), coords[0].y()
+        r_begin  = 9.0
+        b_col    = QColor(80, 255, 140)     # bright green
 
-        # Goal dot — bright accent blue.
-        painter.setBrush(QBrush(QColor(150, 210, 255)))
-        painter.setPen(QPen(QColor(255, 255, 255, 200), 1.5))
-        painter.drawEllipse(coords[-1], 4.5, 4.5)
+        # Expanding glow ring
+        glow_r0     = r_begin + 6 + pulse * 12
+        glow_alpha0 = int((1 - pulse) * 130)
+        grd0 = QRadialGradient(QPointF(cx0, cy0), glow_r0)
+        grd0.setColorAt(0.0, QColor(80, 255, 140, glow_alpha0))
+        grd0.setColorAt(1.0, QColor(0, 0, 0, 0))
+        painter.setBrush(QBrush(grd0))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(QPointF(cx0, cy0), glow_r0, glow_r0)
+
+        ring_r0 = r_begin + 3 + pulse * 13
+        c0 = QColor(80, 255, 140, int((1 - pulse * 0.7) * 190))
+        painter.setPen(QPen(c0, 1.8))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawEllipse(QPointF(cx0, cy0), ring_r0, ring_r0)
+
+        # Solid core dot
+        painter.setBrush(QBrush(b_col))
+        painter.setPen(QPen(QColor(255, 255, 255, 230), 2.0))
+        painter.drawEllipse(QPointF(cx0, cy0), r_begin, r_begin)
+
+        # ── End dot ──────────────────────────────────────────────────────────
+        cx1, cy1 = coords[-1].x(), coords[-1].y()
+        r_end    = 9.0
+        is_sel   = bool(getattr(ov, "_selected_point", None))
+
+        if is_sel:
+            e_col    = QColor(255, 55, 55)
+            e_glow   = QColor(255, 55, 55)
+        else:
+            e_col    = QColor(255, 215, 60)     # gold when idle
+            e_glow   = QColor(255, 200, 40)
+
+        # Expanding glow
+        glow_r1     = r_end + 7 + pulse * 14
+        glow_alpha1 = int((1 - pulse) * (170 if is_sel else 110))
+        grd1 = QRadialGradient(QPointF(cx1, cy1), glow_r1)
+        grd1.setColorAt(0.0, QColor(e_glow.red(), e_glow.green(), e_glow.blue(), glow_alpha1))
+        grd1.setColorAt(1.0, QColor(0, 0, 0, 0))
+        painter.setBrush(QBrush(grd1))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(QPointF(cx1, cy1), glow_r1, glow_r1)
+
+        # One ring when idle, two staggered when selected — more urgency.
+        ring_count = 2 if is_sel else 1
+        for j in range(ring_count):
+            phase_j  = (t + j * 1.3) % (2 * math.pi)
+            prog_j   = (math.sin(phase_j) + 1) / 2
+            ring_r1  = r_end + 3 + prog_j * 15
+            ring_a1  = int((1 - prog_j) * (210 if is_sel else 170))
+            ce = QColor(e_glow)
+            ce.setAlpha(ring_a1)
+            painter.setPen(QPen(ce, 1.8))
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawEllipse(QPointF(cx1, cy1), ring_r1, ring_r1)
+
+        # Solid core dot
+        painter.setBrush(QBrush(e_col))
+        painter.setPen(QPen(QColor(255, 255, 255, 230), 2.0))
+        painter.drawEllipse(QPointF(cx1, cy1), r_end, r_end)
+
+        # Crosshair reticle when selected — makes the target read as "locked".
+        if is_sel:
+            gap  = r_end + 4
+            rlen = 11
+            pen_x = QPen(QColor(255, 80, 80, 190), 1.8)
+            pen_x.setCapStyle(Qt.PenCapStyle.RoundCap)
+            painter.setPen(pen_x)
+            painter.drawLine(QPointF(cx1 + gap, cy1), QPointF(cx1 + gap + rlen, cy1))
+            painter.drawLine(QPointF(cx1 - gap, cy1), QPointF(cx1 - gap - rlen, cy1))
+            painter.drawLine(QPointF(cx1, cy1 + gap), QPointF(cx1, cy1 + gap + rlen))
+            painter.drawLine(QPointF(cx1, cy1 - gap), QPointF(cx1, cy1 - gap - rlen))
 
         painter.end()
 
