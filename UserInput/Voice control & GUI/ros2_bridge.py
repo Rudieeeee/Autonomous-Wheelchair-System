@@ -85,12 +85,16 @@ TOPIC_NAV_GOAL  = "/wheelchair/nav_goal"
 TOPIC_ESTOP     = "/wheelchair/estop"
 TOPIC_STATUS    = "/wheelchair/status"
 TOPIC_AMCL_POSE = "/amcl_pose"          # localisation team — robot pose in map frame
+TOPIC_GOAL_POSE = "/goal_pose"          # nav2 standard — PoseStamped goal to navigate to
+TOPIC_PATH      = "/plan"               # nav2 standard — planned path from nav2
 TOPIC_MAP       = "/map"                # mapping/localisation team — OccupancyGrid
 
-MSG_STRING    = "std_msgs/msg/String"
-MSG_BOOL      = "std_msgs/msg/Bool"
-MSG_POSE_COV  = "geometry_msgs/msg/PoseWithCovarianceStamped"
-MSG_OCC_GRID  = "nav_msgs/msg/OccupancyGrid"
+MSG_STRING       = "std_msgs/msg/String"
+MSG_BOOL         = "std_msgs/msg/Bool"
+MSG_POSE_COV     = "geometry_msgs/msg/PoseWithCovarianceStamped"
+MSG_POSE_STAMPED = "geometry_msgs/msg/PoseStamped"
+MSG_PATH         = "nav_msgs/msg/Path"
+MSG_OCC_GRID     = "nav_msgs/msg/OccupancyGrid"
 
 # Robot state constants (as published by the pathfinding team).
 class RobotState:
@@ -127,6 +131,9 @@ class Ros2BridgeBase(ABC):
         # Called whenever AMCL publishes a new estimated robot pose.
         # Arguments are (x_metres, y_metres) in the ROS2 map frame.
         self.on_pose: Callable[[float, float], None] = lambda _x, _y: None
+        # Called whenever nav2 publishes a new planned path on /plan.
+        # Argument is a list of (x, y) tuples in the map frame.
+        self.on_path: Callable[[list], None] = lambda _pts: None
         # Called whenever a new OccupancyGrid map arrives.
         # Argument is a dict: {width, height, data (RGB bytes), origin_x,
         # origin_y, resolution} — ready to pass to MapOverlay.set_map().
@@ -181,6 +188,21 @@ class Ros2BridgeBase(ABC):
         active : bool
             True  → stop the wheelchair immediately.
             False → release the emergency stop.
+        """
+
+    @abstractmethod
+    def publish_goal_pose(self, x: float, y: float, yaw: float) -> None:
+        """
+        Send a nav2-compatible PoseStamped goal to /goal_pose.
+
+        Parameters
+        ----------
+        x, y : float
+            Target position in the ROS2 map frame (metres).
+        yaw : float
+            Target heading in radians (ROS convention: 0 = +X, CCW positive).
+            Converted to quaternion (z, w) internally; x and y are always 0
+            for 2-D navigation.
         """
 
     # ------------------------------------------------------------------
@@ -302,12 +324,14 @@ class Ros2NativeNode(Ros2BridgeBase):
     def _spin(self) -> None:
         # Lazy-import rclpy so the rest of the app works even without ROS2.
         try:
+            import math
             import rclpy
             from rclpy.executors import SingleThreadedExecutor
             from rclpy.qos import QoSDurabilityPolicy, QoSProfile, QoSReliabilityPolicy
-            from geometry_msgs.msg import PoseWithCovarianceStamped
-            from nav_msgs.msg import OccupancyGrid
+            from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped
+            from nav_msgs.msg import OccupancyGrid, Path
             from std_msgs.msg import Bool, String
+            self._math = math
         except ImportError as exc:
             logger.error(
                 "rclpy import failed — is ROS2 Jazzy sourced?\n  %s", exc
@@ -326,8 +350,9 @@ class Ros2NativeNode(Ros2BridgeBase):
         self._node = rclpy.create_node(self._node_name)
 
         # Publishers
-        self._pub_nav   = self._node.create_publisher(String, TOPIC_NAV_GOAL, qos_profile=10)
-        self._pub_estop = self._node.create_publisher(Bool,   TOPIC_ESTOP,    qos_profile=10)
+        self._pub_nav       = self._node.create_publisher(String,      TOPIC_NAV_GOAL,  qos_profile=10)
+        self._pub_estop     = self._node.create_publisher(Bool,        TOPIC_ESTOP,     qos_profile=10)
+        self._pub_goal_pose = self._node.create_publisher(PoseStamped, TOPIC_GOAL_POSE, qos_profile=10)
 
         # Subscribers
         self._sub_status = self._node.create_subscription(
@@ -335,6 +360,9 @@ class Ros2NativeNode(Ros2BridgeBase):
         )
         self._sub_pose = self._node.create_subscription(
             PoseWithCovarianceStamped, TOPIC_AMCL_POSE, self._on_amcl_pose, qos_profile=10
+        )
+        self._sub_path = self._node.create_subscription(
+            Path, TOPIC_PATH, self._on_path_msg, qos_profile=10
         )
         # /map is a latched topic — use transient_local so we receive the last
         # published map immediately on connect, even if SLAM finished earlier.
@@ -413,6 +441,27 @@ class Ros2NativeNode(Ros2BridgeBase):
         except Exception:
             logger.exception("on_status callback raised")
 
+    def publish_goal_pose(self, x: float, y: float, yaw: float) -> None:
+        if not self._connected or self._pub_goal_pose is None:
+            logger.warning("publish_goal_pose skipped — ROS2 not connected.")
+            return
+        try:
+            import math
+            from geometry_msgs.msg import PoseStamped
+            msg = PoseStamped()
+            msg.header.frame_id = "map"
+            msg.pose.position.x = float(x)
+            msg.pose.position.y = float(y)
+            msg.pose.position.z = 0.0
+            msg.pose.orientation.x = 0.0
+            msg.pose.orientation.y = 0.0
+            msg.pose.orientation.z = math.sin(yaw / 2.0)
+            msg.pose.orientation.w = math.cos(yaw / 2.0)
+            self._pub_goal_pose.publish(msg)
+            logger.info("→ goal_pose published: (%.3f, %.3f) yaw=%.3f", x, y, yaw)
+        except Exception as exc:
+            logger.error("publish_goal_pose error: %s", exc)
+
     def _on_amcl_pose(self, msg) -> None:
         x = msg.pose.pose.position.x
         y = msg.pose.pose.position.y
@@ -420,6 +469,17 @@ class Ros2NativeNode(Ros2BridgeBase):
             self.on_pose(x, y)
         except Exception:
             logger.exception("on_pose callback raised")
+
+    def _on_path_msg(self, msg) -> None:
+        # Extract (x, y) for each pose in the plan — enough for a path overlay.
+        points = [
+            (p.pose.position.x, p.pose.position.y)
+            for p in msg.poses
+        ]
+        try:
+            self.on_path(points)
+        except Exception:
+            logger.exception("on_path callback raised")
 
     def _on_map_msg(self, msg) -> None:
         info     = msg.info
@@ -532,11 +592,13 @@ class Ros2WebsocketBridge(Ros2BridgeBase):
     def _on_open(self, ws) -> None:
         logger.info("Rosbridge WebSocket connected.")
         # Advertise our publishers so the server knows the message types.
-        self._send(ws, {"op": "advertise", "topic": TOPIC_NAV_GOAL, "type": MSG_STRING})
-        self._send(ws, {"op": "advertise", "topic": TOPIC_ESTOP,    "type": MSG_BOOL})
+        self._send(ws, {"op": "advertise", "topic": TOPIC_NAV_GOAL,  "type": MSG_STRING})
+        self._send(ws, {"op": "advertise", "topic": TOPIC_ESTOP,     "type": MSG_BOOL})
+        self._send(ws, {"op": "advertise", "topic": TOPIC_GOAL_POSE, "type": MSG_POSE_STAMPED})
         # Subscribe to incoming topics.
         self._send(ws, {"op": "subscribe", "topic": TOPIC_STATUS,    "type": MSG_STRING})
         self._send(ws, {"op": "subscribe", "topic": TOPIC_AMCL_POSE, "type": MSG_POSE_COV})
+        self._send(ws, {"op": "subscribe", "topic": TOPIC_PATH,      "type": MSG_PATH})
         # rosbridge replays the last latched /map message automatically on subscribe.
         self._send(ws, {"op": "subscribe", "topic": TOPIC_MAP,       "type": MSG_OCC_GRID})
         self._set_connected(True)
@@ -575,6 +637,20 @@ class Ros2WebsocketBridge(Ros2BridgeBase):
                 self.on_pose(x, y)
             except Exception:
                 logger.exception("on_pose callback raised")
+
+        elif op == "publish" and topic == TOPIC_PATH:
+            poses = envelope.get("msg", {}).get("poses", [])
+            points = [
+                (
+                    float(p.get("pose", {}).get("position", {}).get("x", 0.0)),
+                    float(p.get("pose", {}).get("position", {}).get("y", 0.0)),
+                )
+                for p in poses
+            ]
+            try:
+                self.on_path(points)
+            except Exception:
+                logger.exception("on_path callback raised")
 
         elif op == "publish" and topic == TOPIC_MAP:
             msg  = envelope.get("msg", {})
@@ -629,6 +705,31 @@ class Ros2WebsocketBridge(Ros2BridgeBase):
         self._publish_string_topic(TOPIC_NAV_GOAL, json.dumps(payload))
         logger.info("→ nav_goal published: destination=%s mode=%s confirmed=%s",
                     payload.get("destination"), payload.get("mode"), payload.get("confirmed"))
+
+    def publish_goal_pose(self, x: float, y: float, yaw: float) -> None:
+        import math
+        with self._ws_lock:
+            ws = self._ws
+        if ws is None or not self._connected:
+            logger.warning("publish_goal_pose skipped — rosbridge not connected.")
+            return
+        msg = {
+            "op": "publish",
+            "topic": TOPIC_GOAL_POSE,
+            "msg": {
+                "header": {"frame_id": "map"},
+                "pose": {
+                    "position": {"x": float(x), "y": float(y), "z": 0.0},
+                    "orientation": {
+                        "x": 0.0, "y": 0.0,
+                        "z": math.sin(yaw / 2.0),
+                        "w": math.cos(yaw / 2.0),
+                    },
+                },
+            },
+        }
+        self._send(ws, msg)
+        logger.info("→ goal_pose published: (%.3f, %.3f) yaw=%.3f", x, y, yaw)
 
     def publish_estop(self, active: bool) -> None:
         with self._ws_lock:

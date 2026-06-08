@@ -748,6 +748,11 @@ Classify each user utterance into ONE of six intents:
   hide_map  — the user wants to dismiss the map: "close the map",
               "hide the map", "go back", "dismiss this", "okay close it".
 
+  create_point — the user wants to mark a custom waypoint on the map.
+              Triggers: "create a point", "add a point", "mark a location",
+              "place a marker", "drop a pin", "save this spot", "add
+              waypoint".
+
   question  — the user is asking you anything: facts, time, weather,
               jokes, opinions, status, small talk questions. Answer
               concisely and warmly (≤30 words). Use any "Real-time facts"
@@ -761,12 +766,11 @@ Classify each user utterance into ONE of six intents:
   chatter   — false alarm or incomplete: a place name with no command
               verb, a fragment, or speech clearly aimed at someone else.
 
-Valid destinations (use the exact phrasing): lab a, lab b, cafeteria,
-entrance, exit, office.
+Valid destinations (use the exact phrasing — see "Runtime destinations" context).
 
 Output ONLY a single JSON object, no prose, exactly this schema:
 {
-  "intent": "navigate" | "show_map" | "hide_map" | "question" | "chatter" | "goodbye",
+  "intent": "navigate" | "show_map" | "hide_map" | "create_point" | "question" | "chatter" | "goodbye",
   "destination": "<one valid destination>" or null,
   "reply": "<short spoken response, <=30 words>"
 }
@@ -779,6 +783,7 @@ Examples (assume address = "sir"; substitute "madame" if so instructed):
 "show me the map"              -> {"intent":"show_map","destination":null,"reply":"Of course, sir."}
 "open the floor plan"          -> {"intent":"show_map","destination":null,"reply":"Right away, sir."}
 "close the map"                -> {"intent":"hide_map","destination":null,"reply":"Closing the map, sir."}
+"create a waypoint"            -> {"intent":"create_point","destination":null,"reply":"Of course, sir. Tap the map to place your marker."}
 "the cafeteria"                -> {"intent":"chatter","destination":null,"reply":"Would you like me to take you there, sir? Just say take me to the cafeteria."}
 "what's the weather like"      -> {"intent":"question","destination":null,"reply":"Partly cloudy and 16 degrees in Delft, sir."}
 "and tomorrow"                 -> {"intent":"question","destination":null,"reply":"I don't have the forecast, sir, but expect typical Dutch spring weather."}
@@ -865,6 +870,15 @@ class IntentClassifier:
             "Use this exact word when politely addressing them."
         )
         messages.append({"role": "system", "content": addr_ctx})
+        # Inject the live destinations list so the LLM always knows the current
+        # set of valid places — including any added from map_points.json at runtime.
+        dest_list = ", ".join(
+            k for k in self.config.destinations if k != "stop"
+        )
+        messages.append({
+            "role": "system",
+            "content": f'Runtime destinations (use exact phrasing): {dest_list or "none defined yet"}.',
+        })
         tool_ctx = self._build_tool_context(utterance)
         if tool_ctx:
             messages.append({"role": "system", "content": tool_ctx})
@@ -1215,6 +1229,7 @@ class VoiceObserver:
     def on_address(self, address: str) -> None: ...
     def on_show_map(self) -> None: ...
     def on_hide_map(self) -> None: ...
+    def on_create_point(self) -> None: ...
     def on_navigate(self, payload: dict) -> None: ...
 
 
@@ -1305,6 +1320,20 @@ class VoiceController:
         finally:
             print("[PayloadEmitter] >>>")
             print(json.dumps(payload, indent=2))
+
+    def add_destination(self, name: str, loc_id: str) -> None:
+        """Register a new named destination at runtime (thread-safe).
+
+        Updates config.destinations and rebuilds FastNavigator so the new
+        location is immediately matchable without restarting the system.
+        Called by main.py when a waypoint is placed via the map overlay or
+        loaded from map_points.json.
+        """
+        key = name.lower().strip()
+        self.config.destinations[key] = loc_id
+        if self.fast_navigator is not None:
+            self.fast_navigator = FastNavigator(self.config.destinations)
+        print(f"[VoiceController] Destination registered: '{key}' → {loc_id}")
 
     def stop(self) -> None:
         self._running = False
@@ -1606,6 +1635,14 @@ class VoiceController:
             self._map_visible = False
             self.observer.on_hide_map()
             self._broadcast_state("AWAITING COMMAND")
+        elif intent.intent_type == "create_point":
+            self._broadcast_state("SPEAKING")
+            self.speaker.say(intent.reply)
+            if not self._map_visible:
+                self._map_visible = True
+                self.observer.on_show_map()
+            self.observer.on_create_point()
+            self._broadcast_state("AWAITING COMMAND")
         elif intent.intent_type == "question":
             self._broadcast_state("SPEAKING")
             self.speaker.say(intent.reply)
@@ -1627,15 +1664,18 @@ class VoiceController:
     def _handle_navigate(self, intent: Intent, full_transcript: str) -> None:
         """LLM-classified navigate fallback (used when FastNavigator didn't match)."""
         dest = (intent.destination or "").lower().strip()
-        loc_id = self.config.destinations.get(dest)
-        if loc_id is None:
+        if not dest:
             self._broadcast_state("SPEAKING")
-            self.speaker.say(
-                f"I don't know a destination called {dest or 'that'}, "
-                f"{self._address}."
-            )
+            self.speaker.say(f"I didn't catch a destination, {self._address}.")
             self._broadcast_state("AWAITING COMMAND")
             return
+
+        loc_id = self.config.destinations.get(dest)
+        if loc_id is None:
+            # Destination may have been added via the map editor but not registered
+            # in this session — generate a loc_id from the name and proceed.
+            # main.py enriches the payload with ROS coordinates from _map_points.
+            loc_id = f"LOC_{dest.upper().replace(' ', '_').replace('-', '_')}"
 
         hit = Hit(phrase=dest, location_id=loc_id,
                   confidence=0.95, raw_text=full_transcript)

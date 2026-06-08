@@ -55,6 +55,7 @@ import logging
 import os
 import sys
 import threading
+import time
 
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QApplication
@@ -88,9 +89,10 @@ class QtVoiceObserver(QObject, VoiceObserver):
     final    = pyqtSignal(str)
     reply    = pyqtSignal(str)
     address  = pyqtSignal(str)
-    show_map = pyqtSignal()
-    hide_map = pyqtSignal()
-    navigate = pyqtSignal(dict)
+    show_map     = pyqtSignal()
+    hide_map     = pyqtSignal()
+    navigate     = pyqtSignal(dict)
+    create_point = pyqtSignal()
 
     def __init__(self) -> None:
         QObject.__init__(self)
@@ -104,6 +106,7 @@ class QtVoiceObserver(QObject, VoiceObserver):
     def on_address(self, address: str) -> None:    self.address.emit(address)
     def on_show_map(self) -> None:                 self.show_map.emit()
     def on_hide_map(self) -> None:                 self.hide_map.emit()
+    def on_create_point(self) -> None:             self.create_point.emit()
     def on_navigate(self, payload: dict) -> None:  self.navigate.emit(payload)
 
 
@@ -151,6 +154,7 @@ def main() -> None:
     voice_bridge.address.connect(win.set_address)
     voice_bridge.show_map.connect(win.show_map)
     voice_bridge.hide_map.connect(win.hide_map)
+    voice_bridge.create_point.connect(win.request_enter_placement_mode)
     # navigate signal is wired to ROS2 below.
 
     # ── Voice controller ─────────────────────────────────────────────────────
@@ -159,6 +163,15 @@ def main() -> None:
         edge_voice="en-GB-ThomasNeural",
         enable_gender_detection=True,
     )
+
+    # Seed destinations from map_points.json so voice navigation works for
+    # any location the operator placed via the map editor before this session.
+    for pt in win.map_points:
+        name_key = pt["name"].lower().strip()
+        loc_id   = f"LOC_{name_key.upper().replace(' ', '_').replace('-', '_')}"
+        config.destinations[name_key] = loc_id
+        logger.info("Pre-seeded destination from map: '%s' → %s", name_key, loc_id)
+
     controller = VoiceController(config=config, observer=voice_bridge)
 
     audio_thread = threading.Thread(
@@ -202,16 +215,72 @@ def main() -> None:
     def _on_map(payload: dict) -> None:
         win.request_set_map.emit(payload)
 
+    # Planned path from Nav2 /plan → path overlay drawn on the map.
+    def _on_path(points: list) -> None:
+        win.request_set_path.emit(points)
+
     ros2.on_connection_changed = _on_ros2_connection
     ros2.on_status             = _on_robot_status
     ros2.on_pose               = _on_pose
     ros2.on_map                = _on_map
+    ros2.on_path               = _on_path
+
+    # Map waypoint store — seeded from JSON at startup, updated as points are placed.
+    # Maps lower-cased point name → (ros_x, ros_y, ros_yaw) for voice/click navigation.
+    _map_points: dict[str, tuple[float, float, float]] = {
+        pt["name"].lower(): (pt["ros_x"], pt["ros_y"], pt.get("ros_yaw", 0.0))
+        for pt in win.map_points
+    }
+
+    def _on_location_placed(name: str, ros_x: float, ros_y: float) -> None:
+        name_lower = name.lower().strip()
+        # Yaw is 0 for points placed via the GUI (without the heading step) — fine for now.
+        _map_points[name_lower] = (ros_x, ros_y, 0.0)
+        loc_id = f"LOC_{name_lower.upper().replace(' ', '_').replace('-', '_')}"
+        controller.add_destination(name_lower, loc_id)
+        logger.info("Waypoint stored: '%s' → (%.3f, %.3f)", name, ros_x, ros_y)
+
+    win.map_location_placed.connect(_on_location_placed)
+
+    # Click-on-marker → navigate immediately (no voice confirmation needed —
+    # the user explicitly tapped the destination).
+    def _on_map_point_nav(name: str, ros_x: float, ros_y: float, ros_yaw: float = 0.0) -> None:
+        payload = {
+            "mode": "map_click",
+            "destination": name,
+            "ros_x": ros_x,
+            "ros_y": ros_y,
+            "ros_yaw": ros_yaw,
+            "confidence": 1.0,
+            "confirmed": True,
+            "timestamp": time.time(),
+        }
+        logger.info("Map-click navigation: '%s' → (%.3f, %.3f) yaw=%.3f", name, ros_x, ros_y, ros_yaw)
+        ros2.publish_nav_goal(payload)
+        ros2.publish_goal_pose(ros_x, ros_y, ros_yaw)
+        win.request_set_reply.emit(f"Navigating to {name}, sir.")
+        win.request_set_robot_state.emit("NAVIGATING")
+
+    win.map_point_nav_requested.connect(_on_map_point_nav)
 
     # Voice → ROS2: when the voice controller detects a confirmed destination,
-    # forward the payload directly to the pathfinding team via ROS2.
+    # enrich with ROS2 coords if the phrase matches a stored map waypoint.
     def _on_navigate(payload: dict) -> None:
-        logger.info("Navigate command received: %s", payload)
+        phrase = payload.get("destination_phrase", "").lower()
+        ros_yaw = 0.0
+        for name, (rx, ry, ryaw) in _map_points.items():
+            if name in phrase or phrase in name:
+                ros_yaw = ryaw
+                payload = {**payload, "ros_x": rx, "ros_y": ry, "ros_yaw": ryaw, "mode": "map_point"}
+                logger.info(
+                    "Voice navigate matched map waypoint '%s': (%.3f, %.3f) yaw=%.3f",
+                    name, rx, ry, ryaw,
+                )
+                break
+        logger.info("Navigate command: %s", payload)
         ros2.publish_nav_goal(payload)
+        if "ros_x" in payload:
+            ros2.publish_goal_pose(payload["ros_x"], payload["ros_y"], ros_yaw)
 
     voice_bridge.navigate.connect(_on_navigate)
 
