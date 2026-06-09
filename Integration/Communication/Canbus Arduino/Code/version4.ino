@@ -146,6 +146,11 @@ bool waitingStartupDelay = false;
 bool errorSent = false;
 bool injectionEnabled = false;
 
+// Laptop protocol state.
+// START enables serial output and accepts J,x,y commands.
+// STOP disables all output to the laptop and disables injection.
+bool laptopSessionActive = false;
+
 // ============================================================
 // Serial parser
 // Expected from ROS/Python:
@@ -158,6 +163,51 @@ bool injectionEnabled = false;
 
 char serialBuffer[40];
 uint8_t serialIndex = 0;
+
+void updateWheelDirectionsFromXY(int x, int y);
+
+// ============================================================
+// Laptop START/STOP protocol helpers
+// ============================================================
+
+void safeStatusPrint(const char *text) {
+  if (!laptopSessionActive) {
+    return;
+  }
+
+  Serial.println(text);
+}
+
+void resetLaptopControlledState() {
+  hasReceivedSerialCommand = false;
+  waitingStartupDelay = false;
+  errorSent = false;
+  injectionEnabled = false;
+
+  serialJoyX = 0;
+  serialJoyY = 0;
+  joyXByte = 0x00;
+  joyYByte = 0x00;
+
+  lastSerialCommandMs = 0;
+  startupWaitStartMs = 0;
+
+  updateWheelDirectionsFromXY(0, 0);
+}
+
+void handleStartSignal() {
+  laptopSessionActive = true;
+  resetLaptopControlledState();
+
+  safeStatusPrint("STATUS,start_received");
+  safeStatusPrint("STATUS,waiting_for_J_x_y");
+  safeStatusPrint("FORMAT,DATA,time_ms,left_ticks,right_ticks,left_state,right_state,yaw_deg,pitch_deg,roll_deg");
+}
+
+void handleStopSignal() {
+  resetLaptopControlledState();
+  laptopSessionActive = false;
+}
 
 // ============================================================
 // Helper functions
@@ -193,10 +243,10 @@ int decodeJoystickByte(uint8_t raw) {
 
 void enableImuReport() {
   if (!bno08x.enableReport(imuReportType, imuReportIntervalUs)) {
-    Serial.println("STATUS,bno085_enable_report_failed");
+    safeStatusPrint("STATUS,bno085_enable_report_failed");
   }
   else {
-    Serial.println("STATUS,bno085_report_enabled");
+    safeStatusPrint("STATUS,bno085_report_enabled");
   }
 }
 
@@ -327,7 +377,7 @@ void setSerialJoystickCommand(int x, int y) {
     waitingStartupDelay = true;
     startupWaitStartMs = millis();
 
-    Serial.println("STATUS,serial_received_startup_wait_5s");
+    safeStatusPrint("STATUS,serial_received_startup_wait_5s");
   }
 
   updateEncoderDirectionSource();
@@ -371,8 +421,8 @@ void readCANBus() {
     // First step: only detect that CAN exists.
     if (!canSeen) {
       canSeen = true;
-      Serial.println("STATUS,can_traffic_detected");
-      Serial.println("STATUS,waiting_for_laptop_serial");
+      safeStatusPrint("STATUS,can_traffic_detected");
+      safeStatusPrint("STATUS,waiting_for_laptop_serial");
 
       // If laptop serial was already received before CAN,
       // start the 5 second wait now.
@@ -380,7 +430,7 @@ void readCANBus() {
         waitingStartupDelay = true;
         startupWaitStartMs = millis();
 
-        Serial.println("STATUS,serial_already_received_startup_wait_5s");
+        safeStatusPrint("STATUS,serial_already_received_startup_wait_5s");
       }
     }
 
@@ -407,11 +457,24 @@ void readCANBus() {
 // ============================================================
 
 void handleSerialLine(char *line) {
-  // Expected:
-  // J,x,y
-  // Example:
-  // J,100,0
-  // J,0,-100
+  // Protocol commands from Python:
+  // START  -> enable laptop session and allow DATA/STATUS output.
+  // STOP   -> disable laptop session and send nothing to laptop.
+  // J,x,y  -> joystick command, only accepted during START session.
+
+  if (strcmp(line, "START") == 0) {
+    handleStartSignal();
+    return;
+  }
+
+  if (strcmp(line, "STOP") == 0) {
+    handleStopSignal();
+    return;
+  }
+
+  if (!laptopSessionActive) {
+    return;
+  }
 
   if (line[0] != 'J') {
     return;
@@ -461,6 +524,10 @@ void readSerialJoystick() {
 // ============================================================
 
 void handleStartupSequence() {
+  if (!laptopSessionActive) {
+    return;
+  }
+
   // Do nothing until CAN traffic has been seen.
   if (!canSeen) {
     return;
@@ -476,7 +543,7 @@ void handleStartupSequence() {
     waitingStartupDelay = true;
     startupWaitStartMs = millis();
 
-    Serial.println("STATUS,startup_wait_5s_started");
+    safeStatusPrint("STATUS,startup_wait_5s_started");
     return;
   }
 
@@ -502,8 +569,8 @@ void handleStartupSequence() {
       lastHeartbeatSendMs = startMs;
       lastSerialCanSendMs = startMs;
 
-      Serial.println("STATUS,error_sent");
-      Serial.println("STATUS,joystick_serial_heartbeat_enabled");
+      safeStatusPrint("STATUS,error_sent");
+      safeStatusPrint("STATUS,joystick_serial_heartbeat_enabled");
     }
   }
 }
@@ -513,6 +580,10 @@ void handleStartupSequence() {
 // ============================================================
 
 void sendJoystickCAN() {
+  if (!laptopSessionActive) {
+    return;
+  }
+
   if (!injectionEnabled) {
     return;
   }
@@ -551,6 +622,10 @@ void sendJoystickCAN() {
 }
 
 void sendHeartbeatCAN() {
+  if (!laptopSessionActive) {
+    return;
+  }
+
   if (!injectionEnabled) {
     return;
   }
@@ -573,6 +648,10 @@ void sendHeartbeatCAN() {
 }
 
 void sendSerialCAN() {
+  if (!laptopSessionActive) {
+    return;
+  }
+
   if (!injectionEnabled) {
     return;
   }
@@ -607,7 +686,7 @@ void getImuAngles(float &yawDeg, float &pitchDeg, float &rollDeg) {
   }
 
   if (bno08x.wasReset()) {
-    Serial.println("STATUS,bno085_reset_detected");
+    safeStatusPrint("STATUS,bno085_reset_detected");
     enableImuReport();
   }
 
@@ -651,6 +730,10 @@ void getImuAngles(float &yawDeg, float &pitchDeg, float &rollDeg) {
 }
 
 void outputData() {
+  if (!laptopSessionActive) {
+    return;
+  }
+
   unsigned long nowMs = millis();
 
   if (nowMs - lastSensorOutputMs < SENSOR_OUTPUT_PERIOD_MS) {
@@ -725,7 +808,7 @@ void setup() {
 
   delay(500);
 
-  Serial.println("STATUS,starting");
+  safeStatusPrint("STATUS,starting");
 
   pinMode(STANDBY_PIN, OUTPUT);
   digitalWrite(STANDBY_PIN, LOW);
@@ -760,14 +843,14 @@ void setup() {
 
   if (bno08x.begin_I2C(BNO08X_ADDR, &Wire)) {
     bno_ok = true;
-    Serial.println("STATUS,bno085_begin_success");
+    safeStatusPrint("STATUS,bno085_begin_success");
 
     delay(100);
     enableImuReport();
   }
   else {
     bno_ok = false;
-    Serial.println("STATUS,bno085_begin_failed_using_zero_angles");
+    safeStatusPrint("STATUS,bno085_begin_failed_using_zero_angles");
   }
 
   // ------------------------------------------------------------
@@ -775,16 +858,16 @@ void setup() {
   // ------------------------------------------------------------
 
   if (!CAN.begin(CanBitRate::BR_125k)) {
-    Serial.println("STATUS,can_init_failed");
+    safeStatusPrint("STATUS,can_init_failed");
 
     while (1) {
       delay(1000);
     }
   }
 
-  Serial.println("STATUS,can_begin_success");
-  Serial.println("STATUS,waiting_for_can_traffic");
-  Serial.println("FORMAT,DATA,time_ms,left_ticks,right_ticks,left_state,right_state,yaw_deg,pitch_deg,roll_deg");
+  safeStatusPrint("STATUS,can_begin_success");
+  safeStatusPrint("STATUS,waiting_for_can_traffic");
+  safeStatusPrint("FORMAT,DATA,time_ms,left_ticks,right_ticks,left_state,right_state,yaw_deg,pitch_deg,roll_deg");
 
   setNeutralJoystickOutputOnly();
   updateEncoderDirectionSource();

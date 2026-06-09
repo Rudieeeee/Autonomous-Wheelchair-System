@@ -7,7 +7,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --base-paths . sllidar_ros2 ros2_laser_scan_merger"
+        "cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --base-paths . src"
       ],
       "group": {
         "kind": "build",

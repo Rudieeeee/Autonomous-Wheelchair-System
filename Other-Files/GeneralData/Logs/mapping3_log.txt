@@ -1,0 +1,13 @@
+# message_name [message contents] ipc_timestamp ipc_hostname logger_timestamp
+# message formats defined: PARAM SYNC ODOM FLASER RLASER TRUEPOS 
+# PARAM param_name param_value
+# SYNC tagname
+# ODOM x y theta tv rv accel
+# FLASER num_readings [range_readings] x y theta odom_x odom_y odom_theta
+# RLASER num_readings [range_readings] x y theta odom_x odom_y odom_theta
+# TRUEPOS true_x true_y true_theta odom_x odom_y odom_theta
+# NMEA-GGA utc latitude lat_orient longitude long_orient gps_quality num_sattelites hdop sea_level alitude geo_sea_level geo_sep data_age
+PARAM robot_use_laser on nohost 0
+PARAM simulator_num_readings 180 nohost 0
+PARAM robot_frontlaser_offset 0.0 nohost 0
+PARAM robot_rearlaser_offset 0.0 nohost 0

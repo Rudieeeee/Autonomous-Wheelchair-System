@@ -142,7 +142,7 @@ def generate_launch_description():
                 # Command sent while AMCL is uncertain.
                 # You requested [64, 0].
                 # This will only be sent if the full laser scan is clear.
-                'amcl_block_joystick_x': 64,
+                'amcl_block_joystick_x': 100,
                 'amcl_block_joystick_y': 0,
 
                 # Obstacle safety gate for the AMCL-uncertain command
@@ -213,7 +213,7 @@ def generate_launch_description():
             'map',
             default_value=(
                 '/home/rudrh/Autonomous-Wheelchair-System/'
-                'Other-Files/GeneralData/Maps/hall_m_map.yaml'
+                'Other-Files/GeneralData/Maps/hallway_new_map.yaml'
             ),
             description='Full path to the saved map YAML file.',
         ),

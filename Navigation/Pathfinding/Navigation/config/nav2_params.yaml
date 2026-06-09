@@ -66,21 +66,21 @@ controller_server:
 
       min_speed_xy: 0.0                               # 0.0 so the wheelchair is allowed to stop
       max_speed_xy: 0.25                              # should match max_vel_x for forward-only wheelchair
-      min_speed_theta: 0.0                            # min rotation speed
+      min_speed_theta: 0.20                           # min rotation speed
 
       acc_lim_x: 0.3                                  # Maximum forward acceleration in m/s²
       acc_lim_y: 0.0    
-      acc_lim_theta: 0.8                              # rad/s²
+      acc_lim_theta: 1.2                              # rad/s²
 
       decel_lim_x: -0.3                               # more negative --> harder breaking m/s²
       decel_lim_y: 0.0                                
-      decel_lim_theta: -0.8                           # rad/s²
+      decel_lim_theta: -1.2                           # rad/s²
 
       vx_samples: 20                                  # Number of forward velocity samples tests, Higher = better choice of speed, but more CPU load.
       vy_samples: 1                                   # sideways not possible
       vtheta_samples: 20          
 
-      sim_time: 1.5                                   # simulates each velocity command 1.5 s ahead; higher = more foresight, more CPU.
+      sim_time: 1.0                                   # simulates each velocity command 1.5 s ahead; higher = more foresight, more CPU.
       linear_granularity: 0.05                        # checks trajectory every 0.05 m; lower = more accurate, more CPU.
       angular_granularity: 0.025                      # checks rotation every 0.025 rad; lower = more accurate, more CPU.
       transform_tolerance: 0.2                        # Allows 0.2 s TF delay; increase if TF timing errors occur.
@@ -101,7 +101,7 @@ controller_server:
 
       BaseObstacle.scale: 0.02                       # Obstacle avoidance weight; higher = safer clearance, may block narrow spaces.
 
-      PathAlign.scale: 32.0                          # Path direction weight; higher = follows global path direction more strictly.
+      PathAlign.scale: 16                            # Path direction weight; higher = follows global path direction more strictly.
       PathAlign.forward_point_distance: 0.1          # Uses point 0.1 m ahead for path alignment; higher = smoother, less tight.
 
       GoalAlign.scale: 24.0                          # Goal-facing weight; higher = turns more toward the goal direction.
@@ -113,7 +113,6 @@ controller_server:
       RotateToGoal.scale: 32.0                       # Final rotation weight; higher = prioritizes final heading more.
       RotateToGoal.slowing_factor: 5.0               # Slows rotation near goal by factor 5.0; higher = slower final rotation.
       RotateToGoal.lookahead_time: -1.0              # RotateToGoal lookahead; -1.0 = use default behavior.
-
 
 bt_navigator:
   ros__parameters:

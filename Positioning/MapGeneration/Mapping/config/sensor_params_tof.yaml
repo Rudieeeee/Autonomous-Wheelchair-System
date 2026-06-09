@@ -1,0 +1,118 @@
+arduino_sensor_node_tof64:
+  ros__parameters:
+    # -----------------------------
+    # Serial
+    # -----------------------------
+    serial_port: /dev/ttyACM0
+    baud_rate: 460800
+    timer_period_s: 0.01
+
+    clear_serial_buffers_on_start: true
+    serial_startup_delay_s: 2.0
+    startup_skip_lines: 5
+
+    # -----------------------------
+    # Wheel odometry
+    # -----------------------------
+    wheel_diameter_m: 0.35
+    magnets_per_wheel: 12
+    wheel_base_m: 0.55
+
+    left_tick_sign: 1.0
+    right_tick_sign: 1.0
+
+    # -----------------------------
+    # Frames
+    # -----------------------------
+    odom_frame: odom
+    base_frame: base_footprint
+    imu_frame: imu_link
+
+    # -----------------------------
+    # Publishing
+    # -----------------------------
+    publish_odom: true
+    publish_tf: true
+    publish_imu: true
+
+    use_imu_yaw: true
+
+    # -----------------------------
+    # Joystick serial output
+    # -----------------------------
+    joystick_cmd_topic: /joystick_cmd
+    enable_joystick_serial_output: true
+
+    # -----------------------------
+    # ToF64 point cloud
+    # -----------------------------
+    publish_tof_cloud: true
+    tof_cloud_topic: /tof_cloud
+    tof_frame: base_footprint
+
+    tof_count: 8
+    tof_columns: 8
+
+    tof_min_distance_m: 0.03
+    tof_max_distance_m: 4.0
+    tof_invalid_distance_mm: 0
+
+    # Positions of the 8 ToF sensors relative to base_footprint.
+    # These are starting values. Change them to your real mounting positions.
+    tof_sensor_x:
+      - 0.45
+      - 0.45
+      - 0.25
+      - 0.00
+      - -0.25
+      - -0.45
+      - -0.45
+      - 0.00
+
+    tof_sensor_y:
+      - -0.25
+      - 0.25
+      - 0.35
+      - 0.35
+      - 0.35
+      - 0.25
+      - -0.25
+      - -0.35
+
+    tof_sensor_z:
+      - 0.20
+      - 0.20
+      - 0.20
+      - 0.20
+      - 0.20
+      - 0.20
+      - 0.20
+      - 0.20
+
+    # Direction each ToF sensor faces, relative to base_footprint x-axis.
+    # Degrees:
+    # 0 = forward
+    # 90 = left
+    # -90 = right
+    # 180 / -180 = backward
+    tof_sensor_yaw_deg:
+      - -45.0
+      - 45.0
+      - 90.0
+      - 90.0
+      - 90.0
+      - 135.0
+      - -135.0
+      - -90.0
+
+    # 8 angular columns per ToF sensor.
+    # Starting assumption: approximately 45 degree FoV total.
+    tof_column_angles_deg:
+      - -22.5
+      - -16.1
+      - -9.6
+      - -3.2
+      - 3.2
+      - 9.6
+      - 16.1
+      - 22.5

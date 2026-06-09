@@ -1,0 +1,141 @@
+nano ~/measure_req_map_2.sh
+
+chmod +x ~/measure_req_map_2.sh
+
+~/measure_req_map_2.sh | tee ~/req_map_2_new_mapping_time.txt
+
+#!/usr/bin/env bash
+
+START=$(date +%s.%N)
+
+log_time() {
+    NOW=$(date +%s.%N)
+    ELAPSED=$(python3 - <<EOF
+start = float("$START")
+now = float("$NOW")
+print(f"{now - start:.3f}")
+EOF
+)
+    echo "[$ELAPSED s] $1"
+}
+
+wait_for_topic() {
+    TOPIC=$1
+    log_time "Waiting for topic: $TOPIC"
+
+    until ros2 topic list | grep -qx "$TOPIC"; do
+        sleep 0.2
+    done
+
+    log_time "Topic visible: $TOPIC"
+
+    timeout 10 ros2 topic echo "$TOPIC" --once > /tmp/ros2_timing_echo.txt 2>/dev/null
+
+    if [ $? -eq 0 ]; then
+        log_time "First message received on: $TOPIC"
+    else
+        log_time "WARNING: topic exists but no message received within 10 s: $TOPIC"
+    fi
+}
+
+wait_for_node() {
+    NODE=$1
+    log_time "Waiting for node: $NODE"
+
+    until ros2 node list | grep -qx "$NODE"; do
+        sleep 0.2
+    done
+
+    log_time "Node visible: $NODE"
+}
+
+wait_for_tf() {
+    PARENT=$1
+    CHILD=$2
+
+    log_time "Waiting for TF: $PARENT -> $CHILD"
+
+    timeout 15 ros2 run tf2_ros tf2_echo "$PARENT" "$CHILD" > /tmp/tf_check.txt 2>/dev/null
+
+    if [ $? -eq 0 ]; then
+        log_time "TF available: $PARENT -> $CHILD"
+    else
+        log_time "WARNING: TF not available within 15 s: $PARENT -> $CHILD"
+    fi
+}
+
+log_time "REQ-MAP-2 timing started"
+
+wait_for_topic "/scan"
+wait_for_topic "/odom"
+wait_for_topic "/imu/data"
+
+wait_for_tf "odom" "base_footprint"
+
+wait_for_node "/slam_toolbox"
+wait_for_topic "/map"
+
+log_time "System ready for new map generation"
+
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+nano ~/measure_req_map_2_saved_map.sh
+
+chmod +x ~/measure_req_map_2_saved_map.sh
+
+~/measure_req_map_2_saved_map.sh | tee ~/req_map_2_saved_map_time.txt
+
+#!/usr/bin/env bash
+
+START=$(date +%s.%N)
+
+log_time() {
+    NOW=$(date +%s.%N)
+    ELAPSED=$(python3 - <<EOF
+start = float("$START")
+now = float("$NOW")
+print(f"{now - start:.3f}")
+EOF
+)
+    echo "[$ELAPSED s] $1"
+}
+
+wait_for_topic() {
+    TOPIC=$1
+    log_time "Waiting for topic: $TOPIC"
+
+    until ros2 topic list | grep -qx "$TOPIC"; do
+        sleep 0.2
+    done
+
+    log_time "Topic visible: $TOPIC"
+
+    timeout 10 ros2 topic echo "$TOPIC" --once > /tmp/ros2_timing_echo.txt 2>/dev/null
+
+    if [ $? -eq 0 ]; then
+        log_time "First message received on: $TOPIC"
+    else
+        log_time "WARNING: topic exists but no message received within 10 s: $TOPIC"
+    fi
+}
+
+wait_for_node() {
+    NODE=$1
+    log_time "Waiting for node: $NODE"
+
+    until ros2 node list | grep -qx "$NODE"; do
+        sleep 0.2
+    done
+
+    log_time "Node visible: $NODE"
+}
+
+log_time "REQ-MAP-2 saved-map timing started"
+
+wait_for_topic "/scan"
+wait_for_topic "/odom"
+wait_for_topic "/imu/data"
+
+wait_for_node "/map_server"
+wait_for_topic "/map"
+
+log_time "System ready using saved map"
