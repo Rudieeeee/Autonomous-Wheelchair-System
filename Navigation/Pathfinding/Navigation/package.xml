@@ -33,6 +33,9 @@
   <exec_depend>nav2_navfn_planner</exec_depend>
   <exec_depend>nav2_regulated_pure_pursuit_controller</exec_depend>
 
+  <exec_depend>nav2_dwb_controller</exec_depend>
+  <exec_depend>dwb_core</exec_depend>
+
   <!-- Visualization -->
   <exec_depend>rviz2</exec_depend>
 

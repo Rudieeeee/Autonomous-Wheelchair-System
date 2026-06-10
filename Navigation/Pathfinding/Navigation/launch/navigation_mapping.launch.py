@@ -5,7 +5,6 @@ from launch.actions import (
     LogInfo,
     TimerAction,
 )
-from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -45,7 +44,8 @@ def generate_launch_description():
             'right_lidar_port': right_lidar_port,
             'arduino_port': arduino_port,
 
-            # Use only one RViz instance: this launch starts navigation RViz.
+            # Use only one RViz instance.
+            # This launch starts navigation RViz after a delay.
             'use_rviz': 'false',
 
             'save_map': save_map,
@@ -112,11 +112,17 @@ def generate_launch_description():
                 'joystick_topic': '/joystick_cmd',
                 'scan_topic': '/scan',
 
-                'max_linear_speed': 0.25,
-                'max_angular_speed': 0.5,
+                # Keep same style as your current mapping launch.
+                'max_linear_speed': 1.67,
+                'max_angular_speed': 1.1,
 
                 'invert_x': False,
                 'invert_y': False,
+
+                'minimum_nonzero_joystick': 52,
+                'max_joystick_x': 80,
+                'max_joystick_y': 80,
+                'pure_rotation_joystick': 60,
 
                 'deadzone_percent': 3,
                 'timeout_seconds': 0.5,
@@ -155,10 +161,10 @@ def generate_launch_description():
     rviz = Node(
         package='rviz2',
         executable='rviz2',
-        name='rviz_navigation_mapping',
+        name='rviz',
         output='screen',
         arguments=['-d', rviz_config],
-        condition=IfCondition(use_rviz),
+        condition=None,
     )
 
     delayed_navigation = TimerAction(
@@ -172,6 +178,14 @@ def generate_launch_description():
             velocity_smoother,
             cmd_vel_to_joystick_mapping,
             lifecycle_manager_navigation,
+        ],
+    )
+
+    delayed_rviz = TimerAction(
+        period=15.0,
+        actions=[
+            LogInfo(msg='STARTING RVIZ FROM NAVIGATION MAPPING LAUNCH NOW'),
+            rviz,
         ],
     )
 
@@ -222,6 +236,6 @@ def generate_launch_description():
         ),
 
         mapping_launch,
-        rviz,
         delayed_navigation,
+        delayed_rviz,
     ])

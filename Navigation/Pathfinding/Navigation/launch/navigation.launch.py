@@ -5,6 +5,7 @@ from launch.actions import (
     LogInfo,
     TimerAction,
 )
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -102,57 +103,77 @@ def generate_launch_description():
                 'cmd_vel_topic': '/cmd_vel',
                 'joystick_topic': '/joystick_cmd',
 
-                # From your Nav2 YAML:
-                # velocity_smoother max_velocity: [0.25, 0.0, 0.5]
-                'max_linear_speed': 0.25,
-                'max_angular_speed': 0.5,
+                # Real wheelchair calibration:
+                # 5 km/h = 1.39 m/s. Joystick Y=100 roughly means max chair speed.
+                # Nav2 itself is limited lower in nav2_params.yaml.
+                'max_linear_speed': 1.39,
 
-                # Change if direction is reversed
-                'invert_x': False,
+                # Same scale as Nav2 max_vel_theta.
+                'max_angular_speed': 0.42,
+
+                # Change only if left/right or forward/backward is reversed.
+                'invert_x': True,
                 'invert_y': False,
 
-                # Normal safety/settings
                 'deadzone_percent': 3,
+
+                # Your measured breakaway values.
+                'min_forward_joystick': 25,
+                'min_backward_joystick': 40,
+
+                'max_joystick_x': 100,
+                'max_joystick_y': 100,
+
+                # Large pure rotation value.
+                'pure_rotation_joystick': 100,
+
+                # With stepped turning, this is the large-turn threshold.
+                # Above this angular command, pure rotation becomes X=+-100.
+                'pure_rotation_angular_threshold': 0.18,
+
+                # IMPORTANT:
+                # Do not keep this at 100, otherwise mixed driving can turn too hard.
+                # This is only the max X while also driving forward/backward.
+                'mixed_turn_max_joystick': 35,
+
+                # New stepped turning parameters.
+                # These stop small heading corrections from becoming full X=100.
+                'slow_turn_angular_threshold': 0.08,
+                'medium_turn_angular_threshold': 0.18,
+                'slow_turn_joystick': 35,
+                'medium_turn_joystick': 60,
+
+                'linear_cmd_deadband': 0.01,
+                'angular_cmd_deadband': 0.01,
+
                 'timeout_seconds': 0.5,
                 'publish_rate_hz': 20.0,
 
-                # If no /cmd_vel publisher exists, publish nothing
                 'send_nothing_without_cmd_vel_publisher': True,
 
-                # AMCL safety gate
-                # Normal Nav2 movement is only allowed when /amcl_pose is accurate.
+                # AMCL safety gate.
                 'require_accurate_amcl': True,
                 'amcl_pose_topic': '/amcl_pose',
 
-                # Covariance limits:
-                # sqrt(0.04) = 0.20 m position standard deviation
                 'max_x_covariance': 0.04,
                 'max_y_covariance': 0.04,
-
-                # sqrt(0.03) = 0.173 rad = about 10 degrees
                 'max_yaw_covariance': 0.03,
 
-                # Require multiple good AMCL messages before allowing Nav2 movement
                 'min_good_amcl_messages': 5,
-
-                # Increased from 1.0 to 10.0 because AMCL may not publish every second
-                # when the robot is standing still.
                 'amcl_timeout_seconds': 10.0,
 
-                # Command sent while AMCL is uncertain.
-                # You requested [64, 0].
-                # This will only be sent if the full laser scan is clear.
+                # While AMCL is not accepted:
+                # if scan is safe, rotate in place with full X.
                 'amcl_block_joystick_x': 100,
                 'amcl_block_joystick_y': 0,
 
-                # Obstacle safety gate for the AMCL-uncertain command
+                # LiDAR emergency stop before and after AMCL.
                 'use_obstacle_gate': True,
                 'scan_topic': '/scan',
 
-                # Check the complete laser scan, not only the front sector
-                'full_scan_stop_distance_m': 0.45,
+                # 0.70 is quite strict. Use 0.50 first if walls stop it.
+                'full_scan_stop_distance_m': 0.70,
 
-                # If scan data is older than this, send [0, 0]
                 'scan_timeout_seconds': 0.5,
             }
         ],
@@ -203,7 +224,7 @@ def generate_launch_description():
     delayed_rviz = TimerAction(
         period=15.0,
         actions=[
-            LogInfo(msg='STARTING RVIZ FROM NAVIGATION TEST LAUNCH NOW'),
+            LogInfo(msg='STARTING RVIZ FROM NAVIGATION LAUNCH NOW'),
             rviz,
         ],
     )
@@ -213,7 +234,7 @@ def generate_launch_description():
             'map',
             default_value=(
                 '/home/rudrh/Autonomous-Wheelchair-System/'
-                'Other-Files/GeneralData/Maps/hallway_new_map.yaml'
+                'Other-Files/GeneralData/Maps/hall_m_new_map.yaml'
             ),
             description='Full path to the saved map YAML file.',
         ),

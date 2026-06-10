@@ -22,148 +22,134 @@ class CmdVelToJoystick(Node):
         self.declare_parameter("cmd_vel_topic", "/cmd_vel")
         self.declare_parameter("joystick_topic", "/joystick_cmd")
 
-        # IMPORTANT:
-        # These are NOT the Nav2 maximum speeds.
-        # These are the wheelchair speed represented by joystick 100.
-        # UPDATED: 6 km/h = 1.67 m/s, and angular updated to 1.1
-        self.declare_parameter("max_linear_speed", 1.67)
-        self.declare_parameter("max_angular_speed", 1.1)
+        # These are wheelchair calibration values, not Nav2 limits.
+        # If joystick Y=100 gives about 5 km/h, that is about 1.39 m/s.
+        self.declare_parameter("max_linear_speed", 1.39)
+        self.declare_parameter("max_angular_speed", 0.42)
 
-        # Set these if the wheelchair drives/turns opposite to the command.
-        # CHANGED TO TRUE: Fixes the inverted clockwise map rotation issue
-        self.declare_parameter("invert_x", True)
+        self.declare_parameter("invert_x", False)
         self.declare_parameter("invert_y", False)
 
         self.declare_parameter("deadzone_percent", 3)
 
-        # Minimum joystick magnitude for any non-zero Nav2 command.
-        # 0 is still allowed for stop, but movement commands become at least +/-52
-        # because the wheelchair does not move below this value.
-        self.declare_parameter("minimum_nonzero_joystick", 52)
+        # Your measured breakaway joystick values.
+        self.declare_parameter("min_forward_joystick", 25)
+        self.declare_parameter("min_backward_joystick", 40)
 
-        # Extra safety caps for autonomous mode.
-        # X = turning joystick, Y = forward/backward joystick.
-        # UPDATED: Expanded to 100 to allow the wheelchair full dynamic hardware range
         self.declare_parameter("max_joystick_x", 100)
         self.declare_parameter("max_joystick_y", 100)
+
+        # Full-power rotation value. Used only for large angular commands.
+        self.declare_parameter("pure_rotation_joystick", 100)
+
+        # OLD behaviour made every command above this become +-100.
+        # In this new code it is only used as the high/strong turn threshold fallback.
+        self.declare_parameter("pure_rotation_angular_threshold", 0.18)
+
+        # In mixed driving, X is capped so forward+turn does not become too violent.
+        self.declare_parameter("mixed_turn_max_joystick", 35)
+
+        self.declare_parameter("linear_cmd_deadband", 0.01)
+        self.declare_parameter("angular_cmd_deadband", 0.01)
+
+        # Stepped turn behaviour. This prevents overshoot.
+        # Small angular command  -> small joystick X.
+        # Medium angular command -> medium joystick X.
+        # Large angular command  -> full joystick X.
+        self.declare_parameter("slow_turn_angular_threshold", 0.08)
+        self.declare_parameter("medium_turn_angular_threshold", 0.18)
+        self.declare_parameter("slow_turn_joystick", 35)
+        self.declare_parameter("medium_turn_joystick", 60)
 
         self.declare_parameter("timeout_seconds", 0.5)
         self.declare_parameter("publish_rate_hz", 20.0)
 
-        # If True:
-        # - no /cmd_vel publisher -> publish nothing
-        # - /cmd_vel publisher exists but messages stop -> publish neutral [0, 0]
         self.declare_parameter("send_nothing_without_cmd_vel_publisher", True)
 
-        # AMCL safety gate.
-        # If require_accurate_amcl is True, normal Nav2 movement is blocked
-        # until /amcl_pose covariance is low enough once.
+        # AMCL startup gate.
         self.declare_parameter("require_accurate_amcl", True)
         self.declare_parameter("amcl_pose_topic", "/amcl_pose")
 
-        # Covariance limits.
-        # 0.04 means std dev = sqrt(0.04) = 0.20 m.
         self.declare_parameter("max_x_covariance", 0.04)
         self.declare_parameter("max_y_covariance", 0.04)
-
-        # 0.03 means std dev = sqrt(0.03) = 0.173 rad = about 10 degrees.
         self.declare_parameter("max_yaw_covariance", 0.03)
 
-        # Number of good AMCL messages needed before normal movement is allowed.
         self.declare_parameter("min_good_amcl_messages", 5)
-
-        # If AMCL is older than this before first accepted pose, normal movement is blocked.
         self.declare_parameter("amcl_timeout_seconds", 10.0)
 
-        # Command sent while AMCL is uncertain.
-        # Requested behavior: while AMCL is still checking, rotate with [100, 0].
-        # This command is only sent when the obstacle gate says the scan is clear.
-        # It is NOT limited by max_joystick_x/max_joystick_y because those caps
-        # are only for normal Nav2 path-following commands.
+        # While AMCL is not accepted, rotate in place to help localization.
+        # Obstacle gate can still block this.
         self.declare_parameter("amcl_block_joystick_x", 100)
         self.declare_parameter("amcl_block_joystick_y", 0)
 
-        # Obstacle safety gate.
-        # This checks the full LaserScan while AMCL is uncertain.
+        # LiDAR emergency stop gate.
         self.declare_parameter("use_obstacle_gate", True)
         self.declare_parameter("scan_topic", "/scan")
-        self.declare_parameter("full_scan_stop_distance_m", 0.45)
+        self.declare_parameter("full_scan_stop_distance_m", 0.50)
         self.declare_parameter("scan_timeout_seconds", 0.5)
 
         self.cmd_vel_topic = self.get_parameter("cmd_vel_topic").value
         self.joystick_topic = self.get_parameter("joystick_topic").value
 
-        self.max_linear_speed = float(
-            self.get_parameter("max_linear_speed").value
-        )
-        self.max_angular_speed = float(
-            self.get_parameter("max_angular_speed").value
-        )
+        self.max_linear_speed = float(self.get_parameter("max_linear_speed").value)
+        self.max_angular_speed = float(self.get_parameter("max_angular_speed").value)
 
         self.invert_x = bool(self.get_parameter("invert_x").value)
         self.invert_y = bool(self.get_parameter("invert_y").value)
 
-        self.deadzone_percent = int(
-            self.get_parameter("deadzone_percent").value
-        )
-        self.minimum_nonzero_joystick = int(
-            self.get_parameter("minimum_nonzero_joystick").value
-        )
+        self.deadzone_percent = int(self.get_parameter("deadzone_percent").value)
+
+        self.min_forward_joystick = int(self.get_parameter("min_forward_joystick").value)
+        self.min_backward_joystick = int(self.get_parameter("min_backward_joystick").value)
+
         self.max_joystick_x = int(self.get_parameter("max_joystick_x").value)
         self.max_joystick_y = int(self.get_parameter("max_joystick_y").value)
 
-        self.timeout_seconds = float(
-            self.get_parameter("timeout_seconds").value
+        self.pure_rotation_joystick = int(self.get_parameter("pure_rotation_joystick").value)
+        self.pure_rotation_angular_threshold = float(
+            self.get_parameter("pure_rotation_angular_threshold").value
         )
-        self.publish_rate_hz = float(
-            self.get_parameter("publish_rate_hz").value
+
+        self.mixed_turn_max_joystick = int(self.get_parameter("mixed_turn_max_joystick").value)
+
+        self.linear_cmd_deadband = float(self.get_parameter("linear_cmd_deadband").value)
+        self.angular_cmd_deadband = float(self.get_parameter("angular_cmd_deadband").value)
+
+        self.slow_turn_angular_threshold = float(
+            self.get_parameter("slow_turn_angular_threshold").value
         )
+        self.medium_turn_angular_threshold = float(
+            self.get_parameter("medium_turn_angular_threshold").value
+        )
+        self.slow_turn_joystick = int(self.get_parameter("slow_turn_joystick").value)
+        self.medium_turn_joystick = int(self.get_parameter("medium_turn_joystick").value)
+
+        self.timeout_seconds = float(self.get_parameter("timeout_seconds").value)
+        self.publish_rate_hz = float(self.get_parameter("publish_rate_hz").value)
 
         self.send_nothing_without_cmd_vel_publisher = bool(
-            self.get_parameter(
-                "send_nothing_without_cmd_vel_publisher"
-            ).value
+            self.get_parameter("send_nothing_without_cmd_vel_publisher").value
         )
 
-        self.require_accurate_amcl = bool(
-            self.get_parameter("require_accurate_amcl").value
-        )
+        self.require_accurate_amcl = bool(self.get_parameter("require_accurate_amcl").value)
         self.amcl_pose_topic = self.get_parameter("amcl_pose_topic").value
 
-        self.max_x_covariance = float(
-            self.get_parameter("max_x_covariance").value
-        )
-        self.max_y_covariance = float(
-            self.get_parameter("max_y_covariance").value
-        )
-        self.max_yaw_covariance = float(
-            self.get_parameter("max_yaw_covariance").value
-        )
+        self.max_x_covariance = float(self.get_parameter("max_x_covariance").value)
+        self.max_y_covariance = float(self.get_parameter("max_y_covariance").value)
+        self.max_yaw_covariance = float(self.get_parameter("max_yaw_covariance").value)
 
-        self.min_good_amcl_messages = int(
-            self.get_parameter("min_good_amcl_messages").value
-        )
-        self.amcl_timeout_seconds = float(
-            self.get_parameter("amcl_timeout_seconds").value
-        )
+        self.min_good_amcl_messages = int(self.get_parameter("min_good_amcl_messages").value)
+        self.amcl_timeout_seconds = float(self.get_parameter("amcl_timeout_seconds").value)
 
-        self.amcl_block_joystick_x = int(
-            self.get_parameter("amcl_block_joystick_x").value
-        )
-        self.amcl_block_joystick_y = int(
-            self.get_parameter("amcl_block_joystick_y").value
-        )
+        self.amcl_block_joystick_x = int(self.get_parameter("amcl_block_joystick_x").value)
+        self.amcl_block_joystick_y = int(self.get_parameter("amcl_block_joystick_y").value)
 
-        self.use_obstacle_gate = bool(
-            self.get_parameter("use_obstacle_gate").value
-        )
+        self.use_obstacle_gate = bool(self.get_parameter("use_obstacle_gate").value)
         self.scan_topic = self.get_parameter("scan_topic").value
         self.full_scan_stop_distance_m = float(
             self.get_parameter("full_scan_stop_distance_m").value
         )
-        self.scan_timeout_seconds = float(
-            self.get_parameter("scan_timeout_seconds").value
-        )
+        self.scan_timeout_seconds = float(self.get_parameter("scan_timeout_seconds").value)
 
         self.current_x = 0
         self.current_y = 0
@@ -182,11 +168,7 @@ class CmdVelToJoystick(Node):
         self.last_scan_time = self.get_clock().now()
         self.closest_scan_distance = float("inf")
 
-        self.publisher = self.create_publisher(
-            Int16MultiArray,
-            self.joystick_topic,
-            10,
-        )
+        self.publisher = self.create_publisher(Int16MultiArray, self.joystick_topic, 10)
 
         self.subscription = self.create_subscription(
             Twist,
@@ -202,8 +184,6 @@ class CmdVelToJoystick(Node):
             10,
         )
 
-        # Many LaserScan publishers use BEST_EFFORT QoS.
-        # Default reliable QoS may not connect to them.
         scan_qos = QoSProfile(
             reliability=QoSReliabilityPolicy.BEST_EFFORT,
             history=QoSHistoryPolicy.KEEP_LAST,
@@ -217,10 +197,7 @@ class CmdVelToJoystick(Node):
             scan_qos,
         )
 
-        self.timer = self.create_timer(
-            1.0 / self.publish_rate_hz,
-            self.timer_callback,
-        )
+        self.timer = self.create_timer(1.0 / self.publish_rate_hz, self.timer_callback)
 
         self.get_logger().info("cmd_vel_to_joystick started")
         self.get_logger().info(f"Subscribing to cmd_vel: {self.cmd_vel_topic}")
@@ -228,10 +205,17 @@ class CmdVelToJoystick(Node):
         self.get_logger().info(f"max_linear_speed={self.max_linear_speed}")
         self.get_logger().info(f"max_angular_speed={self.max_angular_speed}")
         self.get_logger().info(
-            f"minimum_nonzero_joystick={self.minimum_nonzero_joystick}"
+            f"min_forward_joystick={self.min_forward_joystick}, "
+            f"min_backward_joystick={self.min_backward_joystick}"
         )
         self.get_logger().info(
-            f"max_joystick_x={self.max_joystick_x}, max_joystick_y={self.max_joystick_y}"
+            f"stepped turning: deadband={self.angular_cmd_deadband}, "
+            f"slow<{self.slow_turn_angular_threshold} -> {self.slow_turn_joystick}, "
+            f"medium<{self.medium_turn_angular_threshold} -> {self.medium_turn_joystick}, "
+            f"large -> {self.pure_rotation_joystick}"
+        )
+        self.get_logger().info(
+            f"mixed_turn_max_joystick={self.mixed_turn_max_joystick}"
         )
         self.get_logger().info(
             f"invert_x={self.invert_x}, invert_y={self.invert_y}"
@@ -239,7 +223,6 @@ class CmdVelToJoystick(Node):
         self.get_logger().info(
             f"require_accurate_amcl={self.require_accurate_amcl}"
         )
-        self.get_logger().info(f"Subscribing to AMCL: {self.amcl_pose_topic}")
         self.get_logger().info(
             "AMCL covariance limits: "
             f"x={self.max_x_covariance}, "
@@ -253,7 +236,7 @@ class CmdVelToJoystick(Node):
             f"yaw={math.degrees(math.sqrt(self.max_yaw_covariance)):.1f} deg"
         )
         self.get_logger().info(
-            "AMCL uncertain command: "
+            "AMCL startup command: "
             f"[{self.amcl_block_joystick_x}, {self.amcl_block_joystick_y}]"
         )
         self.get_logger().info(
@@ -266,60 +249,92 @@ class CmdVelToJoystick(Node):
     def clamp(self, value, min_value=-100, max_value=100):
         return max(min_value, min(max_value, value))
 
-    def apply_deadzone(self, value):
+    def apply_deadzone_percent(self, value):
         if abs(value) < self.deadzone_percent:
             return 0
         return value
 
-    def apply_minimum_nonzero_joystick(self, value):
-        value = int(value)
-
-        if value == 0:
+    def scale_linear_to_y(self, linear_x):
+        if self.max_linear_speed <= 0.0:
             return 0
 
-        minimum = abs(self.minimum_nonzero_joystick)
-        minimum = self.clamp(minimum, 0, 100)
+        scaled = int((linear_x / self.max_linear_speed) * 100.0)
+        scaled = self.clamp(scaled, -self.max_joystick_y, self.max_joystick_y)
+        scaled = self.apply_deadzone_percent(scaled)
 
-        if minimum == 0:
-            return value
+        if scaled > 0 and abs(scaled) < self.min_forward_joystick:
+            scaled = self.min_forward_joystick
+        elif scaled < 0 and abs(scaled) < self.min_backward_joystick:
+            scaled = -self.min_backward_joystick
 
-        if abs(value) < minimum:
-            return minimum if value > 0 else -minimum
+        return int(self.clamp(scaled, -self.max_joystick_y, self.max_joystick_y))
 
-        return value
-
-    def scale_to_joystick(self, value, max_value, max_joystick):
-        if max_value <= 0.0:
+    def scale_angular_to_x_continuous(self, angular_z, x_limit):
+        if self.max_angular_speed <= 0.0:
             return 0
 
-        scaled = int((value / max_value) * 100.0)
-        scaled = self.clamp(scaled)
-        scaled = self.apply_deadzone(scaled)
-        scaled = self.apply_minimum_nonzero_joystick(scaled)
+        scaled = int((angular_z / self.max_angular_speed) * 100.0)
+        scaled = self.clamp(scaled, -x_limit, x_limit)
+        scaled = self.apply_deadzone_percent(scaled)
+        return int(self.clamp(scaled, -x_limit, x_limit))
 
-        max_joystick = abs(int(max_joystick))
-        max_joystick = self.clamp(max_joystick, 0, 100)
-        scaled = self.clamp(scaled, -max_joystick, max_joystick)
+    def stepped_rotation_x(self, angular_z):
+        """
+        Converts pure rotation angular.z to stepped joystick X.
+        This avoids overshoot caused by instantly forcing every turn to +-100.
+        """
+        abs_w = abs(angular_z)
 
-        return scaled
+        if abs_w < self.angular_cmd_deadband:
+            return 0
+
+        if abs_w < self.slow_turn_angular_threshold:
+            x = abs(self.slow_turn_joystick)
+        elif abs_w < self.medium_turn_angular_threshold:
+            x = abs(self.medium_turn_joystick)
+        else:
+            x = abs(self.pure_rotation_joystick)
+
+        x = int(self.clamp(x, 0, self.max_joystick_x))
+        return x if angular_z > 0.0 else -x
 
     def cmd_vel_callback(self, msg: Twist):
-        linear_x = msg.linear.x
-        angular_z = msg.angular.z
+        linear_x = float(msg.linear.x)
+        angular_z = float(msg.angular.z)
 
-        # Joystick X = turn left/right.
-        joystick_x = self.scale_to_joystick(
-            angular_z,
-            self.max_angular_speed,
-            self.max_joystick_x,
-        )
+        joystick_x = 0
+        joystick_y = 0
 
-        # Joystick Y = forward/backward.
-        joystick_y = self.scale_to_joystick(
-            linear_x,
-            self.max_linear_speed,
-            self.max_joystick_y,
-        )
+        linear_active = abs(linear_x) >= self.linear_cmd_deadband
+        angular_active = abs(angular_z) >= self.angular_cmd_deadband
+
+        if not linear_active and not angular_active:
+            joystick_x = 0
+            joystick_y = 0
+
+        elif not linear_active and angular_active:
+            # Pure turn. New stepped logic: small command -> small turn,
+            # medium command -> medium turn, large command -> full turn.
+            joystick_x = self.stepped_rotation_x(angular_z)
+            joystick_y = 0
+
+        elif linear_active and not angular_active:
+            # Straight forward/backward.
+            joystick_x = 0
+            joystick_y = self.scale_linear_to_y(linear_x)
+
+        else:
+            # Mixed command. Keep Y active, cap X.
+            # If angular is very large, rotate in place instead of sending [100, small Y].
+            if abs(angular_z) >= self.pure_rotation_angular_threshold:
+                joystick_x = self.stepped_rotation_x(angular_z)
+                joystick_y = 0
+            else:
+                joystick_x = self.scale_angular_to_x_continuous(
+                    angular_z,
+                    abs(self.mixed_turn_max_joystick),
+                )
+                joystick_y = self.scale_linear_to_y(linear_x)
 
         if self.invert_x:
             joystick_x = -joystick_x
@@ -327,29 +342,18 @@ class CmdVelToJoystick(Node):
         if self.invert_y:
             joystick_y = -joystick_y
 
-        # If Nav2 commands a pure rotation, linear velocity becomes zero.
-        # The wheelchair needs full joystick X to rotate reliably in this case.
-        if joystick_y == 0 and joystick_x != 0:
-            joystick_x = 100 if joystick_x > 0 else -100
-
-        self.current_x = joystick_x
-        self.current_y = joystick_y
+        self.current_x = int(self.clamp(joystick_x, -100, 100))
+        self.current_y = int(self.clamp(joystick_y, -100, 100))
 
         self.has_received_cmd_vel = True
         self.last_cmd_time = self.get_clock().now()
 
     def amcl_pose_callback(self, msg: PoseWithCovarianceStamped):
-        # Once AMCL has been good enough once, keep normal movement unlocked.
-        # Do not keep re-checking AMCL covariance after that.
         if self.amcl_pose_estimation_done:
             return
 
         covariance = msg.pose.covariance
 
-        # PoseWithCovariance covariance matrix:
-        # x variance   = covariance[0]
-        # y variance   = covariance[7]
-        # yaw variance = covariance[35]
         x_cov = covariance[0]
         y_cov = covariance[7]
         yaw_cov = covariance[35]
@@ -365,10 +369,7 @@ class CmdVelToJoystick(Node):
         else:
             self.good_amcl_count = 0
 
-        self.amcl_is_accurate = (
-            self.good_amcl_count >= self.min_good_amcl_messages
-        )
-
+        self.amcl_is_accurate = self.good_amcl_count >= self.min_good_amcl_messages
         self.has_received_amcl = True
         self.last_amcl_time = self.get_clock().now()
 
@@ -376,7 +377,8 @@ class CmdVelToJoystick(Node):
             self.amcl_pose_estimation_done = True
             self.get_logger().info(
                 "AMCL pose estimation accepted once. "
-                "Normal movement is now permanently unlocked for this run."
+                "Normal Nav2 movement is now unlocked, "
+                "but LiDAR emergency stop remains active."
             )
         else:
             self.get_logger().warn(
@@ -384,8 +386,7 @@ class CmdVelToJoystick(Node):
                 f"x_cov={x_cov:.4f}, "
                 f"y_cov={y_cov:.4f}, "
                 f"yaw_cov={yaw_cov:.4f}, "
-                f"good_count={self.good_amcl_count}/"
-                f"{self.min_good_amcl_messages}"
+                f"good_count={self.good_amcl_count}/{self.min_good_amcl_messages}"
             )
 
     def scan_callback(self, msg: LaserScan):
@@ -401,17 +402,14 @@ class CmdVelToJoystick(Node):
             closest_distance = min(closest_distance, distance)
 
         self.closest_scan_distance = closest_distance
-        self.obstacle_too_close = (
-            closest_distance < self.full_scan_stop_distance_m
-        )
+        self.obstacle_too_close = closest_distance < self.full_scan_stop_distance_m
 
         self.has_received_scan = True
         self.last_scan_time = self.get_clock().now()
 
         if self.obstacle_too_close:
             self.get_logger().warn(
-                f"Obstacle too close somewhere in full scan: "
-                f"{closest_distance:.2f} m. Blocking AMCL recovery movement."
+                f"Obstacle too close somewhere in full scan: {closest_distance:.2f} m."
             )
 
     def publish_joystick(self, x, y):
@@ -441,27 +439,20 @@ class CmdVelToJoystick(Node):
         if amcl_age > self.amcl_timeout_seconds:
             self.amcl_is_accurate = False
             self.good_amcl_count = 0
-
             self.get_logger().warn(
-                "No recent /amcl_pose received. Blocking normal Nav2 movement."
+                f"/amcl_pose timeout: age={amcl_age:.2f}s. Blocking normal movement."
             )
             return False
 
-        if not self.amcl_is_accurate:
-            self.get_logger().warn(
-                "AMCL pose is not accurate yet. Blocking normal Nav2 movement."
-            )
-            return False
+        return self.amcl_is_accurate
 
-        return True
-
-    def obstacle_allows_recovery_movement(self):
+    def obstacle_gate_allows_movement(self):
         if not self.use_obstacle_gate:
             return True
 
         if not self.has_received_scan:
             self.get_logger().warn(
-                "No /scan received yet. Blocking AMCL recovery movement."
+                "No /scan received yet. Emergency stop active."
             )
             return False
 
@@ -470,77 +461,49 @@ class CmdVelToJoystick(Node):
 
         if scan_age > self.scan_timeout_seconds:
             self.get_logger().warn(
-                "No recent /scan received. Blocking AMCL recovery movement."
+                f"/scan timeout: age={scan_age:.2f}s. Emergency stop active."
             )
             return False
 
         if self.obstacle_too_close:
-            self.get_logger().warn(
-                f"Obstacle gate blocked AMCL recovery movement. "
-                f"Closest scan point: {self.closest_scan_distance:.2f} m"
-            )
             return False
 
         return True
 
-    def timer_callback(self):
-        cmd_vel_publishers = self.count_publishers(self.cmd_vel_topic)
-
-        # If Nav2 /cmd_vel does not exist as a publisher, send nothing.
-        # This prevents the Arduino from receiving joystick commands when Nav2 is not running.
-        if (
-            self.send_nothing_without_cmd_vel_publisher
-            and cmd_vel_publishers == 0
-        ):
-            self.has_received_cmd_vel = False
-            self.current_x = 0
-            self.current_y = 0
-            return
-
-        # AMCL safety gate.
-        # If AMCL is accurate once, allow normal Nav2 /cmd_vel -> /joystick_cmd.
-        # If AMCL is uncertain, perform only a slow recovery turn if scan is clear.
-        if not self.amcl_allows_movement():
-            if self.obstacle_allows_recovery_movement():
-                # AMCL recovery/checking command is intentionally allowed to use
-                # the full joystick range. Normal Nav2 commands are still capped
-                # separately in scale_to_joystick().
-                recovery_x = int(self.clamp(self.amcl_block_joystick_x, -100, 100))
-                recovery_y = int(self.clamp(self.amcl_block_joystick_y, -100, 100))
-
-                self.current_x = recovery_x
-                self.current_y = recovery_y
-                self.get_logger().warn(
-                    f"AMCL CHECKING: publishing joystick [{recovery_x}, {recovery_y}]"
-                )
-                self.publish_joystick(recovery_x, recovery_y)
-            else:
-                self.current_x = 0
-                self.current_y = 0
-                self.publish_joystick(0, 0)
-
-            return
+    def cmd_vel_is_fresh(self):
+        if not self.has_received_cmd_vel:
+            return False
 
         now = self.get_clock().now()
-        age = (now - self.last_cmd_time).nanoseconds / 1e9
+        cmd_age = (now - self.last_cmd_time).nanoseconds / 1e9
+        return cmd_age <= self.timeout_seconds
 
-        # If /cmd_vel publisher exists, but commands stop, send neutral for safety.
-        if (not self.has_received_cmd_vel) or age > self.timeout_seconds:
+    def timer_callback(self):
+        # LiDAR emergency stop has priority before and after AMCL.
+        if not self.obstacle_gate_allows_movement():
+            self.publish_joystick(0, 0)
+            return
+
+        # Before AMCL is accepted, do localization rotation.
+        if not self.amcl_allows_movement():
+            self.publish_joystick(
+                self.amcl_block_joystick_x,
+                self.amcl_block_joystick_y,
+            )
+            return
+
+        # After AMCL is accepted, only use fresh /cmd_vel.
+        if not self.cmd_vel_is_fresh():
+            if self.send_nothing_without_cmd_vel_publisher:
+                return
             self.publish_joystick(0, 0)
             return
 
         self.publish_joystick(self.current_x, self.current_y)
 
-    def destroy_node(self):
-        # Do NOT publish [0, 0] during shutdown.
-        # During launch shutdown this could still be forwarded by
-        # arduino_sensor_node as serial J,0,0.
-        super().destroy_node()
-
 
 def main(args=None):
     rclpy.init(args=args)
-
     node = CmdVelToJoystick()
 
     try:
@@ -548,10 +511,12 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
+        try:
+            node.publish_joystick(0, 0)
+        except Exception:
+            pass
         node.destroy_node()
-
-        if rclpy.ok():
-            rclpy.shutdown()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":
