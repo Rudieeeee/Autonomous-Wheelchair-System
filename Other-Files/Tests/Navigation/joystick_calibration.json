@@ -2,23 +2,55 @@
   "format": "wheelchair_joystick_calibration_v1",
   "description": "Feedforward inverse uses joystick_abs = (velocity_abs - intercept) / slope.",
   "linear_positive": {
-    "valid": false,
-    "reason": "Not enough moving data for linear_positive",
-    "samples": 0
+    "valid": true,
+    "model": "velocity_abs = slope * joystick_abs + intercept",
+    "slope": 0.008061125931791762,
+    "intercept": 0.1934283432957175,
+    "r_squared": 0.9265895406774826,
+    "deadband_estimate": 0.0,
+    "min_output_command": 30.0,
+    "max_output_command": 60.0,
+    "min_measured_velocity_abs": 0.4411142420579255,
+    "max_measured_velocity_abs": 0.6885049468064849,
+    "samples": 6
   },
   "linear_negative": {
-    "valid": false,
-    "reason": "Not enough moving data for linear_negative",
-    "samples": 0
+    "valid": true,
+    "model": "velocity_abs = slope * joystick_abs + intercept",
+    "slope": 0.007119512794004309,
+    "intercept": -0.18638399370278005,
+    "r_squared": 0.9211615633191745,
+    "deadband_estimate": 26.17931859884333,
+    "min_output_command": 40.0,
+    "max_output_command": 60.0,
+    "min_measured_velocity_abs": 0.10995573079761745,
+    "max_measured_velocity_abs": 0.2469986831843889,
+    "samples": 4
   },
   "angular_positive": {
-    "valid": false,
-    "reason": "Not enough moving data for angular_positive",
-    "samples": 1
+    "valid": true,
+    "model": "velocity_abs = slope * joystick_abs + intercept",
+    "slope": 0.013380502622889976,
+    "intercept": -0.6849785242027389,
+    "r_squared": 0.8981027390017812,
+    "deadband_estimate": 51.19228653122108,
+    "min_output_command": 60.0,
+    "max_output_command": 100.0,
+    "min_measured_velocity_abs": 0.02851445449493481,
+    "max_measured_velocity_abs": 0.5986352626746227,
+    "samples": 5
   },
   "angular_negative": {
-    "valid": false,
-    "reason": "Not enough moving data for angular_negative",
-    "samples": 0
+    "valid": true,
+    "model": "velocity_abs = slope * joystick_abs + intercept",
+    "slope": 0.011331040806447238,
+    "intercept": -0.5300845505309342,
+    "r_squared": 0.8630407872598038,
+    "deadband_estimate": 46.78162929475304,
+    "min_output_command": 50.0,
+    "max_output_command": 100.0,
+    "min_measured_velocity_abs": 0.05845212776039312,
+    "max_measured_velocity_abs": 0.6057524328259666,
+    "samples": 6
   }
 }

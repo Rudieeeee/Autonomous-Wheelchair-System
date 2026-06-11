@@ -95,86 +95,74 @@ def generate_launch_description():
 
     cmd_vel_to_joystick = Node(
         package='navigation',
-        executable='cmd_vel_to_joystick',
-        name='cmd_vel_to_joystick',
+        executable='cmd_vel_to_joystick_pid',
+        name='cmd_vel_to_joystick_pid',
         output='screen',
         parameters=[
             {
                 'cmd_vel_topic': '/cmd_vel',
+                'odom_topic': '/odom',
                 'joystick_topic': '/joystick_cmd',
+                'calibration_file': 'joystick_calibration.json',
 
-                # Real wheelchair calibration:
-                # 5 km/h = 1.39 m/s. Joystick Y=100 roughly means max chair speed.
-                # Nav2 itself is limited lower in nav2_params.yaml.
-                'max_linear_speed': 1.39,
-
-                # Same scale as Nav2 max_vel_theta.
-                'max_angular_speed': 0.42,
-
-                # Change only if left/right or forward/backward is reversed.
-                'invert_x': True,
-                'invert_y': False,
-
-                'deadzone_percent': 3,
-
-                # Your measured breakaway values.
-                'min_forward_joystick': 25,
-                'min_backward_joystick': 40,
+                'publish_rate_hz': 20.0,
+                'timeout_seconds': 0.5,
+                'odom_timeout_seconds': 0.5,
+                'send_nothing_without_cmd_vel_publisher': False,
+                'require_fresh_odom': True,
 
                 'max_joystick_x': 100,
                 'max_joystick_y': 100,
+                'invert_x': True,
+                'invert_y': False,
 
-                # Large pure rotation value.
-                'pure_rotation_joystick': 100,
+                # Larger deadbands prevent tiny near-goal corrections from becoming
+                # breakaway joystick commands.
+                'linear_cmd_deadband': 0.04,
+                'angular_cmd_deadband': 0.05,
+                'measured_stop_linear_deadband': 0.03,
+                'measured_stop_angular_deadband': 0.03,
+                'measured_velocity_filter_alpha': 0.35,
 
-                # With stepped turning, this is the large-turn threshold.
-                # Above this angular command, pure rotation becomes X=+-100.
-                'pure_rotation_angular_threshold': 0.18,
+                'linear_kp': 25.0,
+                'linear_ki': 3.0,
+                'linear_kd': 0.0,
+                'linear_integral_limit': 1.0,
+                'linear_pid_output_limit': 15.0,
 
-                # IMPORTANT:
-                # Do not keep this at 100, otherwise mixed driving can turn too hard.
-                # This is only the max X while also driving forward/backward.
-                'mixed_turn_max_joystick': 35,
+                'angular_kp': 25.0,
+                'angular_ki': 3.0,
+                'angular_kd': 0.0,
+                'angular_integral_limit': 1.0,
+                'angular_pid_output_limit': 15.0,
 
-                # New stepped turning parameters.
-                # These stop small heading corrections from becoming full X=100.
-                'slow_turn_angular_threshold': 0.08,
-                'medium_turn_angular_threshold': 0.18,
-                'slow_turn_joystick': 35,
-                'medium_turn_joystick': 60,
+                'max_joystick_x_delta_per_s': 80.0,
+                'max_joystick_y_delta_per_s': 80.0,
 
-                'linear_cmd_deadband': 0.01,
-                'angular_cmd_deadband': 0.01,
+                # Fallback mapping if joystick_calibration.json is missing.
+                'fallback_max_linear_speed': 1.39,
+                'fallback_max_angular_speed': 0.42,
+                'fallback_min_forward_joystick': 25,
+                'fallback_min_backward_joystick': 40,
+                'fallback_min_turn_joystick': 25,
 
-                'timeout_seconds': 0.5,
-                'publish_rate_hz': 20.0,
-
-                'send_nothing_without_cmd_vel_publisher': True,
-
-                # AMCL safety gate.
                 'require_accurate_amcl': True,
                 'amcl_pose_topic': '/amcl_pose',
-
                 'max_x_covariance': 0.04,
                 'max_y_covariance': 0.04,
                 'max_yaw_covariance': 0.03,
-
                 'min_good_amcl_messages': 5,
                 'amcl_timeout_seconds': 10.0,
 
-                # While AMCL is not accepted:
-                # if scan is safe, rotate in place with full X.
+                # Before AMCL is accepted, rotate gently to help localization.
                 'amcl_block_joystick_x': 100,
                 'amcl_block_joystick_y': 0,
 
-                # LiDAR emergency stop before and after AMCL.
+                # Simple joystick-level LiDAR stop is used only before AMCL is accepted
+                # in the edited Python node. After AMCL, Nav2 local_costmap handles LiDAR.
                 'use_obstacle_gate': True,
                 'scan_topic': '/scan',
-
-                # 0.70 is quite strict. Use 0.50 first if walls stop it.
                 'full_scan_stop_distance_m': 0.70,
-
-                'scan_timeout_seconds': 0.5,
             }
         ],
     )

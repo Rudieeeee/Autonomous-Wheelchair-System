@@ -79,13 +79,6 @@ class CmdVelToJoystickPid(Node):
 
         self.declare_parameter("measured_velocity_filter_alpha", 0.35)
 
-        self.declare_parameter("reject_bad_odom", True)
-        self.declare_parameter("max_measured_linear_speed_mps", 1.8)
-        self.declare_parameter("max_measured_angular_speed_radps", 1.5)
-        self.declare_parameter("max_measured_linear_accel_mps2", 2.5)
-        self.declare_parameter("max_measured_angular_accel_radps2", 4.0)
-        self.declare_parameter("hold_last_good_odom_on_reject", True)
-
         self.declare_parameter("linear_kp", 25.0)
         self.declare_parameter("linear_ki", 3.0)
         self.declare_parameter("linear_kd", 0.0)
@@ -152,23 +145,6 @@ class CmdVelToJoystickPid(Node):
             self.get_parameter("measured_velocity_filter_alpha").value
         )
 
-        self.reject_bad_odom = bool(self.get_parameter("reject_bad_odom").value)
-        self.max_measured_linear_speed_mps = float(
-            self.get_parameter("max_measured_linear_speed_mps").value
-        )
-        self.max_measured_angular_speed_radps = float(
-            self.get_parameter("max_measured_angular_speed_radps").value
-        )
-        self.max_measured_linear_accel_mps2 = float(
-            self.get_parameter("max_measured_linear_accel_mps2").value
-        )
-        self.max_measured_angular_accel_radps2 = float(
-            self.get_parameter("max_measured_angular_accel_radps2").value
-        )
-        self.hold_last_good_odom_on_reject = bool(
-            self.get_parameter("hold_last_good_odom_on_reject").value
-        )
-
         self.max_joystick_x_delta_per_s = float(
             self.get_parameter("max_joystick_x_delta_per_s").value
         )
@@ -233,7 +209,6 @@ class CmdVelToJoystickPid(Node):
         self.has_received_odom = False
         self.last_odom_time = self.get_clock().now()
         self.last_good_odom_time = self.get_clock().now()
-        self.rejected_odom_count = 0
 
         self.current_x = 0.0
         self.current_y = 0.0
@@ -370,47 +345,10 @@ class CmdVelToJoystickPid(Node):
         self.has_received_cmd_vel = True
         self.last_cmd_time = self.get_clock().now()
 
-    def odom_measurement_is_valid(self, measured_v: float, measured_w: float, dt: float) -> bool:
-        if not self.reject_bad_odom:
-            return True
-
-        reasons = []
-        if abs(measured_v) > self.max_measured_linear_speed_mps:
-            reasons.append(f"linear speed {measured_v:.2f} mps")
-        if abs(measured_w) > self.max_measured_angular_speed_radps:
-            reasons.append(f"angular speed {measured_w:.2f} radps")
-
-        if self.has_received_odom and dt > 0.0:
-            linear_accel = (measured_v - self.measured_v) / dt
-            angular_accel = (measured_w - self.measured_w) / dt
-            if abs(linear_accel) > self.max_measured_linear_accel_mps2:
-                reasons.append(f"linear accel {linear_accel:.2f} mps2")
-            if abs(angular_accel) > self.max_measured_angular_accel_radps2:
-                reasons.append(f"angular accel {angular_accel:.2f} radps2")
-
-        if not reasons:
-            return True
-
-        self.rejected_odom_count += 1
-        self.get_logger().warn(
-            "Rejected implausible /odom twist: "
-            + ", ".join(reasons)
-            + f". rejected_odom_count={self.rejected_odom_count}"
-        )
-        return False
-
     def odom_callback(self, msg: Odometry):
         now = self.get_clock().now()
-        dt = (now - self.last_odom_time).nanoseconds / 1e9
         measured_v = float(msg.twist.twist.linear.x)
         measured_w = float(msg.twist.twist.angular.z)
-
-        if not self.odom_measurement_is_valid(measured_v, measured_w, dt):
-            self.last_odom_time = now
-            if not self.hold_last_good_odom_on_reject:
-                self.filtered_v = 0.0
-                self.filtered_w = 0.0
-            return
 
         self.measured_v = measured_v
         self.measured_w = measured_w
@@ -522,15 +460,17 @@ class CmdVelToJoystickPid(Node):
     def obstacle_gate_allows_movement(self) -> bool:
         if not self.use_obstacle_gate:
             return True
-        if not self.has_received_scan:
-            self.get_logger().warn("No /scan received yet. Emergency stop active.")
-            return False
 
-        now = self.get_clock().now()
-        age = (now - self.last_scan_time).nanoseconds / 1e9
-        if age > self.scan_timeout_seconds:
-            self.get_logger().warn(f"/scan timeout: age={age:.2f}s. Emergency stop active.")
-            return False
+        # Only use the simple full-scan joystick stop while AMCL is still being accepted.
+        # After AMCL is accepted, obstacle avoidance is handled by Nav2/local_costmap.
+        if self.amcl_pose_estimation_done:
+            return True
+
+        # No scan-timeout emergency stop here. If no scan has arrived yet, do not block
+        # the joystick bridge only because of missing/stale scan data.
+        if not self.has_received_scan:
+            return True
+
         return not self.obstacle_too_close
 
     def rate_limit(self, target: float, current: float, max_delta_per_s: float, dt: float) -> float:
@@ -594,9 +534,8 @@ class CmdVelToJoystickPid(Node):
             desired_w = 0.0
 
         if desired_v == 0.0 and desired_w == 0.0:
-            if abs(self.filtered_v) < self.measured_stop_linear_deadband and abs(self.filtered_w) < self.measured_stop_angular_deadband:
-                self.reset_control()
-                return
+            self.reset_control()
+            return
 
         ff_y = self.feedforward_y(desired_v)
         ff_x = self.feedforward_x(desired_w)

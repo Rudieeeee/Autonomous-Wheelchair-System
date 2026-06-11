@@ -266,6 +266,8 @@ class ArduinoSensorNode(Node):
             f"Connected to {self.serial_port_name} at {self.baud_rate} baud"
         )
 
+        self.send_protocol_line("START")
+
         self.get_logger().info(
             "Expected Arduino format: "
             "DATA,time_ms,left_ticks,right_ticks,left_state,right_state,"
@@ -343,6 +345,24 @@ class ArduinoSensorNode(Node):
             f"seconds_since_valid={seconds_since_valid}, "
             f"previous_data_exists={self.previous_data is not None}"
         )
+
+    def send_protocol_line(self, line: str):
+        if not hasattr(self, "serial_port"):
+            return
+
+        if not self.serial_port.is_open:
+            return
+
+        try:
+            with self.serial_lock:
+                self.serial_port.write((line + "\n").encode("ascii"))
+                self.serial_port.flush()
+
+            self.get_logger().info(f"DEBUG PROTOCOL WRITE OK: {line}")
+        except serial.SerialException as error:
+            self.get_logger().error(
+                f"Serial protocol write error while sending {line!r}: {error}"
+            )
 
     def joystick_cmd_callback(self, msg: Int16MultiArray):
         self.get_logger().info(
@@ -812,9 +832,12 @@ class ArduinoSensorNode(Node):
         if hasattr(self, "serial_port") and self.serial_port.is_open:
             try:
                 with self.serial_lock:
+                    self.serial_port.write(b"STOP\n")
+                    self.serial_port.flush()
+                    time.sleep(0.05)
                     self.serial_port.close()
                 self.get_logger().info(
-                    "Serial port closed without sending shutdown command."
+                    "Serial port closed after sending STOP protocol command."
                 )
             except Exception as error:
                 self.get_logger().warn(

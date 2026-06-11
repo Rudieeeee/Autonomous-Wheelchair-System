@@ -26,6 +26,7 @@ setup(
         'console_scripts': [
             'cmd_vel_to_joystick = navigation.cmd_vel_to_joystick:main',
             'cmd_vel_to_joystick_mapping = navigation.cmd_vel_to_joystick_mapping:main',
+            'cmd_vel_to_joystick_pid = navigation.cmd_vel_to_joystick_pid:main',
         ],
     },
 
