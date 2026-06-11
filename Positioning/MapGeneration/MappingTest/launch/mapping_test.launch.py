@@ -1,3 +1,4 @@
+import os
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
@@ -11,6 +12,7 @@ from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
+
 
 
 def generate_launch_description():
@@ -103,7 +105,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'log_file',
             default_value=(
-                '/home/rudrh/Autonomous-Wheelchair-System/'
+                '/home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/'
                 'Other-Files/GeneralData/Logs/mapping_log.txt'
             ),
         ),
@@ -121,7 +123,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'save_map',
             default_value=(
-                '/home/rudrh/Autonomous-Wheelchair-System/'
+                '/home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/'
                 'Other-Files/GeneralData/Maps/my_map'
             ),
         ),
