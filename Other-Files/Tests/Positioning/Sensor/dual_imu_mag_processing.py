@@ -5,10 +5,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.signal import welch
+from pathlib import Path
 
 # --- CONFIGURATION: MATCH FILENAMES FOR PROCESSING ---
-FILE_BNO055 = "bno055_center.csv"
-FILE_BNO085 = "bno085_center.csv"
+FILE_BNO055 = Path("./Other-Files/Tests/Data/IMU/Sensor Validation/test_bno055_center.csv")
+FILE_BNO085 = FILE_BNO055 
+
 # -----------------------------------------------------
 
 def analyze_imu_data(filepath, label):

@@ -3,11 +3,11 @@ import threading
 import time
 
 # --- CONFIGURATION: SET YOUR PORTS AND FILENAMES HERE ---
-PORT_BNO055 = "COM3"  # Replace with your BNO055 Arduino port
-PORT_BNO085 = "COM4"  # Replace with your BNO085 Arduino port
+PORT_BNO055 = "COM14"  # Replace with your BNO055 Arduino port
+PORT_BNO085 = "COM10"  # Replace with your BNO085 Arduino port
 
-FILE_BNO055 = "bno055_center.csv"
-FILE_BNO085 = "bno085_center.csv"
+FILE_BNO055 = "test_doing nothing_bno055_center.csv"
+FILE_BNO085 = "test_doing_nothing_bno085_center.csv"
 
 BAUD_RATE = 115200
 # --------------------------------------------------------

@@ -194,6 +194,30 @@
       "type": "node-terminal",
       "request": "launch",
       "command": "bash -c 'cd \"${workspaceFolder}/Positioning/Localization/Localization\" && source /opt/ros/jazzy/setup.bash && source \"${workspaceFolder}/Positioning/MapGeneration/Mapping/install/setup.bash\" && source install/setup.bash && ros2 launch localization localization.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=false'"
-    }
+    },
+    {
+    "name": "Run Robust Wheelchair Sensors",
+    "type": "node-terminal",
+    "request": "launch",
+    "command": "bash -c 'source /opt/ros/jazzy/setup.bash && python3 \"${workspaceFolder}/Positioning/MapGeneration/Mapping/map_generator/arduino_sensor_node_nav.py\" --ros-args -p serial_port:=/dev/arduino_wheelchair -p debug_enabled:=true -p enable_encoder_sanity_filter:=true -p one_wheel_fallback_enabled:=true -p use_imu_yaw:=true'"
+    },
+    {
+    "name": "Run Wheelchair Calibration Collector",
+    "type": "node-terminal",
+    "request": "launch",
+    "command": "bash -c 'mkdir -p \"${workspaceFolder}/Other-Files/Tests/Navigation\" && source /opt/ros/jazzy/setup.bash && python3 \"${workspaceFolder}/Navigation/Pathfinding/Navigation/navigation/wheelchair_calibration_collector.py\" --ros-args -p output_directory:=\"${workspaceFolder}/Other-Files/Tests/Navigation\"'"
+    },
+    {
+    "name": "Fit Wheelchair Joystick Calibration",
+    "type": "node-terminal",
+    "request": "launch",
+    "command": "bash -c 'python3 \"${workspaceFolder}/Navigation/Pathfinding/Navigation/navigation/fit_joystick_calibration.py\" \"${workspaceFolder}/Other-Files/Tests/Navigation/wheelchair_calibration_step_summary.csv\" \"${workspaceFolder}/Other-Files/Tests/Navigation/joystick_calibration.json\"'"
+    },
+    {
+    "name": "Run PID CmdVel To Joystick",
+    "type": "node-terminal",
+    "request": "launch",
+    "command": "bash -c 'source /opt/ros/jazzy/setup.bash && python3 \"${workspaceFolder}/Navigation/Pathfinding/Navigation/navigation/cmd_vel_to_joystick_pid.py\" --ros-args -p calibration_file:=\"${workspaceFolder}/Other-Files/Tests/Navigation/joystick_calibration.json\" -p linear_kp:=15.0 -p linear_ki:=1.0 -p linear_kd:=0.0 -p angular_kp:=15.0 -p angular_ki:=1.0 -p angular_kd:=0.0 -p reject_bad_odom:=true'"
+  }
   ]
 }

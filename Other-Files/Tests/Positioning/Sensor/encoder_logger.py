@@ -2,9 +2,9 @@ import serial
 import time
 
 # --- CONFIGURATION SECTION ---
-PORT = "COM3"              # Change to your specific Arduino port (e.g., '/dev/ttyACM0' on Linux)
-BAUD_RATE = 460000         # Must match firmware output speed
-OUTPUT_FILE = "straight_push_test.csv"  # Target output name for processing
+PORT = "COM10"              # Change to your specific Arduino port (e.g., '/dev/ttyACM0' on Linux)
+BAUD_RATE = 460800       # Must match firmware output speed
+OUTPUT_FILE = "spin_drive_test.csv"  # Target output name for processing
 # -----------------------------
 
 def run_logger():
