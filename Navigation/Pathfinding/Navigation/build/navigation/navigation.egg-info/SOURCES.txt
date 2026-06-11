@@ -10,7 +10,10 @@ launch/navigation_tof64.launch.py
 navigation/__init__.py
 navigation/cmd_vel_to_joystick.py
 navigation/cmd_vel_to_joystick_mapping.py
+navigation/cmd_vel_to_joystick_pid.py
 navigation/cmd_vel_to_joystick_tof64.py
+navigation/fit_joystick_calibration.py
+navigation/wheelchair_calibration_collector.py
 navigation.egg-info/PKG-INFO
 navigation.egg-info/SOURCES.txt
 navigation.egg-info/dependency_links.txt

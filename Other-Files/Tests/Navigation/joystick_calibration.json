@@ -1,0 +1,24 @@
+{
+  "format": "wheelchair_joystick_calibration_v1",
+  "description": "Feedforward inverse uses joystick_abs = (velocity_abs - intercept) / slope.",
+  "linear_positive": {
+    "valid": false,
+    "reason": "Not enough moving data for linear_positive",
+    "samples": 0
+  },
+  "linear_negative": {
+    "valid": false,
+    "reason": "Not enough moving data for linear_negative",
+    "samples": 0
+  },
+  "angular_positive": {
+    "valid": false,
+    "reason": "Not enough moving data for angular_positive",
+    "samples": 1
+  },
+  "angular_negative": {
+    "valid": false,
+    "reason": "Not enough moving data for angular_negative",
+    "samples": 0
+  }
+}
