@@ -47,8 +47,8 @@ class WheelchairCalibrationCollector(Node):
 
         self.declare_parameter("test_forward_y", [25, 30, 35, 40, 45, 50, 60])
         self.declare_parameter("test_backward_y", [40, 45, 50, 60])
-        self.declare_parameter("test_left_x", [25, 30, 35, 40, 45, 50, 60])
-        self.declare_parameter("test_right_x", [25, 30, 35, 40, 45, 50, 60])
+        self.declare_parameter("test_left_x", [50, 60, 70, 80, 90, 100])
+        self.declare_parameter("test_right_x", [50, 60, 70, 80, 90, 100])
 
         self.declare_parameter("include_forward", True)
         self.declare_parameter("include_backward", True)
