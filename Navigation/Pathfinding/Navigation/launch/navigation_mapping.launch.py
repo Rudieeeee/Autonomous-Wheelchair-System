@@ -5,6 +5,7 @@ from launch.actions import (
     LogInfo,
     TimerAction,
 )
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -73,6 +74,29 @@ def generate_launch_description():
         ],
     )
 
+    conditional_cmd_vel_limiter = Node(
+        package='navigation',
+        executable='conditional_cmd_vel_limiter',
+        name='conditional_cmd_vel_limiter',
+        output='screen',
+        parameters=[
+            {
+                'input_topic': '/cmd_vel_raw',
+                'output_topic': '/cmd_vel_limited',
+
+                # If abs(linear.x) <= this, it counts as pure rotation.
+                'linear_zero_threshold': 0.02,
+
+                # While driving forward/backward, angular velocity is capped to +/- 0.25.
+                'moving_angular_limit': 0.25,
+
+                # During pure rotation, keep the high angular velocity.
+                # The velocity_smoother still applies its own final limits.
+                'pure_rotation_angular_limit': 10.0,
+            }
+        ],
+    )
+
     bt_navigator = Node(
         package='nav2_bt_navigator',
         executable='bt_navigator',
@@ -96,44 +120,89 @@ def generate_launch_description():
         output='screen',
         parameters=[nav2_params],
         remappings=[
-            ('cmd_vel', 'cmd_vel_raw'),
+            ('cmd_vel', 'cmd_vel_limited'),
             ('cmd_vel_smoothed', 'cmd_vel'),
         ],
     )
 
-    cmd_vel_to_joystick_mapping = Node(
+    cmd_vel_to_joystick = Node(
         package='navigation',
-        executable='cmd_vel_to_joystick_mapping',
-        name='cmd_vel_to_joystick_mapping',
+        executable='cmd_vel_to_joystick_pid',
+        name='cmd_vel_to_joystick_pid',
         output='screen',
         parameters=[
             {
                 'cmd_vel_topic': '/cmd_vel',
+                'odom_topic': '/odom',
                 'joystick_topic': '/joystick_cmd',
-                'scan_topic': '/scan',
+                'calibration_file': 'joystick_calibration.json',
 
-                # Keep same style as your current mapping launch.
-                'max_linear_speed': 1.67,
-                'max_angular_speed': 1.1,
+                'publish_rate_hz': 20.0,
+                'timeout_seconds': 0.5,
+                'odom_timeout_seconds': 0.5,
 
-                'invert_x': False,
+                # For mapping, I prefer false.
+                # If Nav2 stops publishing /cmd_vel, this sends [0, 0].
+                'send_nothing_without_cmd_vel_publisher': False,
+
+                # PID needs odom feedback.
+                'require_fresh_odom': True,
+
+                'max_joystick_x': 100,
+                'max_joystick_y': 100,
+                'invert_x': True,
                 'invert_y': False,
 
-                'minimum_nonzero_joystick': 52,
-                'max_joystick_x': 80,
-                'max_joystick_y': 80,
-                'pure_rotation_joystick': 60,
+                # Larger deadbands stop tiny near-goal corrections
+                # from becoming breakaway joystick commands.
+                'linear_cmd_deadband': 0.04,
+                'angular_cmd_deadband': 0.05,
+                'measured_stop_linear_deadband': 0.03,
+                'measured_stop_angular_deadband': 0.03,
+                'measured_velocity_filter_alpha': 0.35,
 
-                'deadzone_percent': 3,
-                'timeout_seconds': 0.5,
-                'publish_rate_hz': 20.0,
-                'send_nothing_without_cmd_vel_publisher': True,
+                'linear_kp': 25.0,
+                'linear_ki': 3.0,
+                'linear_kd': 0.0,
+                'linear_integral_limit': 1.0,
+                'linear_pid_output_limit': 15.0,
 
+                'angular_kp': 25.0,
+                'angular_ki': 3.0,
+                'angular_kd': 0.0,
+                'angular_integral_limit': 1.0,
+                'angular_pid_output_limit': 15.0,
+
+                'max_joystick_x_delta_per_s': 80.0,
+                'max_joystick_y_delta_per_s': 80.0,
+
+                # Fallback mapping if joystick_calibration.json is missing.
+                'fallback_max_linear_speed': 1.39,
+                'fallback_max_angular_speed': 0.42,
+                'fallback_min_forward_joystick': 25,
+                'fallback_min_backward_joystick': 40,
+                'fallback_min_turn_joystick': 25,
+
+                # IMPORTANT FOR MAPPING:
+                # Do not wait for AMCL. SLAM provides map -> odom.
+                'require_accurate_amcl': False,
+
+                # These can stay here because require_accurate_amcl is false.
+                # They will not block motion.
+                'amcl_pose_topic': '/amcl_pose',
+                'max_x_covariance': 0.04,
+                'max_y_covariance': 0.04,
+                'max_yaw_covariance': 0.03,
+                'min_good_amcl_messages': 5,
+                'amcl_timeout_seconds': 10.0,
+                'amcl_block_joystick_x': 0,
+                'amcl_block_joystick_y': 0,
+
+                # Joystick-level emergency stop during mapping.
                 'use_obstacle_gate': True,
-                'full_scan_stop_distance_m': 0.45,
+                'scan_topic': '/scan',
+                'full_scan_stop_distance_m': 0.50,
                 'scan_timeout_seconds': 0.5,
-
-                'debug': True,
             }
         ],
     )
@@ -175,8 +244,9 @@ def generate_launch_description():
             controller_server,
             bt_navigator,
             behavior_server,
+            conditional_cmd_vel_limiter,
             velocity_smoother,
-            cmd_vel_to_joystick_mapping,
+            cmd_vel_to_joystick,
             lifecycle_manager_navigation,
         ],
     )
@@ -184,7 +254,7 @@ def generate_launch_description():
     delayed_rviz = TimerAction(
         period=15.0,
         actions=[
-            LogInfo(msg='STARTING RVIZ FROM NAVIGATION MAPPING LAUNCH NOW'),
+            LogInfo(msg='STARTING RVIZ FROM NAVIGATION MAPPING PID LAUNCH NOW'),
             rviz,
         ],
     )
@@ -220,7 +290,7 @@ def generate_launch_description():
                 '/home/rudrh/Autonomous-Wheelchair-System/'
                 'Other-Files/GeneralData/Maps/live_nav_map'
             ),
-            description='Path where map_saver_cli should save the live SLAM map.',
+            description='Path where the live SLAM map should be saved.',
         ),
 
         DeclareLaunchArgument(

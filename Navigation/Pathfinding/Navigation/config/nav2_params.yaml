@@ -66,9 +66,9 @@ controller_server:
       regulated_linear_scaling_min_speed: 0.01
 
       use_rotate_to_heading: true
-      rotate_to_heading_angular_vel: 0.20
-      rotate_to_heading_min_angle: 0.785
-      max_angular_accel: 0.35
+      rotate_to_heading_angular_vel: 10.0
+      rotate_to_heading_min_angle: 0.436332313
+      max_angular_accel: 10.0
       stateful: true
       max_robot_pose_search_dist: 10.0
 
@@ -99,7 +99,7 @@ behavior_server:
     local_footprint_topic: local_costmap/published_footprint
     global_footprint_topic: global_costmap/published_footprint
 
-    cycle_frequency: 10.0
+    cycle_frequency: 100.0
     behavior_plugins: ["spin", "backup", "drive_on_heading", "wait"]
 
     spin:
@@ -116,9 +116,9 @@ behavior_server:
     transform_tolerance: 0.3
     simulate_ahead_time: 2.0
 
-    max_rotational_vel: 0.20
-    min_rotational_vel: 0.03
-    rotational_acc_lim: 0.35
+    max_rotational_vel: 1.20
+    min_rotational_vel: 0.5
+    rotational_acc_lim: 1.0
 
 
 velocity_smoother:
@@ -128,8 +128,8 @@ velocity_smoother:
     scale_velocities: false
     feedback: "OPEN_LOOP"
 
-    max_velocity: [0.20, 0.0, 0.22]
-    min_velocity: [-0.05, 0.0, -0.22]
+    max_velocity: [0.20, 0.0, 0.5]
+    min_velocity: [-0.05, 0.0, -0.5]
 
     max_accel: [0.10, 0.0, 0.30]
     max_decel: [-0.25, 0.0, -0.45]
@@ -163,7 +163,7 @@ global_costmap:
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 0.25
+        inflation_radius: 0.55
         cost_scaling_factor: 3.0
 
       always_send_full_costmap: true
@@ -207,7 +207,7 @@ local_costmap:
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 0.25
+        inflation_radius: 0.55
         cost_scaling_factor: 3.0
 
       always_send_full_costmap: true

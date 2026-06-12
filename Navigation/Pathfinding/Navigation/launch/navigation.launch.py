@@ -5,7 +5,6 @@ from launch.actions import (
     LogInfo,
     TimerAction,
 )
-from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -65,6 +64,32 @@ def generate_launch_description():
         ],
     )
 
+    conditional_cmd_vel_limiter = Node(
+        package='navigation',
+        executable='conditional_cmd_vel_limiter',
+        name='conditional_cmd_vel_limiter',
+        output='screen',
+        parameters=[
+            {
+                # Input from Nav2 controller_server
+                'input_topic': '/cmd_vel_raw',
+
+                # Output to velocity_smoother
+                'output_topic': '/cmd_vel_limited',
+
+                # If abs(linear.x) <= this, it counts as pure rotation.
+                'linear_zero_threshold': 0.02,
+
+                # Angular limit while also driving forward/backward.
+                'moving_angular_limit': 0.25,
+
+                # Angular limit during pure rotation.
+                # The velocity_smoother still applies its own final limits.
+                'pure_rotation_angular_limit': 10.0,
+            }
+        ],
+    )
+
     bt_navigator = Node(
         package='nav2_bt_navigator',
         executable='bt_navigator',
@@ -88,7 +113,13 @@ def generate_launch_description():
         output='screen',
         parameters=[nav2_params],
         remappings=[
-            ('cmd_vel', 'cmd_vel_raw'),
+            # Before:
+            # ('cmd_vel', 'cmd_vel_raw'),
+
+            # Now the smoother receives the limited command.
+            ('cmd_vel', 'cmd_vel_limited'),
+
+            # Final smoothed velocity still goes to /cmd_vel.
             ('cmd_vel_smoothed', 'cmd_vel'),
         ],
     )
@@ -116,8 +147,6 @@ def generate_launch_description():
                 'invert_x': True,
                 'invert_y': False,
 
-                # Larger deadbands prevent tiny near-goal corrections from becoming
-                # breakaway joystick commands.
                 'linear_cmd_deadband': 0.04,
                 'angular_cmd_deadband': 0.05,
                 'measured_stop_linear_deadband': 0.03,
@@ -139,7 +168,6 @@ def generate_launch_description():
                 'max_joystick_x_delta_per_s': 80.0,
                 'max_joystick_y_delta_per_s': 80.0,
 
-                # Fallback mapping if joystick_calibration.json is missing.
                 'fallback_max_linear_speed': 1.39,
                 'fallback_max_angular_speed': 0.42,
                 'fallback_min_forward_joystick': 25,
@@ -158,8 +186,8 @@ def generate_launch_description():
                 'amcl_block_joystick_x': 100,
                 'amcl_block_joystick_y': 0,
 
-                # Simple joystick-level LiDAR stop is used only before AMCL is accepted
-                # in the edited Python node. After AMCL, Nav2 local_costmap handles LiDAR.
+                # Used only before AMCL is accepted.
+                # After AMCL, Nav2 local_costmap handles LiDAR.
                 'use_obstacle_gate': True,
                 'scan_topic': '/scan',
                 'full_scan_stop_distance_m': 0.70,
@@ -193,7 +221,6 @@ def generate_launch_description():
         name='rviz',
         output='screen',
         arguments=['-d', rviz_config],
-        condition=None,
     )
 
     delayed_navigation = TimerAction(
@@ -203,6 +230,10 @@ def generate_launch_description():
             controller_server,
             bt_navigator,
             behavior_server,
+
+            # New node between controller_server and velocity_smoother.
+            conditional_cmd_vel_limiter,
+
             velocity_smoother,
             cmd_vel_to_joystick,
             lifecycle_manager_navigation,
@@ -222,7 +253,7 @@ def generate_launch_description():
             'map',
             default_value=(
                 '/home/rudrh/Autonomous-Wheelchair-System/'
-                'Other-Files/GeneralData/Maps/hallway_new_map.yaml'
+                'Other-Files/GeneralData/Maps/my_saved_map.yaml'
             ),
             description='Full path to the saved map YAML file.',
         ),
