@@ -187,7 +187,7 @@
       "name": "Run ROS2 Mapping with Log",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping_with_log.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=true log_file:=/home/rudrh/Autonomous-Wheelchair-System/Other-Files/GeneralData/Logs/mapping_log.txt'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping_with_log.launch.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair use_rviz:=true log_file:=/home/rudrh/Autonomous-Wheelchair-System/Other-Files/GeneralData/Logs/mapping_new_log.txt'"
     },
     {
       "name": "Run ROS2 Localization without RViz",
@@ -227,10 +227,17 @@
 
   },
   {
+    "name": "Run ROS2 ToF64 Scan",
+    "type": "node-terminal",
+    "request": "launch",
+    "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator tof64_scan.launch.py serial_port:=/dev/arduino_wheelchair'"
+  },
+
+  {
   "name": "Run Navigation Wheelchair Sensors FAKE",
   "type": "node-terminal",
   "request": "launch",
   "command": "bash -c 'source /opt/ros/jazzy/setup.bash && python3 \"${workspaceFolder}/Positioning/MapGeneration/Mapping/map_generator/arduino_sensor_node_nav.py\" --ros-args -p serial_port:=/tmp/ttyFAKE_READER -p baud_rate:=460800 -p startup_skip_lines:=0 -p clear_serial_buffers_on_start:=false -p debug_enabled:=true -p debug_raw_serial:=true -p enable_joystick_serial_output:=false -p enable_encoder_sanity_filter:=true -p one_wheel_fallback_enabled:=true -p use_imu_yaw:=true'"
-}
+  }
   ]
 }

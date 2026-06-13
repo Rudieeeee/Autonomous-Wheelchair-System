@@ -1,0 +1,38 @@
+tof64_scan_node:
+  ros__parameters:
+    serial_port: "/dev/arduino_wheelchair"
+    baudrate: 115200
+
+    base_frame: "base_footprint"
+    scan_topic: "/tof_scan"
+
+    range_min: 0.05
+    range_max: 4.0
+
+    angle_min: -3.14159265359
+    angle_max: 3.14159265359
+    angle_increment: 0.01745329252
+
+    use_inf_for_empty_bins: true
+
+    sensor_poses: [
+       0.0,  0.0,  0.0,
+      -0.042,  0.0,  0.0,
+      -0.084, 0.0,  0.0,
+      -0.126, 0.0,  0.0,
+      -0.168, 0.0,  0.0,
+      -0.21, 0.0,  0.0,
+      -0.252, 0.0,  0.0,
+      -0.294, 0.0,  0.0
+    ]
+
+    column_angles_deg: [
+      -22.5,
+      -16.1,
+      -9.6,
+      -3.2,
+       3.2,
+       9.6,
+       16.1,
+       22.5
+    ]

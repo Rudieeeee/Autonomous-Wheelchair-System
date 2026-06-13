@@ -5,7 +5,7 @@ arduino_sensor_node:
     timer_period_s: 0.01
 
     wheel_diameter_m: 0.35
-    magnets_per_wheel: 20
+    magnets_per_wheel: 22
     wheel_base_m: 0.55
 
     odom_frame: "odom"

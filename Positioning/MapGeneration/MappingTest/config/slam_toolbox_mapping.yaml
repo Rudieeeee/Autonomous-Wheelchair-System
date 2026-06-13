@@ -31,7 +31,7 @@ slam_toolbox:
     map_update_interval: 1.0
 
     # Scan matching
-    use_scan_matching: true
+    use_scan_matching: false
     use_scan_barycenter: false
 
     # Do not add a new scan for every tiny movement

@@ -41,6 +41,7 @@ setup(
             'arduino_sensor_node2 = map_generator.arduino_sensor_node2:main',
             'lidar_scan_merger = map_generator.lidar_scan_merger:main',
             'map_carmen_logger = map_generator.map_carmen_logger:main',
+            'tof64_scan_node = map_generator.tof64_scan_node:main',
         ],
     },
 )

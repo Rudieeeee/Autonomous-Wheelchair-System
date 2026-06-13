@@ -104,10 +104,13 @@ behavior_server:
 
     spin:
       plugin: "nav2_behaviors::Spin"
+
     backup:
       plugin: "nav2_behaviors::BackUp"
+
     drive_on_heading:
       plugin: "nav2_behaviors::DriveOnHeading"
+
     wait:
       plugin: "nav2_behaviors::Wait"
 
@@ -163,7 +166,7 @@ global_costmap:
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 0.55
+        inflation_radius: 0.35
         cost_scaling_factor: 3.0
 
       always_send_full_costmap: true
@@ -207,7 +210,7 @@ local_costmap:
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 0.55
+        inflation_radius: 0.35
         cost_scaling_factor: 3.0
 
       always_send_full_costmap: true

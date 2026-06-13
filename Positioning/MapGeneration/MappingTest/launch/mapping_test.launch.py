@@ -105,11 +105,11 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'log_file',
             default_value=(
-                '/home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/'
-                'Other-Files/GeneralData/Logs/mapping_log.txt'
+                 '/home/rudrh/Autonomous-Wheelchair-System/'
+                'Other-Files/GeneralData/Logs/mapping_new_log.txt'
             ),
         ),
-        DeclareLaunchArgument('rate_hz', default_value='10.0'),
+        DeclareLaunchArgument('rate_hz', default_value='20.0'),
         DeclareLaunchArgument('angle_min', default_value='-3.06201518195'),
         DeclareLaunchArgument('angle_max', default_value='3.06201518195'),
         DeclareLaunchArgument('range_min', default_value='0.1'),
@@ -123,7 +123,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'save_map',
             default_value=(
-                '/home/engineer/ros2_ws/src/Autonomous-Wheelchair-System/'
+                '/home/rudrh/Autonomous-Wheelchair-System/'
                 'Other-Files/GeneralData/Maps/my_map'
             ),
         ),
