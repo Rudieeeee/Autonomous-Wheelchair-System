@@ -51,8 +51,11 @@ Run
 
 from __future__ import annotations
 
+import argparse
+import json
 import logging
 import os
+import socket as _socket
 import sys
 import threading
 import time
@@ -71,11 +74,61 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# ── MEMORY PROFILING — remove this block after testing (main.py ~line 73) ──
+try:
+    import psutil as _psutil
+    _mem_proc = _psutil.Process()
+    def _mem_snap(label: str) -> None:
+        rss = _mem_proc.memory_info().rss / (1024 * 1024)
+        print(f"[MEM_STAGE] {label}: {rss:.0f} MB", flush=True)
+except ImportError:
+    def _mem_snap(label: str) -> None:
+        pass
+# ── END MEMORY PROFILING ────────────────────────────────────────────────────
+
 
 # ─── Configuration (override via environment variables) ────────────────────────
 _TRANSPORT    = os.environ.get("ROS2_TRANSPORT",  "native")     # "native" | "websocket"
 _ROS_HOST     = os.environ.get("ROSBRIDGE_HOST",  "localhost")
 _ROS_PORT     = int(os.environ.get("ROSBRIDGE_PORT", "9090"))
+
+# ─── Test socket broadcaster (active only when --test-port is passed) ─────────
+_parser = argparse.ArgumentParser(add_help=False)
+_parser.add_argument("--test-port", type=int, default=0)
+_TEST_PORT: int = _parser.parse_known_args()[0].test_port
+
+_test_conn:  _socket.socket | None = None
+_test_lock:  threading.Lock         = threading.Lock()
+
+
+def _test_server_thread(port: int) -> None:
+    """Accept one test-runner connection and store it in _test_conn."""
+    global _test_conn
+    srv = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+    srv.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, 1)
+    srv.bind(("127.0.0.1", port))
+    srv.listen(1)
+    srv.settimeout(60)
+    try:
+        conn, addr = srv.accept()
+        logger.info("Test runner connected from %s", addr)
+        with _test_lock:
+            _test_conn = conn
+    except _socket.timeout:
+        logger.warning("Test runner did not connect within 60 s — test port idle.")
+    finally:
+        srv.close()
+
+
+def _test_send(data: dict) -> None:
+    """Send one JSON line to the test runner (no-op if not connected)."""
+    with _test_lock:
+        if _test_conn is None:
+            return
+        try:
+            _test_conn.sendall((json.dumps(data) + "\n").encode())
+        except Exception:
+            pass
 
 
 # =============================================================================
@@ -93,21 +146,30 @@ class QtVoiceObserver(QObject, VoiceObserver):
     hide_map     = pyqtSignal()
     navigate     = pyqtSignal(dict)
     create_point = pyqtSignal()
+    dev_command  = pyqtSignal(str)
 
     def __init__(self) -> None:
         QObject.__init__(self)
         VoiceObserver.__init__(self)
+        self._voice_state: str = ""
+
+    def is_confirming(self) -> bool:
+        """Return True while the voice controller is waiting for a verbal yes/no."""
+        return self._voice_state == "CONFIRMING"
 
     # VoiceObserver hooks — fire the matching Qt signal.
-    def on_state(self, state: str) -> None:        self.state.emit(state)
-    def on_partial(self, text: str) -> None:       self.partial.emit(text)
-    def on_final(self, text: str) -> None:         self.final.emit(text)
-    def on_reply(self, text: str) -> None:         self.reply.emit(text)
-    def on_address(self, address: str) -> None:    self.address.emit(address)
-    def on_show_map(self) -> None:                 self.show_map.emit()
-    def on_hide_map(self) -> None:                 self.hide_map.emit()
-    def on_create_point(self) -> None:             self.create_point.emit()
-    def on_navigate(self, payload: dict) -> None:  self.navigate.emit(payload)
+    def on_state(self, state: str) -> None:
+        self._voice_state = state
+        self.state.emit(state)
+    def on_partial(self, text: str) -> None:             self.partial.emit(text)
+    def on_final(self, text: str) -> None:               self.final.emit(text)
+    def on_reply(self, text: str) -> None:               self.reply.emit(text)
+    def on_address(self, address: str) -> None:          self.address.emit(address)
+    def on_show_map(self) -> None:                       self.show_map.emit()
+    def on_hide_map(self) -> None:                       self.hide_map.emit()
+    def on_create_point(self) -> None:                   self.create_point.emit()
+    def on_navigate(self, payload: dict) -> None:        self.navigate.emit(payload)
+    def on_dev_command(self, command: str) -> None:      self.dev_command.emit(command)
 
 
 def _state_for_gui(s: str) -> State:
@@ -139,11 +201,22 @@ def _robot_state_color_hint(state: str) -> str:
 # Main
 # =============================================================================
 def main() -> None:
-    here     = os.path.dirname(os.path.abspath(__file__))
+    here = os.path.dirname(os.path.abspath(__file__))
+
+    # Start test socket server before anything else so the test runner can
+    # connect while the rest of the system is still initialising.
+    if _TEST_PORT:
+        threading.Thread(
+            target=_test_server_thread, args=(_TEST_PORT,),
+            name="TestSocketServer", daemon=True,
+        ).start()
+        logger.info("Test socket server started on port %d", _TEST_PORT)
+
     # ── GUI ──────────────────────────────────────────────────────────────────
     app = QApplication(sys.argv)
     win = JarvisWindow()
     win.show()
+    _mem_snap("Qt + GUI")                            # MEMORY PROFILING
 
     # ── Voice bridge (VoiceObserver → Qt signals) ─────────────────────────
     voice_bridge = QtVoiceObserver()
@@ -155,13 +228,13 @@ def main() -> None:
     voice_bridge.show_map.connect(win.show_map)
     voice_bridge.hide_map.connect(win.hide_map)
     voice_bridge.create_point.connect(win.request_enter_placement_mode)
+    voice_bridge.dev_command.connect(win.request_dev_command)
     # navigate signal is wired to ROS2 below.
 
     # ── Voice controller ─────────────────────────────────────────────────────
     config = VoiceConfig(
         tts_provider="edge",
         edge_voice="en-GB-ThomasNeural",
-        enable_gender_detection=True,
     )
 
     # Seed destinations from map_points.json so voice navigation works for
@@ -173,11 +246,18 @@ def main() -> None:
         logger.info("Pre-seeded destination from map: '%s' → %s", name_key, loc_id)
 
     controller = VoiceController(config=config, observer=voice_bridge)
+    _mem_snap("+ VoiceController constructed (pre-Vosk thread)")  # MEMORY PROFILING
 
     audio_thread = threading.Thread(
         target=controller.run, name="VoiceControllerThread", daemon=True
     )
     audio_thread.start()
+
+    # Delayed snap: Vosk model finishes loading ~10s after thread start.  MEMORY PROFILING
+    def _snap_post_vosk():                                               # MEMORY PROFILING
+        time.sleep(12)                                                   # MEMORY PROFILING
+        _mem_snap("+ Vosk fully loaded (12 s after thread start)")       # MEMORY PROFILING
+    threading.Thread(target=_snap_post_vosk, daemon=True).start()       # MEMORY PROFILING
 
     # ── ROS2 bridge ──────────────────────────────────────────────────────────
     logger.info("Creating ROS2 bridge (transport=%s)", _TRANSPORT)
@@ -245,6 +325,11 @@ def main() -> None:
     # Click-on-marker → navigate immediately (no voice confirmation needed —
     # the user explicitly tapped the destination).
     def _on_map_point_nav(name: str, ros_x: float, ros_y: float, ros_yaw: float = 0.0) -> None:
+        if voice_bridge.is_confirming():
+            logger.info(
+                "Map-click to '%s' rejected: voice controller is in CONFIRMING state.", name
+            )
+            return
         payload = {
             "mode": "map_click",
             "destination": name,
@@ -266,23 +351,48 @@ def main() -> None:
     # Voice → ROS2: when the voice controller detects a confirmed destination,
     # enrich with ROS2 coords if the phrase matches a stored map waypoint.
     def _on_navigate(payload: dict) -> None:
+        _test_send({"type": "nav", "payload": payload, "t": time.time()})
         phrase = payload.get("destination_phrase", "").lower()
         ros_yaw = 0.0
+        matched_name = None
         for name, (rx, ry, ryaw) in _map_points.items():
             if name in phrase or phrase in name:
                 ros_yaw = ryaw
                 payload = {**payload, "ros_x": rx, "ros_y": ry, "ros_yaw": ryaw, "mode": "map_point"}
+                matched_name = name
                 logger.info(
                     "Voice navigate matched map waypoint '%s': (%.3f, %.3f) yaw=%.3f",
                     name, rx, ry, ryaw,
                 )
                 break
         logger.info("Navigate command: %s", payload)
+        # Final safety gate: only ever drive to a marker that exists on the map.
+        # If the phrase did not resolve to a stored waypoint, refuse rather than
+        # sending the pathfinding team a goal with no coordinates.
+        if not matched_name:
+            logger.warning("Navigate rejected — '%s' is not a map marker.", phrase)
+            win.request_set_reply.emit("That location is not on the map, Master.")
+            return
+        # Highlight the destination marker red BEFORE sending to ROS2 so the
+        # GUI is always up-to-date regardless of when the map overlay is open.
+        win.request_set_selected_destination.emit(matched_name)
         ros2.publish_nav_goal(payload)
         if "ros_x" in payload:
             ros2.publish_goal_pose(payload["ros_x"], payload["ros_y"], ros_yaw)
 
     voice_bridge.navigate.connect(_on_navigate)
+
+    # Broadcast speech-final and nav events so the test runner can measure
+    # latency and verify correct destinations without touching internals.
+    if _TEST_PORT:
+        voice_bridge.final.connect(
+            lambda text: _test_send({"type": "final", "text": text, "t": time.time()})
+        )
+        # reply fires when Jarvis starts speaking (intent resolved, before user confirms).
+        # This is the T1 timestamp for REQ-UI-3 latency: command-speech-end → intent resolved.
+        voice_bridge.reply.connect(
+            lambda text: _test_send({"type": "reply", "text": text, "t": time.time()})
+        )
 
     # GUI E-stop button → ROS2 estop publisher.
     def _on_estop(active: bool) -> None:
@@ -291,6 +401,7 @@ def main() -> None:
     win.estop_requested.connect(_on_estop)
 
     ros2.start()
+    _mem_snap("+ ROS2 bridge started")               # MEMORY PROFILING
 
     # ── Shutdown ─────────────────────────────────────────────────────────────
     def _on_quit() -> None:
