@@ -1,0 +1,46 @@
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+
+    <RecoveryNode number_of_retries="6" name="NavigateRecovery">
+
+      <PipelineSequence name="NavigateWithReplanning">
+
+        <RateController hz="0.5">
+          <!-- Replans every 2 seconds while navigation is active. -->
+          <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
+        </RateController>
+
+        <RecoveryNode number_of_retries="2" name="FollowPath">
+          <!-- Follow the path using the controller from nav2_params.yaml. -->
+          <FollowPath path="{path}" controller_id="FollowPath"/>
+
+          <!-- First response to path-following failure: wait, do not clear immediately. -->
+          <Wait wait_duration="3"/>
+        </RecoveryNode>
+
+      </PipelineSequence>
+
+      <ReactiveFallback name="ObstacleRecoveryFallback">
+        <!-- Safe recovery branch. -->
+
+        <GoalUpdated/>
+        <!-- If a new goal is sent, recovery is interrupted and the new goal is handled. -->
+
+        <Sequence name="SafeWaitThenClearLocalOnly">
+
+          <Wait wait_duration="5"/>
+          <!-- First wait 5 seconds. This gives pedestrians or temporary obstacles time to move. -->
+
+          <ClearEntireCostmap name="ClearLocalCostmap-Recovery" service_name="local_costmap/clear_entirely_local_costmap"/>
+          <!-- Clear only the local costmap. This removes nearby stale obstacle data, not the global map context. -->
+
+          <Wait wait_duration="2"/>
+          <!-- Wait 2 seconds so LiDAR/ToF can repopulate the local costmap before movement continues. -->
+
+        </Sequence>
+      </ReactiveFallback>
+
+    </RecoveryNode>
+
+  </BehaviorTree>
+</root>
