@@ -1,20 +1,23 @@
 vosk>=0.3.45
 sounddevice>=0.4.6
 numpy>=1.24
-openai>=1.40.0
+openai>=2.0.0
 pyttsx3>=2.90
 python-dotenv>=1.0.0
 # Neural speech enhancement in front of Vosk (DeepFilterDenoiser).
 # Suppresses stationary noise AND competing voices (babble/crowd).
 # Optional — voice_control.py falls back to passthrough if missing.
-# torch and torchaudio are pulled in by deepfilternet.
-# Install CPU-only wheels first if the full CUDA build is too large:
+# voice_control.py imports torch and torchaudio directly, so they must be listed.
+# Install CPU-only wheels if the full CUDA build is too large:
 #   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+# torchaudio 2.x removed torchaudio.backend; voice_control.py patches this at runtime.
+torch>=2.0.0
+torchaudio>=2.0.0
 deepfilternet>=0.5.6
 # GUI (Jarvis console)
 PyQt6>=6.6
 # optional, only if VoiceConfig.llm_provider == "ollama"
 ollama>=0.3.0
 # optional, only if VoiceConfig.tts_provider == "edge" (natural neural voices)
-edge-tts>=6.1.0
+edge-tts>=7.0.0
 pygame>=2.5.0

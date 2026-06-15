@@ -77,7 +77,7 @@ from PyQt6.QtWidgets import (
 )
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(__file__).resolve().parents[0]
 MAPPING_WS = PROJECT_ROOT / "Positioning" / "MapGeneration" / "Mapping"
 LOCALIZATION_WS = PROJECT_ROOT / "Positioning" / "Localization" / "Localization"
 NAVIGATION_WS = PROJECT_ROOT / "Navigation" / "Pathfinding" / "Navigation"
@@ -637,6 +637,13 @@ class MarkerLayer(QWidget):
 
             is_sel = (pt["name"] == ov._selected_point)
 
+            # When a destination is locked in, fade the other markers back so the
+            # active red target stands out. Full opacity when nothing is selected.
+            if ov._selected_point is not None and not is_sel:
+                painter.setOpacity(0.35)
+            else:
+                painter.setOpacity(1.0)
+
             # Colour scheme — blue for normal, red for selected destination.
             if is_sel:
                 ring_col  = QColor(255, 70,  70)
@@ -1094,6 +1101,10 @@ class MapOverlay(QWidget):
         if self._last_pose is not None:
             self.set_pose(*self._last_pose)
 
+        # Keep the marker layer raised after the pixmap swap so markers stay visible.
+        self._marker_layer.raise_()
+        self._marker_layer.update()
+
     def set_path(self, points: list) -> None:
         """Draw the Nav2 planned path on the map.  Pass [] to clear."""
         self._path_layer.set_path(points)
@@ -1236,7 +1247,17 @@ class MapOverlay(QWidget):
         return super().eventFilter(obj, event)
 
     def set_selected_destination(self, name: Optional[str]) -> None:
-        """Highlight the named marker as the active navigation destination (turns it red)."""
+        """Highlight the named marker as the active navigation destination (turns it red).
+
+        The voice path passes a lower-cased name (main.py stores waypoints lower-cased),
+        while the markers keep their original casing. Resolve to the marker's canonical
+        name so a case mismatch never silently skips the highlight.
+        """
+        if name is not None:
+            for pt in self._map_points:
+                if pt["name"].lower() == name.lower():
+                    name = pt["name"]
+                    break
         self._selected_point = name
         self._marker_layer.update()
 
@@ -1611,9 +1632,11 @@ class JarvisWindow(QMainWindow):
     estop_requested  = pyqtSignal(bool)   # True = activate, False = release
 
     # Map waypoint signals — voice thread → GUI thread → main.py.
-    request_enter_placement_mode = pyqtSignal()                        # arm the next click
-    map_location_placed          = pyqtSignal(str, float, float)       # (name, ros_x, ros_y)
-    map_point_nav_requested      = pyqtSignal(str, float, float, float)  # (name, ros_x, ros_y, ros_yaw)
+    request_enter_placement_mode     = pyqtSignal()                        # arm the next click
+    map_location_placed              = pyqtSignal(str, float, float)       # (name, ros_x, ros_y)
+    map_point_nav_requested          = pyqtSignal(str, float, float, float)  # (name, ros_x, ros_y, ros_yaw)
+    request_set_selected_destination = pyqtSignal(str)                     # highlight marker red
+    request_dev_command              = pyqtSignal(str)                     # voice dev commands
 
     def __init__(self, map_yaml_path: Optional[str] = None):
         super().__init__()
@@ -1684,8 +1707,7 @@ class JarvisWindow(QMainWindow):
         self._chip = AddressChip()
         self._ros2_chip = Ros2StatusChip()
 
-        # Mode toggle buttons — created but not added to the layout yet.
-        # Re-add to top_bar once Developer Mode is complete.
+        # Mode toggle buttons — shown in the top bar, voice-controllable too.
         self._mode_user_btn = QPushButton("USER")
         self._mode_user_btn.setMinimumHeight(28)
         self._mode_user_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1700,6 +1722,10 @@ class JarvisWindow(QMainWindow):
         top_bar.setContentsMargins(28, 22, 28, 0)
         top_bar.addLayout(title_box)
         top_bar.addStretch()
+        top_bar.addWidget(self._mode_user_btn)
+        top_bar.addSpacing(4)
+        top_bar.addWidget(self._mode_dev_btn)
+        top_bar.addSpacing(10)
         top_bar.addWidget(self._chip)
         top_bar.addSpacing(10)
         top_bar.addWidget(self._ros2_chip)
@@ -1868,6 +1894,12 @@ class JarvisWindow(QMainWindow):
         self._sensor_btn.clicked.connect(self._on_sensor_clicked)
         self._apply_launcher_btn_style(self._sensor_btn, running=False)
 
+        self._create_marker_btn = QPushButton("  CREATE MARKER")
+        self._create_marker_btn.setMinimumHeight(36)
+        self._create_marker_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._create_marker_btn.clicked.connect(self.enter_placement_mode)
+        self._apply_launcher_btn_style(self._create_marker_btn, running=False)
+
         _dev_inner = QHBoxLayout()
         _dev_inner.setSpacing(8)
         _dev_inner.setContentsMargins(0, 0, 0, 0)
@@ -1875,6 +1907,7 @@ class JarvisWindow(QMainWindow):
         _dev_inner.addWidget(self._imu_btn)
         _dev_inner.addWidget(self._canbus_btn)
         _dev_inner.addWidget(self._sensor_btn)
+        _dev_inner.addWidget(self._create_marker_btn)
         self._dev_tools_widget = QWidget()
         self._dev_tools_widget.setLayout(_dev_inner)
 
@@ -1956,6 +1989,12 @@ class JarvisWindow(QMainWindow):
         )
         self.request_enter_placement_mode.connect(
             self.enter_placement_mode, Qt.ConnectionType.QueuedConnection
+        )
+        self.request_set_selected_destination.connect(
+            self.set_selected_destination, Qt.ConnectionType.QueuedConnection
+        )
+        self.request_dev_command.connect(
+            self._on_dev_command, Qt.ConnectionType.QueuedConnection
         )
 
     # ------------------------------------------------------------------
@@ -2405,6 +2444,45 @@ class JarvisWindow(QMainWindow):
             self._sensor_proc = _launch_proc(_SENSOR_CMD, "Sensors")
             self._apply_launcher_btn_style(self._sensor_btn, running=True)
             self._sensor_btn.setText("  STOP SENSORS")
+
+    # Voice dev commands -----------------------------------------------
+    def _on_dev_command(self, command: str) -> None:
+        """Dispatch a voice-issued developer command to the correct handler.
+
+        Called via request_dev_command signal (queued, always on GUI thread).
+        Each command string maps directly to the button that would otherwise
+        be clicked in Developer Mode.
+        """
+        if command == "start_mapping":
+            if self._mapping_proc is None or self._mapping_proc.poll() is not None:
+                self._on_mapping_clicked()
+        elif command == "stop_mapping":
+            if self._mapping_proc is not None and self._mapping_proc.poll() is None:
+                self._on_mapping_clicked()
+        elif command == "start_localization":
+            if self._localization_proc is None or self._localization_proc.poll() is not None:
+                self._on_localization_clicked()
+        elif command == "stop_localization":
+            if self._localization_proc is not None and self._localization_proc.poll() is None:
+                self._on_localization_clicked()
+        elif command == "start_navigation":
+            if self._navigation_proc is None or self._navigation_proc.poll() is not None:
+                self._on_navigation_clicked()
+        elif command == "stop_navigation":
+            if self._navigation_proc is not None and self._navigation_proc.poll() is None:
+                self._on_navigation_clicked()
+        elif command == "start_all":
+            self._on_start_all_clicked()
+        elif command == "stop_all":
+            self._on_stop_all_clicked()
+        elif command == "mode_developer":
+            self._set_mode("developer")
+        elif command == "mode_user":
+            self._set_mode("user")
+        elif command == "emergency_stop":
+            self._on_estop_clicked()
+        elif command == "create_marker":
+            self.enter_placement_mode()
 
     # ------------------------------------------------------------------
     # Misc
