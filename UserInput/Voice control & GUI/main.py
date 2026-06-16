@@ -234,20 +234,6 @@ def main() -> None:
     voice_bridge.dev_command.connect(win.request_dev_command)
     # navigate signal is wired to ROS2 below.
 
-    # Auto-start the navigation stack once the voice pipeline is up.  The
-    # controller emits "LISTENING" only after the audio stack and the Vosk
-    # model have finished loading, so that first transition is our "everything
-    # is ready" cue.  We then fire the exact same start_navigation command the
-    # Developer-mode START NAVIGATION button uses, but only once per launch.
-    _nav_autostart = {"done": False}
-    def _maybe_autostart_nav(state: str) -> None:
-        if _nav_autostart["done"] or state != "LISTENING":
-            return
-        _nav_autostart["done"] = True
-        logger.info("Voice pipeline ready — auto-starting navigation stack.")
-        win.request_dev_command.emit("start_navigation")
-    voice_bridge.state.connect(_maybe_autostart_nav)
-
     # ── Voice controller ─────────────────────────────────────────────────────
     config = VoiceConfig(
         tts_provider="edge",
@@ -323,8 +309,19 @@ def main() -> None:
             ros2.publish_goal_pose(payload["ros_x"], payload["ros_y"], ros_yaw)
 
     def _dispatch_goal(payload: dict, ros_yaw: float, name: str) -> None:
-        """Publish the goal now if localisation is confident, else hold it."""
+        """Confirmed goal: start the nav stack, show the map, then publish.
+
+        The moment a destination is confirmed we fire the same start_navigation
+        command as the Developer-mode button (idempotent — it no-ops if the
+        stack is already up) and bring up the map so the user sees where they
+        are headed.  The ROS2 nav_goal / goal_pose itself is still gated on a
+        confident AMCL fix: it goes out now if covariance is already good, else
+        it is held and released automatically once the pose tightens below the
+        threshold.
+        """
         nonlocal _pending
+        win.request_dev_command.emit("start_navigation")
+        win.request_show_map.emit()
         with _pending_lock:
             cov = _loc["cov"]
             if cov < _COV_GATE:
