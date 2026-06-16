@@ -15,7 +15,14 @@ Navigation combines localization, path planning, and obstacle avoidance. The arc
 
 ### Vosk speech model
 
-Download `vosk-model-en-us-0.22` from [alphacephei.com/vosk/models](https://alphacephei.com/vosk/models) and extract the folder into the project root directory. The folder name should remain `vosk-model-en-us-0.22`.
+Download `vosk-model-en-us-0.22` from [alphacephei.com/vosk/models](https://alphacephei.com/vosk/models) and extract it into a `models` folder in the project root. The structure should look like this:
+
+```
+project/
+├── main.py
+└── models/
+    └── vosk-model-en-us-0.22/
+```
 
 ### Virtual environment
 
