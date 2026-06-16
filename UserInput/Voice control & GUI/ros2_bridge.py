@@ -73,6 +73,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import threading
 import time
 from abc import ABC, abstractmethod
@@ -107,6 +108,40 @@ class RobotState:
 
 
 # =============================================================================
+# AMCL pose helpers
+# =============================================================================
+# AMCL publishes geometry_msgs/PoseWithCovarianceStamped: an (x, y) position,
+# a quaternion orientation, and a 6x6 row-major covariance matrix (36 floats)
+# ordered [x, y, z, roll, pitch, yaw].  We only care about the planar pose, so
+# we pull yaw out of the quaternion and reduce the covariance to a single
+# "how sure is localisation" scalar used by the gate in main.py.
+def yaw_from_quaternion(qz: float, qw: float) -> float:
+    """Yaw (radians) for a planar quaternion where qx = qy = 0.
+
+    For 2-D navigation AMCL only ever rotates about Z, so the full
+    atan2 form collapses to 2*atan2(qz, qw).  ROS convention: 0 = +X,
+    CCW positive.
+    """
+    return 2.0 * math.atan2(qz, qw)
+
+
+def pose_covariance_metric(cov) -> float:
+    """Reduce the 36-element covariance to one localisation-quality number.
+
+    Returns max(var_x, var_y, var_yaw) — the worst of the X (index 0),
+    Y (index 7) and yaw (index 35) variances.  Position terms are m^2,
+    the yaw term is rad^2.  A smaller number means a tighter pose
+    estimate; main.py gates goal publishing on this staying below 0.5.
+    Returns +inf if the matrix is missing or malformed so a bad message
+    is treated as "not localised" rather than "perfectly localised".
+    """
+    try:
+        return max(float(cov[0]), float(cov[7]), float(cov[35]))
+    except (TypeError, IndexError, ValueError):
+        return float("inf")
+
+
+# =============================================================================
 # Abstract base
 # =============================================================================
 class Ros2BridgeBase(ABC):
@@ -129,8 +164,12 @@ class Ros2BridgeBase(ABC):
         self.on_status: Callable[[dict], None] = lambda _data: None
         self.on_connection_changed: Callable[[bool], None] = lambda _ok: None
         # Called whenever AMCL publishes a new estimated robot pose.
-        # Arguments are (x_metres, y_metres) in the ROS2 map frame.
-        self.on_pose: Callable[[float, float], None] = lambda _x, _y: None
+        # Arguments are (x_metres, y_metres, yaw_radians, cov_metric) in the
+        # ROS2 map frame.  cov_metric is the localisation-quality scalar from
+        # pose_covariance_metric() — smaller is tighter (see helper above).
+        self.on_pose: Callable[[float, float, float, float], None] = (
+            lambda _x, _y, _yaw, _cov: None
+        )
         # Called whenever nav2 publishes a new planned path on /plan.
         # Argument is a list of (x, y) tuples in the map frame.
         self.on_path: Callable[[list], None] = lambda _pts: None
@@ -465,8 +504,11 @@ class Ros2NativeNode(Ros2BridgeBase):
     def _on_amcl_pose(self, msg) -> None:
         x = msg.pose.pose.position.x
         y = msg.pose.pose.position.y
+        ori = msg.pose.pose.orientation
+        yaw = yaw_from_quaternion(ori.z, ori.w)
+        cov = pose_covariance_metric(msg.pose.covariance)
         try:
-            self.on_pose(x, y)
+            self.on_pose(x, y, yaw, cov)
         except Exception:
             logger.exception("on_pose callback raised")
 
@@ -625,16 +667,18 @@ class Ros2WebsocketBridge(Ros2BridgeBase):
 
         elif op == "publish" and topic == TOPIC_AMCL_POSE:
             # rosbridge serialises PoseWithCovarianceStamped as nested dicts.
-            pos = (
-                envelope.get("msg", {})
-                        .get("pose", {})
-                        .get("pose", {})
-                        .get("position", {})
+            pose_cov = envelope.get("msg", {}).get("pose", {})
+            inner    = pose_cov.get("pose", {})
+            pos      = inner.get("position", {})
+            ori      = inner.get("orientation", {})
+            x   = float(pos.get("x", 0.0))
+            y   = float(pos.get("y", 0.0))
+            yaw = yaw_from_quaternion(
+                float(ori.get("z", 0.0)), float(ori.get("w", 1.0))
             )
-            x = float(pos.get("x", 0.0))
-            y = float(pos.get("y", 0.0))
+            cov = pose_covariance_metric(pose_cov.get("covariance", []))
             try:
-                self.on_pose(x, y)
+                self.on_pose(x, y, yaw, cov)
             except Exception:
                 logger.exception("on_pose callback raised")
 

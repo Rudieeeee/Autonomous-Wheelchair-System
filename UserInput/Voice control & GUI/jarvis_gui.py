@@ -536,50 +536,98 @@ class JarvisOrb(QWidget):
 # Pose dot — "you are here" marker drawn over the map
 # =============================================================================
 class PoseDot(QWidget):
-    """Small animated green circle showing the wheelchair's estimated position.
+    """Animated green pose marker showing the wheelchair's estimated position.
+
+    Styled to match the blue waypoint markers (staggered pulsing rings, a soft
+    halo, a core dot and a heading arrow) but in green so the live AMCL pose is
+    instantly distinguishable from the placed destinations.  The heading arrow
+    is drawn from the AMCL yaw using the same convention as MarkerLayer.
 
     Positioned by MapOverlay.set_pose() whenever a new /amcl_pose message
     arrives.  Lives as a child widget of MapOverlay so it is automatically
-    shown/hidden with the map.
+    shown/hidden with the map.  The widget is deliberately oversized (so the
+    arrow and outer rings are never clipped) and fully mouse-transparent so it
+    never steals clicks from the markers underneath.
     """
 
-    _DOT_RADIUS = 5.0
+    # Box is large enough to contain the longest ring + arrow without clipping.
+    _BOX = 80
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.setFixedSize(20, 20)
+        self.setFixedSize(self._BOX, self._BOX)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._phase = 0.0
+        self._yaw: Optional[float] = None   # AMCL heading in radians, None = unknown
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._tick)
-        self._timer.start(50)   # 20 fps — enough for a subtle pulse
+        self._timer.start(40)   # 25 fps — matches the blue marker pulse
         self.hide()
 
+    def set_heading(self, yaw: Optional[float]) -> None:
+        """Update the heading arrow direction (radians, ROS convention)."""
+        self._yaw = yaw
+        self.update()
+
     def _tick(self) -> None:
-        self._phase = (self._phase + 0.12) % (2 * math.pi)
+        self._phase = (self._phase + 0.08) % (2 * math.pi)
         self.update()
 
     def paintEvent(self, _ev) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        pulse = 0.5 + 0.5 * math.sin(self._phase)
+        t  = self._phase
         cx = self.width() / 2.0
         cy = self.height() / 2.0
-        r  = self._DOT_RADIUS
 
-        # Outer glow ring — fades in and out with the pulse.
-        glow = QRadialGradient(QPointF(cx, cy), r * 2.4)
-        glow_col = QColor(80, 220, 120)
-        glow_col.setAlpha(int(90 * pulse))
-        glow.setColorAt(0.0, glow_col)
-        glow.setColorAt(1.0, QColor(0, 0, 0, 0))
-        painter.setBrush(QBrush(glow))
+        # Green palette mirroring the blue/red scheme used in MarkerLayer.
+        ring_col = QColor(80,  230, 130)
+        halo_col = QColor(80,  230, 130, 110)
+        dot_col  = QColor(170, 255, 200)
+
+        # Three staggered concentric rings — each ring at a different phase.
+        for j in range(3):
+            phase    = (t + j * 0.75) % (2 * math.pi)
+            progress = (math.sin(phase) + 1) / 2
+            r        = 7 + progress * 24
+            c = QColor(ring_col)
+            c.setAlpha(int((1 - progress) * 160))
+            painter.setPen(QPen(c, 1.5))
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawEllipse(QPointF(cx, cy), r, r)
+
+        # Soft radial glow halo.
+        grd = QRadialGradient(QPointF(cx, cy), 16)
+        grd.setColorAt(0.0, halo_col)
+        grd.setColorAt(1.0, QColor(halo_col.red(), halo_col.green(), halo_col.blue(), 0))
+        painter.setBrush(QBrush(grd))
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawEllipse(QPointF(cx, cy), r * 2.4, r * 2.4)
+        painter.drawEllipse(QPointF(cx, cy), 16, 16)
 
-        # Solid inner dot.
-        painter.setBrush(QBrush(QColor(100, 240, 140)))
-        painter.setPen(QPen(QColor(255, 255, 255, 200), 1.5))
-        painter.drawEllipse(QPointF(cx, cy), r, r)
+        # Heading arrow from the AMCL yaw.
+        # ros_yaw: right=0, CCW positive (ROS convention).
+        # Display angle: right=0, CW positive (Y-down screen) → negate.
+        if self._yaw is not None:
+            arrow_len  = 26 + math.sin(t * 2) * 3     # gentle length pulse
+            disp_angle = -self._yaw
+            tip_x = cx + math.cos(disp_angle) * arrow_len
+            tip_y = cy + math.sin(disp_angle) * arrow_len
+            head_len = 8
+            head_ang = 0.45
+            arrow_pen = QPen(ring_col, 2)
+            arrow_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            painter.setPen(arrow_pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawLine(QPointF(cx, cy), QPointF(tip_x, tip_y))
+            for sign in (-1, 1):
+                hx = tip_x - head_len * math.cos(disp_angle + sign * head_ang)
+                hy = tip_y - head_len * math.sin(disp_angle + sign * head_ang)
+                painter.drawLine(QPointF(tip_x, tip_y), QPointF(hx, hy))
+
+        # Core dot.
+        painter.setBrush(QBrush(dot_col))
+        painter.setPen(QPen(QColor(255, 255, 255, 230), 1.5))
+        painter.drawEllipse(QPointF(cx, cy), 4.5, 4.5)
         painter.end()
 
 
@@ -955,7 +1003,7 @@ class MapOverlay(QWidget):
         self._pose_dot = PoseDot(self)
         self._scaled_w = 0
         self._scaled_h = 0
-        self._last_pose: Optional[tuple] = None   # (ros_x, ros_y) of last known pose
+        self._last_pose: Optional[tuple] = None   # (ros_x, ros_y, ros_yaw) of last known pose
 
         # Waypoint state — placement mode, stored named map points, selection.
         self._placement_mode: bool = False
@@ -1012,8 +1060,12 @@ class MapOverlay(QWidget):
             self.hide()
             self.closed.emit()
 
-    def set_pose(self, ros_x: float, ros_y: float) -> None:
+    def set_pose(self, ros_x: float, ros_y: float, ros_yaw: Optional[float] = None) -> None:
         """Position the pose dot from a ROS2 map-frame coordinate (metres).
+
+        ros_yaw (radians, ROS convention) drives the heading arrow.  It is
+        optional so older callers still work; pass it whenever an /amcl_pose
+        message provides an orientation.
 
         The conversion chain is:
           ROS map metres → source-image pixel → scaled-image pixel
@@ -1024,7 +1076,8 @@ class MapOverlay(QWidget):
         with a live OccupancyGrid.  Before that they fall back to the module
         constants (MAP_ORIGIN_X, MAP_ORIGIN_Y, MAP_RESOLUTION).
         """
-        self._last_pose = (ros_x, ros_y)
+        self._last_pose = (ros_x, ros_y, ros_yaw)
+        self._pose_dot.set_heading(ros_yaw)
         if self._pixmap.isNull() or self._scaled_w == 0 or self._scaled_h == 0:
             return
 
@@ -1502,6 +1555,43 @@ class Ros2StatusChip(QLabel):
         )
 
 
+class LocCovChip(QLabel):
+    """Live AMCL localisation-quality readout for Developer Mode.
+
+    Shows the covariance metric (worst of the X, Y and yaw variances) that
+    gates goal publishing in main.py.  Green when it is below the gate, so the
+    chair will drive; amber when it is at or above the gate, so goals are held
+    until the pose tightens; dim when no /amcl_pose has arrived yet.
+    """
+
+    _GATE = 0.5
+
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.set_cov(float("inf"))
+
+    def set_cov(self, cov: float) -> None:
+        if cov == float("inf"):
+            text, color = "LOC  σ² —", QColor(150, 160, 175)
+        elif cov < self._GATE:
+            text, color = f"LOC  σ² {cov:.3f}  OK", QColor(80, 220, 120)
+        else:
+            text, color = f"LOC  σ² {cov:.3f}  HOLD", QColor(235, 170, 60)
+        self.setText(f"  ●  {text}  ")
+        self.setStyleSheet(
+            f"color: {color.name()};"
+            "background-color: rgba(10,20,35,180);"
+            "border: 1px solid rgba(80,170,255,80);"
+            "border-radius: 14px;"
+            "padding: 5px 12px;"
+            "font-family: 'Segoe UI';"
+            "font-size: 11px;"
+            "font-weight: 600;"
+            "letter-spacing: 3px;"
+        )
+
+
 # =============================================================================
 # Developer log panel
 # =============================================================================
@@ -1622,7 +1712,8 @@ class JarvisWindow(QMainWindow):
     # ROS2 signals (driven from the bridge thread → GUI thread via queued conn).
     request_set_ros2_connected = pyqtSignal(bool)
     request_set_robot_state    = pyqtSignal(str)
-    request_set_pose           = pyqtSignal(float, float)   # (ros_x, ros_y) metres
+    request_set_pose           = pyqtSignal(float, float, float)   # (ros_x, ros_y, ros_yaw)
+    request_set_loc_cov        = pyqtSignal(float)          # AMCL covariance metric (dev chip)
     request_set_map            = pyqtSignal(object)         # occupancy grid payload dict
     request_set_path           = pyqtSignal(object)         # list of (x, y) tuples from /plan
 
@@ -1726,9 +1817,12 @@ class JarvisWindow(QMainWindow):
         top_bar.addSpacing(4)
         top_bar.addWidget(self._mode_dev_btn)
         top_bar.addSpacing(10)
+        self._loc_cov_chip = LocCovChip()
         top_bar.addWidget(self._chip)
         top_bar.addSpacing(10)
         top_bar.addWidget(self._ros2_chip)
+        top_bar.addSpacing(10)
+        top_bar.addWidget(self._loc_cov_chip)
 
         # Centre: orb.
         self._orb = JarvisOrb()
@@ -1981,6 +2075,9 @@ class JarvisWindow(QMainWindow):
         self.request_set_pose.connect(
             self.set_pose, Qt.ConnectionType.QueuedConnection
         )
+        self.request_set_loc_cov.connect(
+            self.set_loc_cov, Qt.ConnectionType.QueuedConnection
+        )
         self.request_set_map.connect(
             self.set_map, Qt.ConnectionType.QueuedConnection
         )
@@ -2039,6 +2136,10 @@ class JarvisWindow(QMainWindow):
         """Update the ROS2 status chip in the top bar."""
         self._ros2_chip.set_connected(connected)
 
+    def set_loc_cov(self, cov: float) -> None:
+        """Update the Developer-mode AMCL localisation-quality chip."""
+        self._loc_cov_chip.set_cov(cov)
+
     def set_robot_state(self, state: str) -> None:
         """
         Show the wheelchair's navigation state below the voice state label.
@@ -2070,13 +2171,14 @@ class JarvisWindow(QMainWindow):
         self._robot_state_label.setText(f"ROBOT  ·  {upper}")
         self._robot_state_label.setVisible(True)
 
-    def set_pose(self, ros_x: float, ros_y: float) -> None:
-        """Update the 'you are here' dot on the map overlay.
+    def set_pose(self, ros_x: float, ros_y: float, ros_yaw: float = 0.0) -> None:
+        """Update the 'you are here' marker on the map overlay.
 
         Safe to call at any time — the map overlay stores the pose and
         re-applies it whenever the map is next opened or the window resizes.
+        ros_yaw (radians) drives the green heading arrow.
         """
-        self._map.set_pose(ros_x, ros_y)
+        self._map.set_pose(ros_x, ros_y, ros_yaw)
 
     def set_map(self, payload: object) -> None:
         """Replace the static EEMCS image with the live sensor map.
@@ -2360,6 +2462,7 @@ class JarvisWindow(QMainWindow):
 
         # Developer-only widgets.
         self._ros2_chip.setVisible(is_dev)
+        self._loc_cov_chip.setVisible(is_dev)
         self._transcript_label.setVisible(is_dev)
         self._launcher_widget.setVisible(is_dev)
         self._dev_tools_widget.setVisible(is_dev)

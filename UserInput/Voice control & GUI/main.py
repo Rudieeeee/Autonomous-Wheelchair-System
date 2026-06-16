@@ -234,6 +234,20 @@ def main() -> None:
     voice_bridge.dev_command.connect(win.request_dev_command)
     # navigate signal is wired to ROS2 below.
 
+    # Auto-start the navigation stack once the voice pipeline is up.  The
+    # controller emits "LISTENING" only after the audio stack and the Vosk
+    # model have finished loading, so that first transition is our "everything
+    # is ready" cue.  We then fire the exact same start_navigation command the
+    # Developer-mode START NAVIGATION button uses, but only once per launch.
+    _nav_autostart = {"done": False}
+    def _maybe_autostart_nav(state: str) -> None:
+        if _nav_autostart["done"] or state != "LISTENING":
+            return
+        _nav_autostart["done"] = True
+        logger.info("Voice pipeline ready — auto-starting navigation stack.")
+        win.request_dev_command.emit("start_navigation")
+    voice_bridge.state.connect(_maybe_autostart_nav)
+
     # ── Voice controller ─────────────────────────────────────────────────────
     config = VoiceConfig(
         tts_provider="edge",
@@ -291,9 +305,62 @@ def main() -> None:
         elif state.upper() in ("OBSTACLE", "ERROR"):
             win.request_set_reply.emit(message or f"Navigation issue: {state}.")
 
-    # Pose updates from the localisation team → "you are here" dot on the map.
-    def _on_pose(x: float, y: float) -> None:
-        win.request_set_pose.emit(x, y)
+    # ── Localisation-gated goal dispatch ──────────────────────────────────────
+    # The pathfinding team can only plan a correct path once AMCL is confident
+    # about where the chair actually is.  Every nav_goal / goal_pose is gated on
+    # the latest /amcl_pose covariance metric (the worst of the X, Y and yaw
+    # variances).  A goal that arrives while the pose is still loose is *held*,
+    # not dropped, and released automatically the instant localisation tightens
+    # below the threshold — so the chair waits for a good fix, then drives.
+    _COV_GATE = 0.5
+    _loc = {"cov": float("inf")}            # latest covariance metric (inf = unknown)
+    _pending: dict | None = None            # held goal awaiting a confident fix
+    _pending_lock = threading.Lock()
+
+    def _do_publish(payload: dict, ros_yaw: float) -> None:
+        ros2.publish_nav_goal(payload)
+        if "ros_x" in payload:
+            ros2.publish_goal_pose(payload["ros_x"], payload["ros_y"], ros_yaw)
+
+    def _dispatch_goal(payload: dict, ros_yaw: float, name: str) -> None:
+        """Publish the goal now if localisation is confident, else hold it."""
+        nonlocal _pending
+        with _pending_lock:
+            cov = _loc["cov"]
+            if cov < _COV_GATE:
+                _do_publish(payload, ros_yaw)
+                logger.info("Goal '%s' sent — AMCL covariance %.3f < %.2f.",
+                            name, cov, _COV_GATE)
+                win.request_set_reply.emit(f"Navigating to {name}, Master.")
+                win.request_set_robot_state.emit("NAVIGATING")
+            else:
+                _pending = {"payload": payload, "yaw": ros_yaw, "name": name}
+                logger.warning(
+                    "Goal '%s' held — AMCL covariance %.3f >= %.2f, waiting for a tighter fix.",
+                    name, cov, _COV_GATE,
+                )
+                win.request_set_reply.emit(
+                    f"Holding {name} until I am sure of our position, Master."
+                )
+
+    # Pose updates from the localisation team → green pose marker + gate state.
+    def _on_pose(x: float, y: float, yaw: float = 0.0, cov: float = float("inf")) -> None:
+        nonlocal _pending
+        win.request_set_pose.emit(x, y, yaw)
+        win.request_set_loc_cov.emit(cov)          # dev-mode localisation quality chip
+        released = None
+        with _pending_lock:
+            _loc["cov"] = cov
+            if _pending is not None and cov < _COV_GATE:
+                released, _pending = _pending, None
+        if released is not None:
+            _do_publish(released["payload"], released["yaw"])
+            logger.info("Held goal '%s' released — AMCL covariance %.3f < %.2f.",
+                        released["name"], cov, _COV_GATE)
+            win.request_set_reply.emit(
+                f"Position confirmed. Navigating to {released['name']}, Master."
+            )
+            win.request_set_robot_state.emit("NAVIGATING")
 
     # Live OccupancyGrid from the mapping team → replaces static EEMCS PNG.
     def _on_map(payload: dict) -> None:
@@ -345,10 +412,7 @@ def main() -> None:
             "timestamp": time.time(),
         }
         logger.info("Map-click navigation: '%s' → (%.3f, %.3f) yaw=%.3f", name, ros_x, ros_y, ros_yaw)
-        ros2.publish_nav_goal(payload)
-        ros2.publish_goal_pose(ros_x, ros_y, ros_yaw)
-        win.request_set_reply.emit(f"Navigating to {name}, sir.")
-        win.request_set_robot_state.emit("NAVIGATING")
+        _dispatch_goal(payload, ros_yaw, name)
 
     win.map_point_nav_requested.connect(_on_map_point_nav)
 
@@ -380,9 +444,7 @@ def main() -> None:
         # Highlight the destination marker red BEFORE sending to ROS2 so the
         # GUI is always up-to-date regardless of when the map overlay is open.
         win.request_set_selected_destination.emit(matched_name)
-        ros2.publish_nav_goal(payload)
-        if "ros_x" in payload:
-            ros2.publish_goal_pose(payload["ros_x"], payload["ros_y"], ros_yaw)
+        _dispatch_goal(payload, ros_yaw, matched_name)
 
     voice_bridge.navigate.connect(_on_navigate)
 
