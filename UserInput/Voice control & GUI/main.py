@@ -95,7 +95,10 @@ _ROS_PORT     = int(os.environ.get("ROSBRIDGE_PORT", "9090"))
 # ─── Test socket broadcaster (active only when --test-port is passed) ─────────
 _parser = argparse.ArgumentParser(add_help=False)
 _parser.add_argument("--test-port", type=int, default=0)
-_TEST_PORT: int = _parser.parse_known_args()[0].test_port
+_parser.add_argument("--no-fast-nav", action="store_true", default=False)
+_parsed_args      = _parser.parse_known_args()[0]
+_TEST_PORT: int   = _parsed_args.test_port
+_NO_FAST_NAV: bool = _parsed_args.no_fast_nav
 
 _test_conn:  _socket.socket | None = None
 _test_lock:  threading.Lock         = threading.Lock()
@@ -235,6 +238,7 @@ def main() -> None:
     config = VoiceConfig(
         tts_provider="edge",
         edge_voice="en-GB-ThomasNeural",
+        fast_navigate=not _NO_FAST_NAV,
     )
 
     # Seed destinations from map_points.json so voice navigation works for
@@ -382,17 +386,32 @@ def main() -> None:
 
     voice_bridge.navigate.connect(_on_navigate)
 
-    # Broadcast speech-final and nav events so the test runner can measure
-    # latency and verify correct destinations without touching internals.
+    # Broadcast speech-final, reply, and state events so the test runner
+    # can measure latency and verify destinations.
+    #
+    # IMPORTANT: these callbacks are invoked directly on the voice thread
+    # (inside VoiceObserver hooks) so the timestamps reflect actual
+    # processing time, not Qt event-loop delay.  The previous approach
+    # routed through Qt signals (QueuedConnection) and the main thread's
+    # animation timers added ~1 s of phantom latency to every measurement.
     if _TEST_PORT:
-        voice_bridge.final.connect(
-            lambda text: _test_send({"type": "final", "text": text, "t": time.time()})
-        )
-        # reply fires when Jarvis starts speaking (intent resolved, before user confirms).
-        # This is the T1 timestamp for REQ-UI-3 latency: command-speech-end → intent resolved.
-        voice_bridge.reply.connect(
-            lambda text: _test_send({"type": "reply", "text": text, "t": time.time()})
-        )
+        _orig_on_final = voice_bridge.on_final
+        def _test_on_final(text: str) -> None:
+            _test_send({"type": "final", "text": text, "t": time.time()})
+            _orig_on_final(text)
+        voice_bridge.on_final = _test_on_final
+
+        _orig_on_reply = voice_bridge.on_reply
+        def _test_on_reply(text: str) -> None:
+            _test_send({"type": "reply", "text": text, "t": time.time()})
+            _orig_on_reply(text)
+        voice_bridge.on_reply = _test_on_reply
+
+        _orig_on_state = voice_bridge.on_state
+        def _test_on_state(state: str) -> None:
+            _test_send({"type": "state", "state": state, "t": time.time()})
+            _orig_on_state(state)
+        voice_bridge.on_state = _test_on_state
 
     # GUI E-stop button → ROS2 estop publisher.
     def _on_estop(active: bool) -> None:

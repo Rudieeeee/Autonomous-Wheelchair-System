@@ -39,6 +39,7 @@ Setup:
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import json
 import os
 import queue
@@ -297,9 +298,11 @@ class VoiceConfig:
     # ---- Vosk (speech-to-text, offline) --------------------------------
     model_path: str = "models/vosk-model-en-us-0.22"
     sample_rate: int = 16000
-    # 2000 samples @ 16 kHz = 125 ms chunks — faster partial feedback than
-    # the previous 250 ms without hurting Vosk accuracy.
-    block_size: int = 2000
+    # 1600 samples @ 16 kHz = 100 ms chunks — tighter audio loop for
+    # faster endpoint detection.  Values below 1000 (62.5 ms) can starve
+    # DeepFilterNet which buffers at 10 ms internally, so 100 ms is a
+    # safe middle ground.
+    block_size: int = 1600
     # Preferred device index for the Plantronics BT300M headset mic (WASAPI).
     # If this index is missing or not an input device, AudioStream falls back
     # to auto-detection by name, then the system default.
@@ -316,6 +319,7 @@ class VoiceConfig:
     # The rest are real mishearings observed in noisy open-day testing.
     wake_word_aliases: list = field(default_factory=lambda: [
         "harvest", "harvard", "nervous", "therapist", "jurors", "server", "service", "services", "carvers", "garbage",
+        "jervis", "orvis",
     ])
     awake_timeout_s: float = 30.0
     wake_acknowledgement: str = "What do you want?"
@@ -365,12 +369,12 @@ class VoiceConfig:
     # Set use_silence_gate=False to revert to the original Vosk-boundary
     # behaviour (instantaneous dispatch on each Vosk final result).
     #
-    # 1.0 s is short enough that the chair reacts almost as soon as the
-    # user stops talking, but still long enough to bridge a normal pause
-    # in the middle of a sentence.  Raise it back towards 2.0 s only if
-    # users find their sentences are being cut off mid-thought.
+    # 0.6 s is short enough that the chair reacts quickly after the user
+    # stops talking, while still bridging a normal mid-sentence pause.
+    # Lower values (< 0.5 s) risk cutting off slow speakers. Raise it
+    # back towards 1.0 s only if users find sentences are split mid-thought.
     use_silence_gate: bool = True
-    silence_commit_s: float = 1.0
+    silence_commit_s: float = 0.6
 
     # ---- Neural denoiser (DeepFilterNet3 before Vosk) ------------------
     # Third stage of the rejection pipeline.  Runs every speech chunk
@@ -946,6 +950,7 @@ class SilenceCommitter:
     the first fragment reaches the command pipeline on its own and may
     be misclassified.  Waiting for a longer silence (default 2 s) lets
     the user finish a sentence naturally before any processing begins.
+    The default window is 0.6 s (see VoiceConfig.silence_commit_s).
 
     Emergency-stop bypass
     ---------------------
@@ -1727,6 +1732,15 @@ class VoiceController:
         if self.fast_navigator:
             print("[FastNavigator] Active — navigate commands bypass LLM.")
 
+        # Single-worker pool for the parallel LLM+FastNav race.  One worker
+        # is enough because commands are processed sequentially; the pool is
+        # only here to let the LLM HTTP call start before FastNav finishes its
+        # < 1 ms keyword check, so misrecognised-verb commands reach Groq with
+        # a head start instead of waiting for FastNav to give up first.
+        self._llm_pool = concurrent.futures.ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="llm-race"
+        )
+
         # Software noise gate (second layer after Plantronics hardware DSP)
         self.noise_gate = (
             NoiseGate(
@@ -2019,7 +2033,11 @@ class VoiceController:
         question = f"Shall I take you to {dest_display}, {self._address}?"
         self.observer.on_reply(question)   # show the prompt on the GUI
         self._broadcast_state("SPEAKING")
-        self.speaker.say(question)   # drain=True: flush any leftover audio
+        # drain=False: keep audio captured during TTS so the user can say
+        # "yes" while Jarvis is still asking and the confirmation loop
+        # picks it up.  Barge-in stops playback early when the user talks
+        # over Jarvis; drain=False ensures non-barge audio is also kept.
+        self.speaker.say(question, drain=False)
         self._broadcast_state("CONFIRMING")
         print(f"[Confirm] Listening for yes/no (timeout {self.config.confirm_timeout_s}s) …")
 
@@ -2146,11 +2164,29 @@ class VoiceController:
                     self._broadcast_state("LISTENING")
                 return
 
+        # ---- Parallel LLM + FastNav race ----
+        # Submit the LLM call to the background thread immediately so the
+        # Groq HTTP request is in flight while FastNav does its < 1 ms check.
+        # On a clean FastNav match the future is cancelled / ignored.
+        # On a miss (garbled verb, free-form phrasing) the LLM result is
+        # already arriving instead of starting only after FastNav gives up.
+        llm_future: Optional[concurrent.futures.Future] = None
+        if (self.fast_navigator is not None
+                and getattr(self.intent_classifier, "_available", False)):
+            llm_future = self._llm_pool.submit(
+                self.intent_classifier.classify, command, self._address
+            )
+
         # ---- Fast path: keyword router (no LLM, ~0 ms) ----
         if self.fast_navigator is not None:
             fast_match = self.fast_navigator.match(command, address=self._address)
             if fast_match:
                 dest_key, loc_id, reply = fast_match
+                # FastNav won — discard the LLM future.  cancel() is a no-op
+                # if the HTTP request is already in flight, which is fine: the
+                # result comes back to the pool thread and is simply never read.
+                if llm_future is not None:
+                    llm_future.cancel()
                 print(f"[FastNav] '{dest_key}' → {loc_id}  (LLM skipped)")
                 hit = Hit(phrase=dest_key, location_id=loc_id,
                           confidence=1.0, raw_text=full_transcript)
@@ -2178,7 +2214,12 @@ class VoiceController:
         # ---- LLM path: intent classification ----
         self._broadcast_state("THINKING")
         try:
-            intent = self.intent_classifier.classify(command, address=self._address)
+            if llm_future is not None:
+                # Collect the parallel result — already in flight since before
+                # the FastNav check, so wait time ≈ max(0, llm_time - fastnav_time).
+                intent = llm_future.result(timeout=30)
+            else:
+                intent = self.intent_classifier.classify(command, address=self._address)
         except Exception as exc:
             print(f"[Intent ] classify error: {exc}")
             self._broadcast_state("LISTENING")
