@@ -17,7 +17,8 @@ Behavior:
         show_map  — bring up the on-screen venue map
         hide_map  — dismiss the map
         question  — answer it aloud (live weather/time injected as context)
-        chatter   — gentle nudge to clarify
+        chatter   — false alarm or speech aimed at someone else; Jarvis
+                    goes back to idle and waits for the wake word again
         goodbye   — end the conversation, return to idle.
   • The chair only moves on "navigate". Mentioning a place is not enough.
   • A neural DeepFilterDenoiser (DeepFilterNet3) suppresses background
@@ -72,6 +73,28 @@ _STT_NOISE_WORDS: frozenset = frozenset({
 # Average per-word confidence threshold.  Results below this are also dropped.
 _STT_MIN_CONF: float = 0.45
 
+
+def _strip_edge_noise_words(text: str) -> str:
+    """
+    Trim filler words like a dangling "the" off the front and back of a
+    final transcript.
+
+    Vosk often tacks a trailing "the" or "a" onto the end of an utterance
+    when it is still deciding whether more words are coming.  That dangling
+    word holds the live partial open longer before it commits to a final,
+    and it leaves a stray "the" sitting on screen after the user has
+    finished speaking.  We keep the meaningful words in the middle and drop
+    the noise words that bracket them, so "take me to lab a the" becomes
+    "take me to lab a".  A line that is nothing but noise words collapses
+    to empty and gets rejected upstream.
+    """
+    words = text.split()
+    while words and words[0].lower() in _STT_NOISE_WORDS:
+        words.pop(0)
+    while words and words[-1].lower() in _STT_NOISE_WORDS:
+        words.pop()
+    return " ".join(words)
+
 # ---------------------------------------------------------------------------
 # Fast navigation verb regex
 # Matches explicit motion commands BEFORE sending to the LLM.
@@ -92,6 +115,26 @@ _NAV_VERB_RE = re.compile(
 # "stop" by itself (with optional politeness / emphasis words)
 _STOP_ONLY_RE = re.compile(
     r'^\s*(?:please\s+)?(?:emergency\s+)?stop[.!]?\s*$',
+    re.IGNORECASE,
+)
+
+# Explicit "go to sleep" command — the spoken twin of the wake word.
+# Lets the user dismiss Jarvis on demand ("go to sleep", "stop listening",
+# "naptime", "shut down") instead of waiting for the conversation window to
+# time out.  An optional leading/trailing "jarvis" is allowed so "jarvis go
+# to sleep" and "go to sleep jarvis" both match.  This is NOT an emergency
+# stop — it only ends the listening session, it does not touch the chair.
+_SLEEP_RE = re.compile(
+    r'^\s*(?:jarvis[\s,]+)?'
+    r'(?:'
+    r'stop\s+listening|'
+    r'go\s+(?:back\s+)?to\s+sleep|'
+    r'nap\s*time|'
+    r'shut\s*down|'
+    r'power\s+down|'
+    r'sleep(?:\s+now)?'
+    r')'
+    r'(?:[\s,]+jarvis)?[.!]?\s*$',
     re.IGNORECASE,
 )
 
@@ -351,8 +394,15 @@ class VoiceConfig:
     # −42 dBFS sits cleanly between the two and gives a healthy margin
     # for quiet consonants in "Jarvis" without letting crowd through.
     # If you switch to a plain omni mic, drop this to ~−55 dBFS.
+    #
+    # Tightened from −42 to −35 dBFS so the gate only opens for the loud
+    # close-mic wearer.  The wearer still arrives at roughly −20, so there
+    # is a 15 dB margin for quiet consonants in "Jarvis", while a neighbour
+    # leaning in at −40 now stays shut out instead of slipping through.
+    # If quiet starts of "Jarvis" ever get clipped, ease this back towards
+    # −40.
     noise_gate_enabled: bool = True
-    noise_gate_threshold_db: float = -42.0
+    noise_gate_threshold_db: float = -35.0
     # Keep the gate open this many extra 125 ms frames after speech drops
     # below threshold so trailing consonants are not swallowed.
     noise_gate_hold_frames: int = 10
@@ -385,6 +435,15 @@ class VoiceConfig:
     # Requires the deepfilternet package.  Falls back to passthrough with
     # a printed warning if not installed.
     spectral_denoiser_enabled: bool = True
+    # Post-filter is the extra suppression stage from the DeepFilterNet
+    # demo.  On by default so competing voices get pushed down as hard as
+    # the model allows.  Turn it off if the user's own voice starts to
+    # sound thin or watery.
+    deepfilter_post_filter: bool = True
+    # Attenuation limit in dB.  None is the demo bar at maximum: noise is
+    # suppressed with no cap.  Put a number here (e.g. 12.0) only if you
+    # want to deliberately leave that many dB of background in.
+    deepfilter_atten_lim_db: Optional[float] = None
 
     # ---- LLM intent gate -----------------------------------------------
     llm_provider: str = "groq"          # "groq" | "ollama"
@@ -547,8 +606,21 @@ class DeepFilterDenoiser:
     Install with:  pip install deepfilternet
     """
 
-    def __init__(self, sample_rate: int = 16000) -> None:
+    def __init__(self, sample_rate: int = 16000,
+                 post_filter: bool = True,
+                 atten_lim_db: Optional[float] = None) -> None:
+        # post_filter is the extra suppression stage exposed in the
+        # DeepFilterNet demo.  It costs a touch of speech naturalness and
+        # buys the last few dB of rejection on competing voices, which is
+        # exactly the trade we want at a crowded open day.
+        #
+        # atten_lim_db caps how hard noise is pushed down.  None means no
+        # cap, i.e. the model suppresses as much as it can.  That is the
+        # "bar at maximum" setting from the demo.  Set a number like 12.0
+        # to deliberately leave that many dB of background in.
         self.sample_rate = sample_rate
+        self.post_filter = post_filter
+        self.atten_lim_db = atten_lim_db
         self._model = None
         self._df_state = None
         self._torch = None
@@ -586,11 +658,27 @@ class DeepFilterDenoiser:
             sys.modules["torchaudio.backend.common"] = _common
             sys.modules["torchaudio.backend"].common = _common
             from df import init_df
+            # DeepFilterNet's logger asks git for the current commit while
+            # it loads the model, via subprocess(["git", ...]).  It only
+            # catches CalledProcessError, so on a machine where git is not
+            # on PATH the call raises FileNotFoundError ([WinError 2] on
+            # Windows) and takes the whole model load down with it — the
+            # denoiser then silently falls back to passthrough and never
+            # suppresses anything.  Stub the git lookup so the model loads
+            # whether or not git is installed.
+            import df.utils as _df_utils
+            _df_utils.get_git_root = lambda: None
             self._torch = torch
             self._torchaudio = torchaudio
-            self._model, self._df_state, _ = init_df()
+            self._model, self._df_state, _ = init_df(
+                post_filter=self.post_filter
+            )
             self._available = True
-            print("[DeepFilterDenoiser] Active — DeepFilterNet3 loaded.")
+            lim = ("max" if self.atten_lim_db is None
+                   else f"{self.atten_lim_db:g} dB cap")
+            print(f"[DeepFilterDenoiser] Active — DeepFilterNet3 loaded "
+                  f"(post-filter {'on' if self.post_filter else 'off'}, "
+                  f"attenuation {lim}).")
         except Exception as e:
             print(f"[DeepFilterDenoiser] DeepFilterNet unavailable: {e}. "
                   "Passthrough.  Install with: pip install deepfilternet")
@@ -618,7 +706,8 @@ class DeepFilterDenoiser:
                 audio, self.sample_rate, 48000
             )
             from df import enhance
-            enhanced_48k = enhance(self._model, self._df_state, audio_48k)
+            enhanced_48k = enhance(self._model, self._df_state, audio_48k,
+                                   atten_lim_db=self.atten_lim_db)
             # Downsample 48 kHz → 16 kHz.
             enhanced = self._torchaudio.functional.resample(
                 enhanced_48k, 48000, self.sample_rate
@@ -1096,8 +1185,14 @@ Classify each user utterance into ONE of six intents:
               The user will answer with a simple yes or no, so do not ask
               them to repeat the destination.
 
-  chatter   — false alarm or incomplete: a place name with no command
-              verb, a fragment, or speech clearly aimed at someone else.
+  chatter   — a false alarm: background noise, an unrelated remark, or
+              speech clearly aimed at someone else rather than you. The
+              wake word was caught but nothing here is for Jarvis. After a
+              chatter turn Jarvis stops listening until the wake word is
+              spoken again, so only use it when the utterance is genuinely
+              not a question or a command. A place name spoken on its own
+              (the user naming where they want to go) is NOT chatter — use
+              clarify for that.
 
 Valid destinations (use the exact phrasing — see "Runtime destinations" context).
 
@@ -1122,8 +1217,10 @@ Examples:
 "stop all"                     -> {"intent":"dev_command","destination":"stop_all","reply":"Stopping all systems, Master."}
 "developer mode"               -> {"intent":"dev_command","destination":"mode_developer","reply":"Switching to developer mode, Master."}
 "user mode"                    -> {"intent":"dev_command","destination":"mode_user","reply":"Switching to user mode, Master."}
-"the cafeteria"                -> {"intent":"chatter","destination":null,"reply":"Would you like me to take you there, Master? Just say take me to the cafeteria."}
+"the cafeteria"                -> {"intent":"clarify","destination":"cafeteria","reply":"Did you mean the cafeteria, Master?"}
 "i think i want lab a"         -> {"intent":"clarify","destination":"lab a","reply":"Did you mean lab a, Master?"}
+"no i was talking to you"      -> {"intent":"chatter","destination":null,"reply":""}
+"so anyway like i was saying"  -> {"intent":"chatter","destination":null,"reply":""}
 "the place with the elevators" -> {"intent":"clarify","destination":"elevator one","reply":"Did you mean elevator one, Master?"}
 "what's the weather like"      -> {"intent":"question","destination":null,"reply":"Partly cloudy and 16 degrees in Delft, Master."}
 "and tomorrow"                 -> {"intent":"question","destination":null,"reply":"I don't have the forecast, Master, but expect typical Dutch spring weather."}
@@ -1757,7 +1854,11 @@ class VoiceController:
         # Disabled if the noise gate is off because the gate's is_speech
         # flag drives which chunks are sent through enhancement.
         self.denoiser = (
-            DeepFilterDenoiser(sample_rate=self.config.sample_rate)
+            DeepFilterDenoiser(
+                sample_rate=self.config.sample_rate,
+                post_filter=self.config.deepfilter_post_filter,
+                atten_lim_db=self.config.deepfilter_atten_lim_db,
+            )
             if (self.config.spectral_denoiser_enabled
                 and self.noise_gate is not None)
             else None
@@ -1925,6 +2026,11 @@ class VoiceController:
                     continue
 
                 final_text = (result.get("text") or "").strip()
+                # Drop a dangling "the"/"a" off the ends before anything
+                # else looks at the line.  This stops a stray trailing word
+                # from sitting on screen and from holding the live partial
+                # open longer than it needs to.
+                final_text = _strip_edge_noise_words(final_text)
 
                 # ---- Noise / hallucination guard -----------------------
                 if final_text:
@@ -1989,7 +2095,9 @@ class VoiceController:
                     self.fast_navigator.match(command, address=self._address)
                     if self.fast_navigator is not None else None
                 )
-                if _STOP_ONLY_RE.match(command) or fast_hit is not None:
+                if (_STOP_ONLY_RE.match(command)
+                        or _SLEEP_RE.match(command)
+                        or fast_hit is not None):
                     self._handle_command(command, final_text)
                     if _committer is not None:
                         _committer.reset()
@@ -2135,6 +2243,23 @@ class VoiceController:
             print(f"[Homophone] '{command}' -> '{corrected}'")
             command = corrected
 
+        # ---- Explicit sleep command ("go to sleep" / "stop listening") ----
+        # Spoken twin of the wake word: the user dismisses Jarvis on demand
+        # and he returns to idle until "Jarvis" is heard again.  Checked
+        # before everything else so it also cancels a pending "Did you mean
+        # X?" question.  It does NOT move the chair — only stops listening.
+        if _SLEEP_RE.match(command):
+            print("[WakeGate] sleep command → returning to idle.")
+            self._pending_clarify = None
+            reply = f"Going to sleep, {self._address}. Say Jarvis when you need me."
+            self.observer.on_reply(reply)
+            self._broadcast_state("SPEAKING")
+            self.speaker.say(reply)
+            self.wake_gate.end_conversation()
+            self.intent_classifier.reset_history()
+            self._broadcast_state("STANDING BY")
+            return
+
         # ---- Pending clarification ("Did you mean X?") ----
         # If the previous turn asked the user to confirm a destination,
         # treat a plain yes/no here as the answer so they don't have to
@@ -2266,10 +2391,21 @@ class VoiceController:
             self.speaker.say(reply)
             self.wake_gate.end_conversation()
             self.intent_classifier.reset_history()
-        else:  # question, chatter
+        elif intent.intent_type == "question":
             self.observer.on_reply(reply)
             self._broadcast_state("SPEAKING")
             self.speaker.say(reply)
+        else:  # chatter — false alarm or speech aimed at someone else.
+            # The follow-up after the wake word was not a question or a
+            # command for Jarvis, so treat the wake as a false trigger and
+            # drop straight back to idle instead of holding the conversation
+            # window open for the full timeout. Jarvis only listens again
+            # after the wake word is spoken once more.
+            print("[WakeGate] chatter after wake → returning to idle.")
+            self.wake_gate.end_conversation()
+            self.intent_classifier.reset_history()
+            self._broadcast_state("STANDING BY")
+            return
 
         self._broadcast_state("LISTENING")
 
