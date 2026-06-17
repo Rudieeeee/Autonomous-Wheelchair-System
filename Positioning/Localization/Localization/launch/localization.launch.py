@@ -39,7 +39,7 @@ def generate_launch_description():
             PathJoinSubstitution([
                 FindPackageShare('map_generator'),
                 'launch',
-                'sensors.launch2.py',
+                'sensors.launch.py',
             ])
         ),
         launch_arguments={

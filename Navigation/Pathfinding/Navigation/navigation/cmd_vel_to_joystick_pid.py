@@ -107,12 +107,12 @@ class CmdVelToJoystickPid(Node):
         self.declare_parameter("max_yaw_covariance", 0.03)
         self.declare_parameter("min_good_amcl_messages", 5)
         self.declare_parameter("amcl_timeout_seconds", 10.0)
-        self.declare_parameter("amcl_block_joystick_x", 40)
+        self.declare_parameter("amcl_block_joystick_x", 100)
         self.declare_parameter("amcl_block_joystick_y", 0)
 
         self.declare_parameter("use_obstacle_gate", True)
-        self.declare_parameter("scan_topic", "/scan")
-        self.declare_parameter("full_scan_stop_distance_m", 0.50)
+        self.declare_parameter("scan_topics", ["/scan", "/tof_scan"])
+        self.declare_parameter("full_scan_stop_distance_m", 0.90)
         self.declare_parameter("scan_timeout_seconds", 0.5)
 
         self.cmd_vel_topic = self.get_parameter("cmd_vel_topic").value
@@ -175,7 +175,7 @@ class CmdVelToJoystickPid(Node):
         self.amcl_block_joystick_y = int(self.get_parameter("amcl_block_joystick_y").value)
 
         self.use_obstacle_gate = bool(self.get_parameter("use_obstacle_gate").value)
-        self.scan_topic = self.get_parameter("scan_topic").value
+        self.scan_topics = list(self.get_parameter("scan_topics").value)
         self.full_scan_stop_distance_m = float(self.get_parameter("full_scan_stop_distance_m").value)
         self.scan_timeout_seconds = float(self.get_parameter("scan_timeout_seconds").value)
 
@@ -219,11 +219,14 @@ class CmdVelToJoystickPid(Node):
         self.good_amcl_count = 0
         self.has_received_amcl = False
         self.last_amcl_time = self.get_clock().now()
+        self.amcl_search_start_time = None
 
         self.obstacle_too_close = False
         self.has_received_scan = False
-        self.last_scan_time = self.get_clock().now()
         self.closest_scan_distance = float("inf")
+        self.closest_scan_topic = ""
+        self.scan_distances = {}
+        self.scan_times = {}
 
         self.publisher = self.create_publisher(Int16MultiArray, self.joystick_topic, 10)
 
@@ -241,7 +244,16 @@ class CmdVelToJoystickPid(Node):
             history=QoSHistoryPolicy.KEEP_LAST,
             depth=10,
         )
-        self.scan_sub = self.create_subscription(LaserScan, self.scan_topic, self.scan_callback, scan_qos)
+
+        self.scan_subs = []
+        for topic in self.scan_topics:
+            sub = self.create_subscription(
+                LaserScan,
+                topic,
+                lambda msg, topic_name=topic: self.scan_callback(msg, topic_name),
+                scan_qos,
+            )
+            self.scan_subs.append(sub)
 
         self.timer = self.create_timer(1.0 / self.publish_rate_hz, self.timer_callback)
 
@@ -250,6 +262,8 @@ class CmdVelToJoystickPid(Node):
         self.get_logger().info(f"odom_topic={self.odom_topic}")
         self.get_logger().info(f"joystick_topic={self.joystick_topic}")
         self.get_logger().info(f"calibration_file={self.calibration_file}")
+        self.get_logger().info(f"scan_topics={self.scan_topics}")
+        self.get_logger().info(f"full_scan_stop_distance_m={self.full_scan_stop_distance_m}")
 
     @staticmethod
     def clamp(value: float, low: float, high: float) -> float:
@@ -391,6 +405,7 @@ class CmdVelToJoystickPid(Node):
 
         if self.amcl_is_accurate:
             self.amcl_pose_estimation_done = True
+            self.amcl_search_start_time = None
             self.get_logger().info("AMCL pose accepted. Normal movement unlocked.")
         else:
             self.get_logger().warn(
@@ -399,7 +414,7 @@ class CmdVelToJoystickPid(Node):
                 f"good_count={self.good_amcl_count}/{self.min_good_amcl_messages}"
             )
 
-    def scan_callback(self, msg: LaserScan):
+    def scan_callback(self, msg: LaserScan, topic_name: str):
         closest_distance = float("inf")
 
         for distance in msg.ranges:
@@ -409,13 +424,41 @@ class CmdVelToJoystickPid(Node):
                 continue
             closest_distance = min(closest_distance, distance)
 
-        self.closest_scan_distance = closest_distance
-        self.obstacle_too_close = closest_distance < self.full_scan_stop_distance_m
+        now = self.get_clock().now()
+        self.scan_distances[topic_name] = closest_distance
+        self.scan_times[topic_name] = now
         self.has_received_scan = True
-        self.last_scan_time = self.get_clock().now()
 
-        if self.obstacle_too_close:
-            self.get_logger().warn(f"Obstacle too close in full scan: {closest_distance:.2f} m")
+        self.update_closest_scan_state()
+
+        if self.obstacle_too_close and not self.amcl_pose_estimation_done:
+            self.get_logger().warn(
+                f"Obstacle too close during AMCL search from {self.closest_scan_topic}: "
+                f"{self.closest_scan_distance:.2f} m"
+            )
+
+    def update_closest_scan_state(self):
+        now = self.get_clock().now()
+
+        closest_distance = float("inf")
+        closest_topic = ""
+
+        for topic, distance in self.scan_distances.items():
+            last_time = self.scan_times.get(topic)
+            if last_time is None:
+                continue
+
+            age = (now - last_time).nanoseconds / 1e9
+            if age > self.scan_timeout_seconds:
+                continue
+
+            if distance < closest_distance:
+                closest_distance = distance
+                closest_topic = topic
+
+        self.closest_scan_distance = closest_distance
+        self.closest_scan_topic = closest_topic
+        self.obstacle_too_close = closest_distance < self.full_scan_stop_distance_m
 
     def publish_joystick(self, x: float, y: float):
         x = int(round(self.clamp(x, -100.0, 100.0)))
@@ -461,17 +504,41 @@ class CmdVelToJoystickPid(Node):
         if not self.use_obstacle_gate:
             return True
 
-        # Only use the simple full-scan joystick stop while AMCL is still being accepted.
-        # After AMCL is accepted, obstacle avoidance is handled by Nav2/local_costmap.
+        # Only use this simple full-scan joystick stop while AMCL is still being accepted.
+        # After AMCL is accepted, obstacle safety is handled by Nav2/local_costmap and tof_safety_limiter.
         if self.amcl_pose_estimation_done:
             return True
 
-        # No scan-timeout emergency stop here. If no scan has arrived yet, do not block
-        # the joystick bridge only because of missing/stale scan data.
         if not self.has_received_scan:
             return True
 
+        self.update_closest_scan_state()
+
         return not self.obstacle_too_close
+
+    def get_amcl_search_joystick_command(self):
+        now = self.get_clock().now()
+
+        if self.amcl_search_start_time is None:
+            self.amcl_search_start_time = now
+
+        elapsed = (now - self.amcl_search_start_time).nanoseconds / 1e9
+        cycle_time = elapsed % 8.0
+
+        if cycle_time < 3.0:
+            # Right / original AMCL search movement: 100, 0
+            return 100.0, 0.0
+
+        if cycle_time < 3.5:
+            # Forward: 0, 100
+            return 0.0, 100.0
+
+        if cycle_time < 4.5:
+            # Backward: 0, -100
+            return 0.0, -100.0
+
+        # Left: -100, 0
+        return -100.0, 0.0
 
     def rate_limit(self, target: float, current: float, max_delta_per_s: float, dt: float) -> float:
         allowed_delta = abs(max_delta_per_s) * max(0.0, dt)
@@ -497,18 +564,14 @@ class CmdVelToJoystickPid(Node):
         if not self.amcl_allows_movement():
             self.linear_pid.reset()
             self.angular_pid.reset()
-            self.current_x = self.rate_limit(
-                self.amcl_block_joystick_x,
-                self.current_x,
-                self.max_joystick_x_delta_per_s,
-                dt,
-            )
-            self.current_y = self.rate_limit(
-                self.amcl_block_joystick_y,
-                self.current_y,
-                self.max_joystick_y_delta_per_s,
-                dt,
-            )
+
+            target_x, target_y = self.get_amcl_search_joystick_command()
+
+            # During AMCL search, send the search joystick command immediately.
+            # Do not ramp up with rate_limit.
+            self.current_x = target_x
+            self.current_y = target_y
+
             self.publish_joystick(self.current_x, self.current_y)
             return
 

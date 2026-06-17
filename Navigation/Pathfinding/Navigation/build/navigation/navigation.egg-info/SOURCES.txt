@@ -1,6 +1,7 @@
 package.xml
 setup.cfg
 setup.py
+behavior_trees/wheelchair_obstacle_replanning.xml
 config/nav2_mapping_params.yaml
 config/nav2_params.yaml
 config/nav2_params_tof64.yaml
@@ -14,6 +15,7 @@ navigation/cmd_vel_to_joystick_pid.py
 navigation/cmd_vel_to_joystick_tof64.py
 navigation/conditional_cmd_vel_limiter.py
 navigation/fit_joystick_calibration.py
+navigation/tof_safety_limiter.py
 navigation/wheelchair_calibration_collector.py
 navigation.egg-info/PKG-INFO
 navigation.egg-info/SOURCES.txt

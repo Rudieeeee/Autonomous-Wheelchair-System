@@ -47,6 +47,7 @@ setup(
             'cmd_vel_to_joystick_mapping = navigation.cmd_vel_to_joystick_mapping:main',
             'cmd_vel_to_joystick_pid = navigation.cmd_vel_to_joystick_pid:main',
             'conditional_cmd_vel_limiter = navigation.conditional_cmd_vel_limiter:main',
+            'tof_safety_limiter = navigation.tof_safety_limiter:main',
         ],
     },
 )

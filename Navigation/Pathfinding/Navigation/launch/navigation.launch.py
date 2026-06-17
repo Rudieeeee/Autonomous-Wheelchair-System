@@ -5,6 +5,7 @@ from launch.actions import (
     LogInfo,
     TimerAction,
 )
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -23,6 +24,12 @@ def generate_launch_description():
         FindPackageShare('navigation'),
         'config',
         'nav2_params.yaml',
+    ])
+
+    bt_xml = PathJoinSubstitution([
+        FindPackageShare('navigation'),
+        'behavior_trees',
+        'wheelchair_obstacle_replan.xml',
     ])
 
     rviz_config = PathJoinSubstitution([
@@ -60,7 +67,7 @@ def generate_launch_description():
         output='screen',
         parameters=[nav2_params],
         remappings=[
-            ('cmd_vel', 'cmd_vel_raw'),
+            ('/cmd_vel', '/cmd_vel_raw'),
         ],
     )
 
@@ -71,20 +78,10 @@ def generate_launch_description():
         output='screen',
         parameters=[
             {
-                # Input from Nav2 controller_server
                 'input_topic': '/cmd_vel_raw',
-
-                # Output to velocity_smoother
                 'output_topic': '/cmd_vel_limited',
-
-                # If abs(linear.x) <= this, it counts as pure rotation.
                 'linear_zero_threshold': 0.02,
-
-                # Angular limit while also driving forward/backward.
                 'moving_angular_limit': 0.25,
-
-                # Angular limit during pure rotation.
-                # The velocity_smoother still applies its own final limits.
                 'pure_rotation_angular_limit': 10.0,
             }
         ],
@@ -95,7 +92,12 @@ def generate_launch_description():
         executable='bt_navigator',
         name='bt_navigator',
         output='screen',
-        parameters=[nav2_params],
+        parameters=[
+            nav2_params,
+            {
+                'navigate_to_pose.default_nav_to_pose_bt_xml': bt_xml,
+            },
+        ],
     )
 
     behavior_server = Node(
@@ -113,15 +115,17 @@ def generate_launch_description():
         output='screen',
         parameters=[nav2_params],
         remappings=[
-            # Before:
-            # ('cmd_vel', 'cmd_vel_raw'),
-
-            # Now the smoother receives the limited command.
-            ('cmd_vel', 'cmd_vel_limited'),
-
-            # Final smoothed velocity still goes to /cmd_vel.
-            ('cmd_vel_smoothed', 'cmd_vel'),
+            ('/cmd_vel', '/cmd_vel_limited'),
+            ('/cmd_vel_smoothed', '/cmd_vel'),
         ],
+    )
+
+    tof_safety_limiter = Node(
+        package='navigation',
+        executable='tof_safety_limiter',
+        name='tof_safety_limiter',
+        output='screen',
+        parameters=[nav2_params],
     )
 
     cmd_vel_to_joystick = Node(
@@ -131,7 +135,10 @@ def generate_launch_description():
         output='screen',
         parameters=[
             {
-                'cmd_vel_topic': '/cmd_vel',
+                # IMPORTANT:
+                # This must listen to the safety-filtered command, not raw /cmd_vel.
+                'cmd_vel_topic': '/cmd_vel_safe',
+
                 'odom_topic': '/odom',
                 'joystick_topic': '/joystick_cmd',
                 'calibration_file': 'joystick_calibration.json',
@@ -182,15 +189,22 @@ def generate_launch_description():
                 'min_good_amcl_messages': 5,
                 'amcl_timeout_seconds': 10.0,
 
-                # Before AMCL is accepted, rotate gently to help localization.
+                # Before AMCL is accepted, run this repeating search movement:
+                # 100, 0    for 3 sec
+                # 0, 100    for 1 sec
+                # 0, -100   for 1 sec
+                # -100, 0   for 3 sec
+                # repeat
                 'amcl_block_joystick_x': 100,
                 'amcl_block_joystick_y': 0,
 
                 # Used only before AMCL is accepted.
-                # After AMCL, Nav2 local_costmap handles LiDAR.
+                # This now checks both the lidar scan and the ToF scan.
+                # After AMCL, Nav2 local_costmap and tof_safety_limiter handle safety.
                 'use_obstacle_gate': True,
-                'scan_topic': '/scan',
-                'full_scan_stop_distance_m': 0.70,
+                'scan_topics': ['/scan', '/tof_scan'],
+                'full_scan_stop_distance_m': 0.90,
+                'scan_timeout_seconds': 0.5,
             }
         ],
     )
@@ -230,11 +244,9 @@ def generate_launch_description():
             controller_server,
             bt_navigator,
             behavior_server,
-
-            # New node between controller_server and velocity_smoother.
             conditional_cmd_vel_limiter,
-
             velocity_smoother,
+            tof_safety_limiter,
             cmd_vel_to_joystick,
             lifecycle_manager_navigation,
         ],
@@ -253,7 +265,7 @@ def generate_launch_description():
             'map',
             default_value=(
                 '/home/rudrh/Autonomous-Wheelchair-System/'
-                'Other-Files/GeneralData/Maps/The_Halls.yaml'
+                'Other-Files/GeneralData/Maps/my_saved_map.yaml'
             ),
             description='Full path to the saved map YAML file.',
         ),

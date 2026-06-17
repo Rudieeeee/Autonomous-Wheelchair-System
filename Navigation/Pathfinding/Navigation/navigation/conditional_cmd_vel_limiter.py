@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import math
-
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
@@ -14,25 +12,24 @@ class ConditionalCmdVelLimiter(Node):
         self.declare_parameter("input_topic", "/cmd_vel_raw")
         self.declare_parameter("output_topic", "/cmd_vel_limited")
 
-        # If abs(linear.x) is below this, it counts as pure rotation.
         self.declare_parameter("linear_zero_threshold", 0.02)
-
-        # Angular cap when the robot is also driving forward/backward.
-        self.declare_parameter("moving_angular_limit", 0.15)
-
-        # Optional safety cap during pure rotation.
-        # Set high because velocity_smoother already limits final speed.
+        self.declare_parameter("moving_angular_limit", 0.25)
         self.declare_parameter("pure_rotation_angular_limit", 10.0)
 
         self.input_topic = self.get_parameter("input_topic").value
         self.output_topic = self.get_parameter("output_topic").value
-        self.linear_zero_threshold = float(self.get_parameter("linear_zero_threshold").value)
-        self.moving_angular_limit = abs(float(self.get_parameter("moving_angular_limit").value))
+        self.linear_zero_threshold = float(
+            self.get_parameter("linear_zero_threshold").value
+        )
+        self.moving_angular_limit = abs(
+            float(self.get_parameter("moving_angular_limit").value)
+        )
         self.pure_rotation_angular_limit = abs(
             float(self.get_parameter("pure_rotation_angular_limit").value)
         )
 
         self.publisher = self.create_publisher(Twist, self.output_topic, 10)
+
         self.subscription = self.create_subscription(
             Twist,
             self.input_topic,
@@ -45,7 +42,9 @@ class ConditionalCmdVelLimiter(Node):
         self.get_logger().info(f"output_topic={self.output_topic}")
         self.get_logger().info(f"linear_zero_threshold={self.linear_zero_threshold}")
         self.get_logger().info(f"moving_angular_limit={self.moving_angular_limit}")
-        self.get_logger().info(f"pure_rotation_angular_limit={self.pure_rotation_angular_limit}")
+        self.get_logger().info(
+            f"pure_rotation_angular_limit={self.pure_rotation_angular_limit}"
+        )
 
     @staticmethod
     def clamp(value: float, limit: float) -> float:
@@ -67,13 +66,11 @@ class ConditionalCmdVelLimiter(Node):
         angular_z = float(msg.angular.z)
 
         if abs(linear_x) <= self.linear_zero_threshold:
-            # Pure rotation: keep high angular velocity.
             out.angular.z = self.clamp(
                 angular_z,
                 self.pure_rotation_angular_limit,
             )
         else:
-            # Driving + turning: reduce angular velocity.
             out.angular.z = self.clamp(
                 angular_z,
                 self.moving_angular_limit,
