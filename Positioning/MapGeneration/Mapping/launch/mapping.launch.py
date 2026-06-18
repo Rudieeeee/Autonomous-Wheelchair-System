@@ -7,8 +7,27 @@ from launch.actions import (
 )
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
+
+
+def repeated_map_save(save_map, auto_save_map, auto_save_period):
+    return ExecuteProcess(
+        cmd=[
+            'bash',
+            '-c',
+            [
+                'while true; do ',
+                'sleep ', auto_save_period, '; ',
+                'ros2 run nav2_map_server map_saver_cli ',
+                '-f ', save_map, ' ',
+                '--ros-args -p map_subscribe_transient_local:=true; ',
+                'done'
+            ],
+        ],
+        output='screen',
+        condition=IfCondition(auto_save_map),
+    )
 
 
 def generate_launch_description():
@@ -20,7 +39,7 @@ def generate_launch_description():
 
     save_map = LaunchConfiguration('save_map')
     auto_save_map = LaunchConfiguration('auto_save_map')
-    auto_save_delay = LaunchConfiguration('auto_save_delay')
+    auto_save_period = LaunchConfiguration('auto_save_period')
 
     sensors_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
@@ -51,7 +70,7 @@ def generate_launch_description():
             'base_frame': 'base_footprint',
             'odom_frame': 'odom',
             'map_frame': 'map',
-            'scan_topic': '/scan',
+            'scan_topic': '/tof_scan',
         }.items(),
     )
 
@@ -65,22 +84,6 @@ def generate_launch_description():
         cmd=['rviz2', '-d', rviz_config],
         output='screen',
         condition=IfCondition(use_rviz),
-    )
-
-    save_map_process = ExecuteProcess(
-        cmd=[
-            'ros2', 'run', 'nav2_map_server', 'map_saver_cli',
-            '-f', save_map,
-        ],
-        output='screen',
-        condition=IfCondition(auto_save_map),
-    )
-
-    delayed_save_map = TimerAction(
-        period=PythonExpression([auto_save_delay]),
-        actions=[
-            save_map_process,
-        ],
     )
 
     return LaunchDescription([
@@ -100,7 +103,6 @@ def generate_launch_description():
             'use_rviz',
             default_value='true',
         ),
-
         DeclareLaunchArgument(
             'save_map',
             default_value=(
@@ -111,16 +113,26 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'auto_save_map',
             default_value='false',
-            description='Automatically save the map after auto_save_delay seconds.',
+            description='Continuously autosave the map.',
         ),
         DeclareLaunchArgument(
-            'auto_save_delay',
-            default_value='120.0',
-            description='Seconds to wait before automatically saving the map.',
+            'auto_save_period',
+            default_value='60.0',
+            description='Seconds between map autosaves.',
         ),
 
         sensors_launch,
-        slam_launch,
-        rviz,
-        delayed_save_map,
+
+        TimerAction(
+            period=5.0,
+            actions=[slam_launch],
+        ),
+
+        TimerAction(
+            period=8.0,
+            actions=[rviz],
+        ),
+
+        # Repeated autosave
+        repeated_map_save(save_map, auto_save_map, auto_save_period),
     ])

@@ -2,25 +2,30 @@
 <package format="3">
   <name>navigation</name>
   <version>0.0.1</version>
-  <description>Nav2 navigation package using LocalizationTest for AMCL and Nav2 for path planning.</description>
+  <description>Nav2 navigation package using localization for AMCL and Nav2 for path planning.</description>
 
   <maintainer email="rudrh@todo.todo">rudrh</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_python</buildtool_depend>
 
+  <!-- Python ROS dependencies -->
   <exec_depend>rclpy</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
-  <exec_depend>python3-serial</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>python3-serial</exec_depend>
 
+  <!-- Launch dependencies -->
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <!-- Other project packages -->
   <exec_depend>map_generator</exec_depend>
-
-  <!-- Localization provides map_server, AMCL, replayed /scan, /odom, and /tf -->
   <exec_depend>localization</exec_depend>
 
-  <!-- Navigation nodes -->
+  <!-- Nav2 lifecycle and servers -->
   <exec_depend>nav2_lifecycle_manager</exec_depend>
   <exec_depend>nav2_planner</exec_depend>
   <exec_depend>nav2_controller</exec_depend>
@@ -28,16 +33,20 @@
   <exec_depend>nav2_behaviors</exec_depend>
   <exec_depend>nav2_velocity_smoother</exec_depend>
 
-  <!-- Navigation plugins and costmaps -->
+  <!-- Nav2 plugins and costmaps -->
   <exec_depend>nav2_costmap_2d</exec_depend>
   <exec_depend>nav2_navfn_planner</exec_depend>
+  <exec_depend>nav2_smac_planner</exec_depend>
   <exec_depend>nav2_regulated_pure_pursuit_controller</exec_depend>
 
+  <!-- Optional controller dependencies if you still use DWB anywhere -->
   <exec_depend>nav2_dwb_controller</exec_depend>
   <exec_depend>dwb_core</exec_depend>
 
   <!-- Visualization -->
   <exec_depend>rviz2</exec_depend>
+
+  <test_depend>pytest</test_depend>
 
   <export>
     <build_type>ament_python</build_type>

@@ -350,7 +350,7 @@ class VoiceConfig:
     # If this index is missing or not an input device, AudioStream falls back
     # to auto-detection by name, then the system default.
     # Set to None to always use the system default.
-    input_device: Optional[int] = 24
+    input_device: Optional[int] = 6
     grammar_locked: bool = False
     show_partials: bool = True
 

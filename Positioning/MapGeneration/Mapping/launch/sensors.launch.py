@@ -10,10 +10,22 @@ def generate_launch_description():
     right_lidar_port = LaunchConfiguration('right_lidar_port')
     arduino_port = LaunchConfiguration('arduino_port')
 
+    merger_params = PathJoinSubstitution([
+        FindPackageShare('ros2_laser_scan_merger'),
+        'config',
+        'params.yaml',
+    ])
+
     sensor_params = PathJoinSubstitution([
         FindPackageShare('map_generator'),
         'config',
         'sensor_params.yaml',
+    ])
+
+    tof_params = PathJoinSubstitution([
+        FindPackageShare('map_generator'),
+        'config',
+        'tof64_scan.yaml',
     ])
 
     left_lidar = Node(
@@ -29,9 +41,7 @@ def generate_launch_description():
             'angle_compensate': True,
             'scan_mode': 'Standard',
         }],
-        remappings=[
-            ('scan', '/scan_left'),
-        ],
+        remappings=[('scan', '/scan_left')],
     )
 
     right_lidar = Node(
@@ -47,32 +57,7 @@ def generate_launch_description():
             'angle_compensate': True,
             'scan_mode': 'Standard',
         }],
-        remappings=[
-            ('scan', '/scan_right'),
-        ],
-    )
-
-    arduino_node = Node(
-        package='map_generator',
-        executable='arduino_sensor_node',
-        name='arduino_sensor_node',
-        output='screen',
-        parameters=[
-            sensor_params,
-            {
-                'serial_port': arduino_port,
-            },
-        ],
-    )
-
-    lidar_scan_merger = Node(
-        package='map_generator',
-        executable='lidar_scan_merger',
-        name='lidar_scan_merger',
-        output='screen',
-        parameters=[
-            sensor_params,
-        ],
+        remappings=[('scan', '/scan_right')],
     )
 
     base_to_left_laser = Node(
@@ -80,7 +65,7 @@ def generate_launch_description():
         executable='static_transform_publisher',
         name='base_to_left_laser',
         arguments=[
-            '0.82', '0.27', '0.20',
+            '0.50', '0.26', '0.0',
             '0.0', '0.0', '0.0',
             'base_footprint', 'left_laser',
         ],
@@ -91,7 +76,7 @@ def generate_launch_description():
         executable='static_transform_publisher',
         name='base_to_right_laser',
         arguments=[
-            '0.82', '-0.27', '0.20',
+            '0.50', '-0.26', '0',
             '0.0', '0.0', '0.0',
             'base_footprint', 'right_laser',
         ],
@@ -102,9 +87,41 @@ def generate_launch_description():
         executable='static_transform_publisher',
         name='base_to_imu',
         arguments=[
-            '0.0', '0.0', '0.15',
+            '0.0', '0.0', '0.0',
             '0.0', '0.0', '0.0',
             'base_footprint', 'imu_link',
+        ],
+    )
+
+    laser_scan_merger = Node(
+        package='ros2_laser_scan_merger',
+        executable='ros2_laser_scan_merger',
+        name='ros2_laser_scan_merger',
+        output='screen',
+        parameters=[merger_params],
+    )
+
+    pointcloud_to_laserscan = Node(
+        package='pointcloud_to_laserscan',
+        executable='pointcloud_to_laserscan_node',
+        name='pointcloud_to_laserscan',
+        output='screen',
+        parameters=[merger_params],
+    )
+
+    tof64_scan_node = Node(
+        package='map_generator',
+        executable='tof64_scan_node',
+        name='tof64_scan_node',
+        output='screen',
+        parameters=[
+            sensor_params,
+            tof_params,
+            {
+                'serial_port': arduino_port,
+                'baud_rate': 1000000,
+                'baudrate': 1000000,
+            },
         ],
     )
 
@@ -119,7 +136,7 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'arduino_port',
-            default_value='/dev/ttyACM0',
+            default_value='/dev/arduino_wheelchair',
         ),
 
         base_to_left_laser,
@@ -127,19 +144,13 @@ def generate_launch_description():
         base_to_imu,
 
         left_lidar,
+        right_lidar,
+
+        laser_scan_merger,
+        pointcloud_to_laserscan,
 
         TimerAction(
-            period=8.0,
-            actions=[right_lidar],
-        ),
-
-        TimerAction(
-            period=12.0,
-            actions=[arduino_node],
-        ),
-
-        TimerAction(
-            period=14.0,
-            actions=[lidar_scan_merger],
+            period=2.0,
+            actions=[tof64_scan_node],
         ),
     ])
