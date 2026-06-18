@@ -1,1 +1,0 @@
-/home/rudrh/Autonomous-Wheelchair-System/Navigation/Pathfinding/NavigationTest/build/navigation_test/launch/navigation_test.launch.py
