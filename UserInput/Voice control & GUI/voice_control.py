@@ -350,7 +350,7 @@ class VoiceConfig:
     # If this index is missing or not an input device, AudioStream falls back
     # to auto-detection by name, then the system default.
     # Set to None to always use the system default.
-    input_device: Optional[int] = 6
+    input_device: Optional[int] = 24
     grammar_locked: bool = False
     show_partials: bool = True
 
@@ -631,6 +631,14 @@ class DeepFilterDenoiser:
             import types
             import torch
             import torchaudio
+            # Cap torch to 2 threads.  On a laptop CPU it otherwise grabs every
+            # core for DeepFilterNet inference and starves Vosk, the GUI, and
+            # the ROS2 spin loop, which makes the stalls worse.  2 threads is
+            # plenty for real-time 100 ms chunks.
+            try:
+                torch.set_num_threads(2)
+            except Exception:
+                pass
             # torchaudio 2.x removed torchaudio.backend and the AudioMetaData
             # class. deepfilterlib 0.5.6 still does, at import time,
             #   from torchaudio.backend.common import AudioMetaData
@@ -817,13 +825,29 @@ class FastNavigator:
 class AudioStream:
     def __init__(self, config: VoiceConfig):
         self.config = config
-        self.queue: "queue.Queue[bytes]" = queue.Queue()
+        # Bounded queue: the recogniser loop stops draining the queue while
+        # Jarvis is talking or waiting on the LLM, and an unbounded queue let
+        # raw PCM pile up the whole time.  When the loop resumed it pushed the
+        # entire backlog through DeepFilterNet at once, which is the lag burst
+        # and the "everything I said arrives in one dump" behaviour.  Capping
+        # the queue (~5 s at 100 ms blocks) and dropping the oldest chunk when
+        # it is full means a backlog can never build.
+        self.queue: "queue.Queue[bytes]" = queue.Queue(maxsize=50)
         self._stream: Optional[sd.RawInputStream] = None
 
     def _callback(self, indata, frames, time_info, status):
         if status:
             print(f"[AudioStream] {status}", file=sys.stderr)
-        self.queue.put(bytes(indata))
+        try:
+            self.queue.put_nowait(bytes(indata))
+        except queue.Full:
+            # Drop the oldest chunk to make room for the newest.  Always keep
+            # the freshest audio so Vosk works on what the user just said.
+            try:
+                self.queue.get_nowait()
+                self.queue.put_nowait(bytes(indata))
+            except (queue.Empty, queue.Full):
+                pass
 
     @staticmethod
     def _find_device_by_name(name_fragment: str) -> Optional[int]:
@@ -1527,7 +1551,12 @@ class Speaker:
         if self._audio_queue is None:
             return
         for chunk in chunks:
-            self._audio_queue.put(chunk)
+            # Non-blocking: the mic queue is bounded now, so a blocking put
+            # could stall the TTS thread if the queue happened to be full.
+            try:
+                self._audio_queue.put_nowait(chunk)
+            except queue.Full:
+                break
 
     def _drain_mic(self) -> None:
         """Throw away any audio that accumulated while TTS was playing."""
@@ -1978,6 +2007,12 @@ class VoiceController:
             while self._running:
                 try:
                     pcm = self.audio.queue.get(timeout=0.2)
+                    # Backlog probe: prints only when audio is piling up behind
+                    # the loop (queue should normally sit at 0-1).  A spike here
+                    # while Jarvis is replying points straight at the stall.
+                    _qd = self.audio.queue.qsize()
+                    if _qd >= 3:
+                        print(f"[qsize] backlog building: {_qd} chunks waiting")
                 except queue.Empty:
                     # No audio for 0.2 s — pure silence.  Let the committer
                     # decide whether the pending buffer is ready to dispatch.

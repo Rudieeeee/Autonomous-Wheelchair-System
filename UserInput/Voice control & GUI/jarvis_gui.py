@@ -60,7 +60,6 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import (
     QApplication,
-    QComboBox,
     QDialog,
     QGraphicsBlurEffect,
     QGraphicsOpacityEffect,
@@ -78,14 +77,14 @@ from PyQt6.QtWidgets import (
 )
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(__file__).resolve().parents[0]
 MAPPING_WS = PROJECT_ROOT / "Positioning" / "MapGeneration" / "Mapping"
 LOCALIZATION_WS = PROJECT_ROOT / "Positioning" / "Localization" / "Localization"
 NAVIGATION_WS = PROJECT_ROOT / "Navigation" / "Pathfinding" / "Navigation"
 ROS_SETUP = Path("/opt/ros/jazzy/setup.bash")
 LEFT_LIDAR_PORT = "/dev/left_lidar"
 RIGHT_LIDAR_PORT = "/dev/right_lidar"
-ARDUINO_PORT = "/dev/ttyACM0"
+ARDUINO_PORT = "/dev/arduino_wheelchair"
 
 def q(value):
     return shlex.quote(str(value))
@@ -274,15 +273,10 @@ _LIDAR_MAP_DIR  = "Lidar Map"
 _LIDAR_MAP_YAML = "my_map.yaml"
 
 
-def lidar_map_dir_path() -> str:
-    """Absolute path to the folder that contains saved ROS map YAML files."""
-    here = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(here, _LIDAR_MAP_DIR)
-
-
 def default_map_yaml_path() -> str:
-    """Absolute path to the default ROS map_server YAML in the Lidar Map folder."""
-    return os.path.join(lidar_map_dir_path(), _LIDAR_MAP_YAML)
+    """Absolute path to the ROS map_server YAML in the project Lidar Map folder."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(here, _LIDAR_MAP_DIR, _LIDAR_MAP_YAML)
 
 
 def _parse_ros_map_yaml(yaml_path: str) -> dict:
@@ -348,184 +342,8 @@ def _pgm_to_rgb(
     return rgb.tobytes()
 
 
-def find_valid_map_yaml_paths() -> list[str]:
-    """Return ROS map YAML files whose referenced image file exists.
-
-    A map is considered selectable when:
-      • it is a .yaml or .yml file in the Lidar Map folder, and
-      • its image: entry points to an existing .pgm/.png/etc. image file.
-
-    This keeps broken/incomplete saves out of the startup chooser.
-    """
-    folder = lidar_map_dir_path()
-    if not os.path.isdir(folder):
-        return []
-
-    valid: list[str] = []
-    for name in sorted(os.listdir(folder), key=str.lower):
-        if not name.lower().endswith((".yaml", ".yml")):
-            continue
-        yaml_path = os.path.join(folder, name)
-        try:
-            meta = _parse_ros_map_yaml(yaml_path)
-        except Exception:
-            continue
-
-        image_name = meta.get("image")
-        if not image_name:
-            image_name = os.path.splitext(name)[0] + ".pgm"
-        image_path = image_name
-        if not os.path.isabs(image_path):
-            image_path = os.path.join(folder, image_name)
-
-        if os.path.exists(image_path):
-            valid.append(yaml_path)
-
-    return valid
-
-
-def _map_choice_labels(maps: list[str]) -> tuple[list[str], dict[str, str]]:
-    """Build operator-friendly labels for selectable map YAML files."""
-    labels: list[str] = []
-    label_to_path: dict[str, str] = {}
-    for path in maps:
-        try:
-            meta = _parse_ros_map_yaml(path)
-            image = meta.get("image", os.path.splitext(os.path.basename(path))[0] + ".pgm")
-            res = meta.get("resolution", "?")
-            label = f"{os.path.basename(path)}  →  {image}  ({res} m/px)"
-        except Exception:
-            label = os.path.basename(path)
-        labels.append(label)
-        label_to_path[label] = path
-    return labels, label_to_path
-
-
-def choose_map_yaml_path(
-    parent: Optional[QWidget] = None,
-    *,
-    current_path: Optional[str] = None,
-    allow_cancel: bool = True,
-) -> Optional[str]:
-    """Show a Jarvis-styled map picker for all valid maps in Lidar Map/."""
-    maps = find_valid_map_yaml_paths()
-    default_path = default_map_yaml_path()
-
-    if not maps:
-        return None if allow_cancel else default_path
-    if len(maps) == 1 and not allow_cancel:
-        return maps[0]
-
-    labels, label_to_path = _map_choice_labels(maps)
-
-    preferred_path = current_path or default_path
-    preferred_index = 0
-    for i, path in enumerate(maps):
-        if os.path.abspath(path) == os.path.abspath(preferred_path):
-            preferred_index = i
-            break
-
-    dialog = QDialog(parent)
-    dialog.setWindowTitle("Choose LiDAR map")
-    dialog.setModal(True)
-    dialog.setStyleSheet(
-        "QDialog {"
-        "  background-color: rgba(4, 10, 24, 245);"
-        "}"
-        "QLabel {"
-        f"  color: {Theme.TEXT_PRIMARY.name()};"
-        "  font-family: 'Segoe UI';"
-        "  font-size: 13px;"
-        "  letter-spacing: 2px;"
-        "}"
-        "QComboBox {"
-        "  background-color: rgba(10, 20, 40, 230);"
-        f"  color: {Theme.ACCENT_BRIGHT.name()};"
-        "  border: 1px solid rgba(80,170,255,150);"
-        "  border-radius: 6px;"
-        "  padding: 8px 12px;"
-        "  font-family: 'Segoe UI';"
-        "  font-size: 12px;"
-        "}"
-        "QComboBox QAbstractItemView {"
-        "  background-color: rgb(6, 14, 30);"
-        f"  color: {Theme.TEXT_PRIMARY.name()};"
-        "  selection-background-color: rgba(80,170,255,120);"
-        "  border: 1px solid rgba(80,170,255,120);"
-        "}"
-        "QPushButton {"
-        "  background-color: rgba(15,30,55,210);"
-        f"  color: {Theme.ACCENT_BRIGHT.name()};"
-        "  border: 1px solid rgba(80,170,255,130);"
-        "  border-radius: 6px;"
-        "  font-family: 'Segoe UI';"
-        "  font-size: 11px;"
-        "  font-weight: 600;"
-        "  letter-spacing: 3px;"
-        "  padding: 8px 18px;"
-        "}"
-        "QPushButton:hover { background-color: rgba(25,55,95,230); }"
-        "QPushButton:pressed { background-color: rgba(80,170,255,180); color: white; }"
-    )
-
-    title = QLabel("SELECT LIDAR MAP")
-    title.setStyleSheet(
-        f"color: {Theme.ACCENT_BRIGHT.name()}; "
-        "font-family: 'Segoe UI'; font-size: 16px; font-weight: 700; "
-        "letter-spacing: 5px;"
-    )
-
-    hint = QLabel("Only valid YAML files with an existing map image are shown.")
-    hint.setStyleSheet(
-        f"color: {Theme.TEXT_DIM.name()}; "
-        "font-family: 'Segoe UI'; font-size: 11px; letter-spacing: 2px;"
-    )
-
-    combo = QComboBox()
-    combo.addItems(labels)
-    combo.setCurrentIndex(preferred_index)
-    combo.setMinimumWidth(520)
-
-    load_btn = QPushButton("LOAD MAP")
-    cancel_btn = QPushButton("CANCEL")
-    cancel_btn.setVisible(allow_cancel)
-
-    chosen: dict[str, Optional[str]] = {"path": None}
-
-    def _accept() -> None:
-        chosen["path"] = label_to_path.get(combo.currentText())
-        dialog.accept()
-
-    load_btn.clicked.connect(_accept)
-    cancel_btn.clicked.connect(dialog.reject)
-
-    buttons = QHBoxLayout()
-    buttons.addStretch()
-    buttons.addWidget(cancel_btn)
-    buttons.addWidget(load_btn)
-
-    layout = QVBoxLayout(dialog)
-    layout.setContentsMargins(28, 24, 28, 24)
-    layout.setSpacing(14)
-    layout.addWidget(title)
-    layout.addWidget(hint)
-    layout.addSpacing(6)
-    layout.addWidget(combo)
-    layout.addSpacing(10)
-    layout.addLayout(buttons)
-
-    if dialog.exec() == QDialog.DialogCode.Accepted:
-        return chosen["path"]
-    return None if allow_cancel else default_path
-
-
-def choose_startup_map_yaml_path(parent: Optional[QWidget] = None) -> str:
-    """Scan the map folder and ask the operator which valid map to load."""
-    selected = choose_map_yaml_path(parent, current_path=default_map_yaml_path(), allow_cancel=False)
-    return selected or default_map_yaml_path()
-
 def load_lidar_map(yaml_path: str) -> tuple[QPixmap, float, float, float]:
-    """Load a ROS map YAML + its image into a QPixmap and transform params."""
+    """Load Lidar Map/my_map.yaml + its PGM into a QPixmap and transform params."""
     if not os.path.exists(yaml_path):
         return QPixmap(), MAP_ORIGIN_X, MAP_ORIGIN_Y, MAP_RESOLUTION
 
@@ -1213,32 +1031,6 @@ class MapOverlay(QWidget):
 
     def has_map(self) -> bool:
         return not self._pixmap.isNull()
-
-    def load_static_map(self, yaml_path: str) -> bool:
-        """Load a selected YAML map into the existing overlay without rebuilding the GUI."""
-        pixmap, ox, oy, res = load_lidar_map(yaml_path)
-        if pixmap.isNull():
-            return False
-
-        self._map_yaml_path = yaml_path
-        self._pixmap = pixmap
-        self._map_origin_x = ox
-        self._map_origin_y = oy
-        self._map_resolution = res
-        self._title_label.setText("LIDAR MAP")
-        self._map_label.setText("")
-        self._map_label.setStyleSheet("background: transparent;")
-        self._build_nav_assets()
-        self._update_pixmap()
-        if self._last_pose is not None:
-            self.set_pose(*self._last_pose)
-        self._marker_layer.raise_()
-        self._marker_layer.update()
-        return True
-
-    @property
-    def map_yaml_path(self) -> str:
-        return self._map_yaml_path
 
     def fade_in(self) -> None:
         self.show()
@@ -1955,11 +1747,8 @@ class JarvisWindow(QMainWindow):
         # Current view mode: "user" | "developer"
         self._mode: str = "developer"
 
-        # Start normally with the default map. Do not open a chooser at startup;
-        # the operator can change maps later with the CHANGE MAP button.
         if map_yaml_path is None:
             map_yaml_path = default_map_yaml_path()
-        print(f"[JarvisWindow] Selected map: {map_yaml_path}")
         self._build_ui(map_yaml_path)
         self._wire_signals()
 
@@ -2098,12 +1887,6 @@ class JarvisWindow(QMainWindow):
         self._map_btn.clicked.connect(self._on_map_btn_clicked)
         self._apply_map_btn_style(open=False)
 
-        self._change_map_btn = QPushButton("  CHANGE MAP")
-        self._change_map_btn.setMinimumHeight(46)
-        self._change_map_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._change_map_btn.clicked.connect(self._on_change_map_clicked)
-        self._apply_change_map_btn_style()
-
         self._estop_active = False
         self._estop_btn = QPushButton("  EMERGENCY STOP")
         self._estop_btn.setMinimumHeight(46)
@@ -2114,7 +1897,6 @@ class JarvisWindow(QMainWindow):
         btn_row = QHBoxLayout()
         btn_row.setSpacing(12)
         btn_row.addWidget(self._map_btn)
-        btn_row.addWidget(self._change_map_btn)
         btn_row.addWidget(self._estop_btn)
 
         # Launcher row — Start/Stop Mapping / Localization / Navigation + Stop All.
@@ -2451,42 +2233,6 @@ class JarvisWindow(QMainWindow):
             self.hide_map()
         else:
             self.show_map()
-
-    def _on_change_map_clicked(self) -> None:
-        """Open the map chooser and reload the selected static LiDAR map."""
-        selected = choose_map_yaml_path(
-            self,
-            current_path=self._map.map_yaml_path,
-            allow_cancel=True,
-        )
-        if not selected:
-            return
-
-        if self._map.load_static_map(selected):
-            name = os.path.basename(selected)
-            self.set_reply(f"Loaded map: {name}")
-            print(f"[JarvisWindow] Changed map: {selected}")
-            if self._map.isVisible():
-                self.show_map()
-        else:
-            self.set_reply("Could not load that map, Master.")
-
-    def _apply_change_map_btn_style(self) -> None:
-        self._change_map_btn.setStyleSheet(
-            "QPushButton {"
-            "  background-color: rgba(10, 20, 40, 210);"
-            f"  color: {Theme.ACCENT_BRIGHT.name()};"
-            "  border: 1px solid rgba(80,170,255,150);"
-            "  border-radius: 8px;"
-            "  font-family: 'Segoe UI';"
-            "  font-size: 13px;"
-            "  font-weight: 600;"
-            "  letter-spacing: 4px;"
-            "  padding: 8px 24px;"
-            "}"
-            "QPushButton:hover { background-color: rgba(20,50,90,230); }"
-            "QPushButton:pressed { background-color: rgba(80,170,255,180); color: white; }"
-        )
 
     def _on_map_overlay_closed(self) -> None:
         """Keep the map button label in sync when the overlay is dismissed (ESC / voice)."""
