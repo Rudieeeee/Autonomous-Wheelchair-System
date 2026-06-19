@@ -901,12 +901,22 @@ class AudioStream:
             except Exception:
                 print(f"[AudioStream] Device {device} not available — "
                       "searching by name for Plantronics BT300M …")
-                for fragment in ("Plantronics BT300M", "BT300M", "Plantronics"):
+                for fragment in ("Plantronics BT300M", "BT300M", "Plantronics",
+                                 "Voyager", "Poly"):
                     device = self._find_device_by_name(fragment)
                     if device is not None:
                         break
                 if device is None:
-                    print("[AudioStream] Plantronics not found — using system default.")
+                    print("\n" + "!" * 70)
+                    print("[AudioStream] WARNING: Plantronics BT300M NOT found.")
+                    print("  Falling back to the SYSTEM DEFAULT mic (laptop / pulse).")
+                    print("  The default mic is omnidirectional, so it hears")
+                    print("  everyone in the room and the off-axis noise rejection")
+                    print("  the system is designed around is GONE.  Plug in the")
+                    print("  BT300M USB adapter (with the headset paired) and")
+                    print("  re-run, or set VoiceConfig.input_device to the right")
+                    print("  index from the device list printed above.")
+                    print("!" * 70 + "\n")
 
         # Try the resolved device first, then fall back to the system default.
         # Without this outer try/except the voice thread died silently when the
@@ -1653,7 +1663,15 @@ class Speaker:
         os.close(tmp_fd)
 
         async def _synth():
-            await edge_tts.Communicate(text, self.config.edge_voice).save(tmp_path)
+            # Hard timeout so a stalled cloud connection can never hang the
+            # caller forever.  Edge-TTS is a network service, and say() waits
+            # on this synchronously, so without a timeout one bad round trip
+            # froze the whole recogniser thread (the "stopped talking" + freeze
+            # seen on Linux).  On timeout this raises and _say_edge falls back.
+            await asyncio.wait_for(
+                edge_tts.Communicate(text, self.config.edge_voice).save(tmp_path),
+                timeout=6.0,
+            )
 
         loop = asyncio.new_event_loop()
         try:
@@ -2022,7 +2040,20 @@ class VoiceController:
                             self._handle_command(committed,
                                                  _commit_full or committed)
                             _commit_full = ""
+                            self._drop_stale_audio("after command")
                     continue
+
+                # ---- Idle backlog cap -----------------------------------
+                # While Jarvis is idle (not awake), the only thing that
+                # should fill the queue is the open mic hearing the room.
+                # On a slow CPU the large Vosk model cannot decode constant
+                # background speech in real time, so the queue creeps up and
+                # everything lags.  We do not need that backlog — drop it so
+                # idle listening always stays close to real time.  Once awake
+                # we keep every chunk so the actual command is never clipped.
+                if (not self.wake_gate.is_awake
+                        and self.audio.queue.qsize() > 15):
+                    self._drop_stale_audio("idle backlog")
 
                 # ---- Software noise gate + neural denoiser -------------
                 # Pipeline: NoiseGate classifies the chunk as speech or
@@ -2034,7 +2065,18 @@ class VoiceController:
                     pcm, is_speech = self.noise_gate.process(pcm)
                     if self.denoiser is not None:
                         if is_speech:
-                            pcm = self.denoiser.process(pcm)
+                            # Only run the heavy DeepFilterNet pass once Jarvis
+                            # is awake and actually listening for a command.
+                            # On a CPU it cannot denoise every 100 ms chunk in
+                            # under 100 ms, so running it on the always-on idle
+                            # stream made the loop fall permanently behind and
+                            # the queue sat several seconds deep (the backlog in
+                            # the screenshot).  Wake-word detection works fine on
+                            # the noise-gated audio, so the idle loop stays real
+                            # time and only the short command window pays the
+                            # denoiser cost.
+                            if self.wake_gate.is_awake:
+                                pcm = self.denoiser.process(pcm)
                         else:
                             self.denoiser.feed_noise(pcm)
 
@@ -2047,6 +2089,8 @@ class VoiceController:
                         self._handle_command(committed,
                                              _commit_full or committed)
                         _commit_full = ""
+                        self._drop_stale_audio("after command")
+                        continue
 
                 result = self.engine.feed(pcm)
 
@@ -2268,6 +2312,28 @@ class VoiceController:
         return False
 
     # -- command pipeline -------------------------------------------
+    def _drop_stale_audio(self, reason: str) -> int:
+        """Throw away everything sitting in the mic queue and reset Vosk.
+
+        _handle_command blocks the audio thread for the whole Groq round
+        trip and the spoken reply, and on an open mic the queue fills with
+        room audio the entire time.  If we then processed that backlog the
+        loop would lag several seconds behind and decode a wall of crowd
+        speech.  We only care about fresh audio after a command, so drop it
+        and clear the recogniser's half-built partial.
+        """
+        dropped = 0
+        while True:
+            try:
+                self.audio.queue.get_nowait()
+                dropped += 1
+            except queue.Empty:
+                break
+        if dropped:
+            self.engine.reset()
+            print(f"[drain] dropped {dropped} stale chunks ({reason})")
+        return dropped
+
     def _handle_command(self, command: str, full_transcript: str) -> None:
         # ---- Homophone correction ----
         # Fix the common Vosk verb swaps (wake/break -> take, road -> go,
@@ -2457,7 +2523,6 @@ class VoiceController:
         if loc_id is None:
             self._reject_unknown_destination(dest_phrase)
             return
-
         hit = Hit(
             phrase=dest_phrase,
             location_id=loc_id,
@@ -2491,7 +2556,6 @@ class VoiceController:
             self.speaker.say(reply)
             self._broadcast_state("LISTENING")
             return
-
         # Only allow destinations that exist as map markers. The LLM can
         # hallucinate a place that is not on the map, so reject anything not
         # in the live destinations table instead of synthesising a LOC_ id.
@@ -2499,7 +2563,6 @@ class VoiceController:
         if loc_id is None:
             self._reject_unknown_destination(dest_phrase)
             return
-
         hit = Hit(
             phrase=dest_phrase,
             location_id=loc_id,
