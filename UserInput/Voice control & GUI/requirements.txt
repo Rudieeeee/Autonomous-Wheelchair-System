@@ -21,3 +21,6 @@ ollama>=0.3.0
 # optional, only if VoiceConfig.tts_provider == "edge" (natural neural voices)
 edge-tts>=7.0.0
 pygame>=2.5.0
+# Required only for ROS2_TRANSPORT=websocket (Ros2WebsocketBridge → rosbridge).
+# Voice/GUI on Windows talks to ROS2 on the WSL/robot side over ws://host:9090.
+websocket-client>=1.7.0
