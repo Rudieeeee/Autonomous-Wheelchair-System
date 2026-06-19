@@ -12,14 +12,14 @@ slam_toolbox:
     resolution: 0.05
 
     max_laser_range: 12.0
-    minimum_time_interval: 0.0
+    minimum_time_interval: 0.01
     throttle_scans: 1
 
     transform_publish_period: 0.01
     transform_timeout: 0.2
     tf_buffer_duration: 10.0
 
-    map_update_interval: 1.0
+    map_update_interval: 0.5
 
     use_scan_matching: true
     use_scan_barycenter: true
@@ -27,17 +27,17 @@ slam_toolbox:
     minimum_travel_distance: 0.05
     minimum_travel_heading: 0.05
 
-    scan_buffer_size: 10
-    scan_buffer_maximum_scan_distance: 10.0
+    scan_buffer_size: 50
+    scan_buffer_maximum_scan_distance: 12.0
 
-    link_match_minimum_response_fine: 0.1
-    link_scan_maximum_distance: 1.5
+    link_match_minimum_response_fine: 0.001
+    link_scan_maximum_distance: 10.0
 
     do_loop_closing: true
-    loop_search_maximum_distance: 3.0
-    loop_match_minimum_chain_size: 10
+    loop_search_maximum_distance: 1.5
+    loop_match_minimum_chain_size: 15
     loop_match_maximum_variance_coarse: 3.0
-    loop_match_minimum_response_coarse: 0.45
+    loop_match_minimum_response_coarse: 0.75
     loop_match_minimum_response_fine: 0.55
 
     correlation_search_space_dimension: 1.0

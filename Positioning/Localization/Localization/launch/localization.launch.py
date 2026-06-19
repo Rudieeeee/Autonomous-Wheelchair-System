@@ -22,7 +22,7 @@ DEFAULT_MAP = (
     / 'Other-Files'
     / 'GeneralData'
     / 'Maps'
-    / 'my_saved_map.yaml'
+    / 'tellegen.yaml'
 )
 
 
@@ -39,7 +39,7 @@ def generate_launch_description():
             PathJoinSubstitution([
                 FindPackageShare('map_generator'),
                 'launch',
-                'sensors.launch.py',
+                'sensors.launch2.py',
             ])
         ),
         launch_arguments={

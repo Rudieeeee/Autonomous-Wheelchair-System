@@ -55,7 +55,7 @@
       "name": "Run ROS2 Mapping EKF and Auto Save Map",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch2.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair auto_save_map:=true auto_save_period:=5.0 save_map:=\"${workspaceFolder}/Other-Files/GeneralData/Maps/hall_m_new_map\"'"
+      "command": "bash -c 'cd \"${workspaceFolder}/Positioning/MapGeneration/Mapping\" && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch map_generator mapping.launch2.py left_lidar_port:=/dev/left_lidar right_lidar_port:=/dev/right_lidar arduino_port:=/dev/arduino_wheelchair auto_save_map:=true auto_save_period:=5.0 save_map:=\"${workspaceFolder}/Other-Files/GeneralData/Maps/tellegen_half\"'"
     },
     {
       "name": "Build and Run ROS2 Sensors",
