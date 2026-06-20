@@ -113,7 +113,11 @@ Adafruit_BNO08x bno08x(BNO08X_RESET);
 sh2_SensorValue_t imuSensorValue;
 
 bool bno_ok = false;
-sh2_SensorId_t imuReportType = SH2_GAME_ROTATION_VECTOR;
+// Absolute heading mode:
+// SH2_ROTATION_VECTOR uses gyro + accelerometer + magnetometer.
+// This outputs compass-referenced absolute yaw instead of gyro-only relative yaw.
+// Use this together with the Python node that does NOT subtract the startup yaw.
+sh2_SensorId_t imuReportType = SH2_ROTATION_VECTOR;
 const long imuReportIntervalUs = 10000;  // 100 Hz
 
 float lastYawDeg = 0.0f;
@@ -521,7 +525,7 @@ void enableImuReport() {
     safeStatusPrint("STATUS,bno085_enable_report_failed");
   }
   else {
-    safeStatusPrint("STATUS,bno085_report_enabled");
+    safeStatusPrint("STATUS,bno085_absolute_rotation_vector_enabled");
   }
 }
 

@@ -29,7 +29,7 @@ import subprocess
 import sys
 import queue
 import threading
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
@@ -77,11 +77,17 @@ from PyQt6.QtWidgets import (
 )
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[0]
+WINDOWS_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+WSL_PROJECT_ROOT = PurePosixPath("/home/rudrh/Autonomous-Wheelchair-System")
+
+PROJECT_ROOT = WSL_PROJECT_ROOT if os.name == "nt" else Path(__file__).resolve().parents[2]
+
 MAPPING_WS = PROJECT_ROOT / "Positioning" / "MapGeneration" / "Mapping"
 LOCALIZATION_WS = PROJECT_ROOT / "Positioning" / "Localization" / "Localization"
 NAVIGATION_WS = PROJECT_ROOT / "Navigation" / "Pathfinding" / "Navigation"
-ROS_SETUP = Path("/opt/ros/jazzy/setup.bash")
+
+ROS_SETUP = PurePosixPath("/opt/ros/jazzy/setup.bash") if os.name == "nt" else Path("/opt/ros/jazzy/setup.bash")
 LEFT_LIDAR_PORT = "/dev/left_lidar"
 RIGHT_LIDAR_PORT = "/dev/right_lidar"
 ARDUINO_PORT = "/dev/arduino_wheelchair"
@@ -172,18 +178,35 @@ _SENSOR_CMD = (
 def _launch_proc(cmd: str, name: str):
     """Start a ROS2 launch command in a new process group and return the process.
 
+    Works on:
+      - Linux/WSL directly
+      - Windows Python launching ROS2 commands inside WSL through wsl.exe
+
     stdout and stderr are merged and piped through a daemon reader thread so
     the LogPanel widget can display them in real time without blocking the GUI.
-    Output is also echoed to the terminal so existing dev workflows still work.
+    Output is also echoed to the terminal.
     """
-    proc = subprocess.Popen(
-        ["bash", "-c", cmd],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        preexec_fn=os.setsid,
-        text=True,
-        bufsize=1,
-    )
+    if os.name == "nt":
+        # Windows Python: run the Linux ROS2 command inside WSL.
+        # os.setsid does not exist on Windows, so use CREATE_NEW_PROCESS_GROUP.
+        proc = subprocess.Popen(
+            ["wsl.exe", "bash", "-lc", cmd],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+        )
+    else:
+        # Linux / WSL Python: normal bash launch with a separate process group.
+        proc = subprocess.Popen(
+            ["bash", "-c", cmd],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            preexec_fn=os.setsid,
+            text=True,
+            bufsize=1,
+        )
 
     def _reader() -> None:
         try:
@@ -200,14 +223,40 @@ def _launch_proc(cmd: str, name: str):
 
 
 def _kill_proc(proc, name: str) -> None:
-    """SIGINT → SIGTERM → SIGKILL cascade so ROS2 nodes shut down cleanly.
+    """Stop a launched process.
 
-    ROS2 launch files respond to SIGINT with a graceful teardown of all child
-    nodes.  SIGTERM and SIGKILL are escalations if the process does not exit
-    within 3 seconds each — matching the pattern in gui_launcher.py.
+    Linux/WSL uses SIGINT -> SIGTERM -> SIGKILL on the process group.
+    Windows uses terminate/kill because os.killpg and os.setsid are unavailable.
     """
     if proc is None or proc.poll() is not None:
         return
+
+    if os.name == "nt":
+        try:
+            proc.terminate()
+            print(f"[Launcher] {name} stopping on Windows...")
+        except Exception as exc:
+            print(f"[Launcher] Could not stop {name}: {exc}")
+            return
+
+        def _escalate_windows() -> None:
+            import time as _time
+            _time.sleep(3)
+            if proc.poll() is not None:
+                return
+            try:
+                proc.kill()
+                print(f"[Launcher] {name} did not exit after terminate. Killing...")
+            except Exception as exc:
+                print(f"[Launcher] Could not kill {name}: {exc}")
+
+        threading.Thread(
+            target=_escalate_windows,
+            daemon=True,
+            name=f"kill_{name}",
+        ).start()
+        return
+
     try:
         os.killpg(os.getpgid(proc.pid), signal.SIGINT)
         print(f"[Launcher] {name} stopping (SIGINT)…")

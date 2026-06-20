@@ -81,10 +81,10 @@ def generate_launch_description():
             '-p', ['start_index:=', start_index],
             '-p', ['max_entries:=', max_entries],
             '-p', 'keep_last_pose_alive:=true',
-            '-p', 'angle_min:=-1.5707963268',
-            '-p', 'angle_max:=1.5707963268',
+            '-p', 'angle_min:=-3.14159265359',
+            '-p', 'angle_max:=3.14159265359',
             '-p', 'range_min:=0.1',
-            '-p', 'range_max:=50.0',
+            '-p', 'range_max:=12.0',
             '-p', 'laser_frame:=laser',
             '-p', 'base_frame:=base_footprint',
             '-p', 'odom_frame:=odom',
@@ -117,14 +117,13 @@ def generate_launch_description():
             'map',
             default_value=(
                 '/home/rudrh/Autonomous-Wheelchair-System/'
-                'Other-Files/GeneralData/Maps/my_map.yaml'
+                'Other-Files/GeneralData/Maps/tellegen.yaml'
             ),
         ),
         DeclareLaunchArgument(
             'log_file',
             default_value=(
-                '/home/rudrh/Autonomous-Wheelchair-System/'
-                'Other-Files/GeneralData/lidar.txt'
+                '/home/rudrh/Autonomous-Wheelchair-System/Other-Files/GeneralData/Logs/mapping_new_log.txt'
             ),
         ),
 

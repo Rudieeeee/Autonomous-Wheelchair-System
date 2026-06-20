@@ -234,7 +234,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        "usbipd attach --wsl --busid 1-1; usbipd attach --wsl --busid 1-3; usbipd attach --wsl --busid 1-4"
+        "usbipd attach --wsl --busid 4-2; usbipd attach --wsl --busid 4-1; usbipd attach --wsl --busid 4-4"
       ],
       "problemMatcher": []
     },

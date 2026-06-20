@@ -4,9 +4,9 @@ arduino_sensor_node2:
     baud_rate: 460800
     timer_period_s: 0.005
 
-    wheel_diameter_m: 0.35
-    magnets_per_wheel: 25
-    wheel_base_m: 0.55
+    wheel_diameter_m: 0.34
+    magnets_per_wheel: 20
+    wheel_base_m: 0.60
 
     odom_frame: "odom"
     base_frame: "base_footprint"

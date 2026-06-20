@@ -1,0 +1,7 @@
+image: testing_40hz.pgm
+mode: trinary
+resolution: 0.050
+origin: [-25.690, -13.269, 0]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.196
