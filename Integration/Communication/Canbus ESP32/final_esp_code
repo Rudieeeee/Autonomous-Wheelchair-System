@@ -1,0 +1,667 @@
+#include <Arduino.h>
+#include <Wire.h>
+#include <math.h>
+#include "driver/twai.h"
+#include "esp_task_wdt.h"
+#include "esp_system.h"
+#include "DFRobot_MatrixLidar.h"
+
+// ============================================================================
+// ESP ToF CAN Node — ESP-side map + robust paced baseline transfer
+// IMPORTANT: Change ACTIVE_NODE before flashing each ESP board.
+// Node 1 = ToF 1,2,3    Node 2 = ToF 7,8    Node 3 = ToF 4,5,6
+// ============================================================================
+
+#define ACTIVE_NODE 3   // <<< SET TO 1, 2, OR 3 FOR EACH ESP BOARD
+
+static_assert(ACTIVE_NODE >= 1 && ACTIVE_NODE <= 3, "ACTIVE_NODE must be 1, 2, or 3");
+
+enum Mode : uint8_t {
+  MODE_HALT        = 0,
+  MODE_DRIVE       = 1,
+  MODE_CALIB       = 2,
+  MODE_CALIB_DRIVE = 3
+};
+
+constexpr uint32_t ID_SYSTEM_CTRL = 0x010;
+constexpr uint32_t ID_CALIBRATE   = 0x011;
+constexpr uint32_t ID_CALIB_STAT  = 0x012;
+constexpr uint32_t ID_MASTER_PING = 0x400;
+constexpr uint32_t NODE_REPLY_ID  = 0x400 + ACTIVE_NODE;
+
+constexpr uint16_t MIN_VALID            = 20;
+constexpr uint16_t MAX_VALID            = 3000;
+constexpr uint16_t NO_DETECTION         = 4000;
+constexpr uint16_t FLOOR_MARGIN         = 250;
+constexpr uint32_t TICK_MS              = 66;       // ~15 Hz per node
+constexpr uint32_t CALIB_MS             = 5000;
+constexpr uint16_t CALIB_MIN_SAMPLES    = 20;
+constexpr uint8_t  I2C_MAX_FAILS        = 5;
+constexpr uint32_t RECOVER_INTERVAL_MS  = 2000;
+constexpr uint16_t PX_INVALID           = 0xFFFF;
+
+// Extra baseline reliability: after calibration, resend baseline map several times.
+constexpr uint8_t  BASELINE_TX_ROUNDS              = 10;    // repeated map rounds for robust PC display
+constexpr uint32_t BASELINE_TX_FRAME_INTERVAL_MS   = 25;    // one CAN frame at a time, avoids MCP overflow
+constexpr uint32_t BASELINE_TX_NODE_STAGGER_MS     = 140;   // node 1/2/3 do not burst together
+
+constexpr int I2C_SDA = 5;
+constexpr int I2C_SCL = 6;
+
+enum Rotation : uint8_t { ROT_NONE, ROT_CW, ROT_CCW };
+
+struct SensorConfig {
+  uint8_t  addr;
+  Rotation rot;
+  float    tiltDeg;
+  uint8_t  floorStart;
+  uint16_t liveId;
+  uint16_t baseId;
+};
+
+#if ACTIVE_NODE == 1
+  constexpr gpio_num_t CAN_TX_PIN = GPIO_NUM_44, CAN_RX_PIN = GPIO_NUM_43;
+  constexpr uint8_t NUM_TOFS = 3;
+  const SensorConfig CFG[NUM_TOFS] = {
+    { 0x31, ROT_NONE, 15.0f, 6, 0x110, 0x200 },
+    { 0x32, ROT_NONE, 15.0f, 6, 0x120, 0x202 },
+    { 0x33, ROT_NONE,  0.0f, 5, 0x130, 0x204 },
+  };
+#elif ACTIVE_NODE == 2
+  constexpr gpio_num_t CAN_TX_PIN = GPIO_NUM_43, CAN_RX_PIN = GPIO_NUM_44;
+  constexpr uint8_t NUM_TOFS = 2;
+  const SensorConfig CFG[NUM_TOFS] = {
+    { 0x31, ROT_CW,   0.0f, 6, 0x170, 0x206 },
+    { 0x32, ROT_CCW,  0.0f, 6, 0x180, 0x208 },
+  };
+#elif ACTIVE_NODE == 3
+  constexpr gpio_num_t CAN_TX_PIN = GPIO_NUM_43, CAN_RX_PIN = GPIO_NUM_44;
+  constexpr uint8_t NUM_TOFS = 3;
+  const SensorConfig CFG[NUM_TOFS] = {
+    { 0x31, ROT_NONE, 15.0f, 6, 0x140, 0x20A },
+    { 0x32, ROT_NONE, 15.0f, 6, 0x150, 0x20C },
+    { 0x33, ROT_NONE,  0.0f, 5, 0x160, 0x20E },
+  };
+#endif
+
+DFRobot_MatrixLidar_I2C dev0(CFG[0].addr, &Wire);
+DFRobot_MatrixLidar_I2C dev1(CFG[1].addr, &Wire);
+#if ACTIVE_NODE != 2
+DFRobot_MatrixLidar_I2C dev2(CFG[2].addr, &Wire);
+DFRobot_MatrixLidar_I2C* const tofDev[NUM_TOFS] = { &dev0, &dev1, &dev2 };
+#else
+DFRobot_MatrixLidar_I2C* const tofDev[NUM_TOFS] = { &dev0, &dev1 };
+#endif
+
+struct SensorState {
+  uint8_t  rotMap[64];
+  uint16_t cosQ15[8];
+  uint16_t filt[64];
+  uint16_t baseline[64];
+  uint32_t calibSum[64];
+  uint16_t calibCnt[64];
+  uint8_t  fails;
+  bool     alive;
+  bool     baselineReady;
+  uint8_t  validColumnMask;
+  uint32_t lastRecoverMs;
+};
+
+SensorState S[NUM_TOFS];
+
+Mode mode = MODE_HALT;
+uint32_t lastTick = 0;
+uint32_t calibEndMs = 0;
+uint32_t tickCount = 0;
+uint32_t lastRateLog = 0;
+uint8_t bootResetReason = 0;
+
+uint32_t canTxFailTotal = 0;
+uint32_t canRxTotal = 0;
+uint32_t i2cRecoverTotal = 0;
+bool baselineTxActive = false;
+uint8_t baselineTxRoundsLeft = 0;
+uint8_t baselineTxSensor = 0;
+uint8_t baselineTxHalf = 0;
+uint32_t baselineTxNextMs = 0;
+
+void resetFilter(uint8_t n) {
+  memset(S[n].filt, 0xFF, sizeof(S[n].filt));
+}
+
+bool canSend(uint32_t id, const uint8_t* data, uint8_t len) {
+  twai_message_t m = {};
+  m.identifier = id;
+  m.extd = 0;
+  m.rtr = 0;
+  m.data_length_code = len;
+  memcpy(m.data, data, len);
+  const bool ok = (twai_transmit(&m, pdMS_TO_TICKS(10)) == ESP_OK);
+  if (!ok) canTxFailTotal++;
+  return ok;
+}
+
+void sendColumnPackets(uint32_t baseId, const uint16_t pkt[8]) {
+  uint8_t buf[8];
+  for (uint8_t half = 0; half < 2; half++) {
+    for (uint8_t i = 0; i < 4; i++) {
+      const uint16_t v = pkt[half * 4 + i];
+      buf[i * 2]     = v & 0xFF;
+      buf[i * 2 + 1] = v >> 8;
+    }
+    canSend(baseId + half, buf, 8);
+  }
+}
+
+void initGeometry() {
+  const float rowAngleDeg[8] = {
+    26.25f, 18.75f, 11.25f, 3.75f,
+    -3.75f, -11.25f, -18.75f, -26.25f
+  };
+
+  for (uint8_t n = 0; n < NUM_TOFS; n++) {
+    for (uint8_t row = 0; row < 8; row++) {
+      const float c = cosf((rowAngleDeg[row] + CFG[n].tiltDeg) * DEG_TO_RAD);
+      S[n].cosQ15[row] = (uint16_t)(constrain(c, 0.0f, 1.0f) * 32767.0f);
+    }
+
+    for (uint8_t r = 0; r < 8; r++) {
+      for (uint8_t c = 0; c < 8; c++) {
+        const uint8_t src = r * 8 + c;
+        const uint8_t dst = (CFG[n].rot == ROT_CW)  ? c * 8 + (7 - r)
+                          : (CFG[n].rot == ROT_CCW) ? (7 - c) * 8 + r
+                          : src;
+        S[n].rotMap[dst] = src;
+      }
+    }
+  }
+}
+
+void i2cBusClear() {
+  Wire.end();
+  pinMode(I2C_SCL, OUTPUT);
+  pinMode(I2C_SDA, INPUT_PULLUP);
+  for (uint8_t i = 0; i < 9; i++) {
+    digitalWrite(I2C_SCL, LOW);  delayMicroseconds(5);
+    digitalWrite(I2C_SCL, HIGH); delayMicroseconds(5);
+  }
+  pinMode(I2C_SCL, INPUT_PULLUP);
+  Wire.begin(I2C_SDA, I2C_SCL);
+  Wire.setClock(400000);
+  Wire.setTimeout(10);
+}
+
+void markDead(uint8_t n, uint32_t now) {
+  S[n].alive = false;
+  S[n].lastRecoverMs = now;
+  resetFilter(n);
+  Serial.printf("[NODE %d] ToF local %u @0x%02X disconnected\n", ACTIVE_NODE, n, CFG[n].addr);
+}
+
+void tryRecover(uint8_t n, uint32_t now) {
+  if (now - S[n].lastRecoverMs < RECOVER_INTERVAL_MS) return;
+  S[n].lastRecoverMs = now;
+
+  bool anyAlive = false;
+  for (uint8_t k = 0; k < NUM_TOFS; k++) anyAlive |= S[k].alive;
+  if (!anyAlive) i2cBusClear();
+
+  Wire.beginTransmission(CFG[n].addr);
+  if (Wire.endTransmission() == 0) {
+    tofDev[n]->begin();
+    resetFilter(n);
+    S[n].fails = 0;
+    S[n].alive = true;
+    i2cRecoverTotal++;
+    Serial.printf("[NODE %d] ToF local %u @0x%02X online\n", ACTIVE_NODE, n, CFG[n].addr);
+  }
+}
+
+void serviceCanBus(uint32_t now) {
+  static uint32_t last = 0;
+  if (now - last < 1000) return;
+  last = now;
+
+  twai_status_info_t st;
+  if (twai_get_status_info(&st) != ESP_OK) return;
+
+  if (st.state == TWAI_STATE_BUS_OFF) {
+    Serial.printf("[NODE %d] CAN bus off, starting recovery\n", ACTIVE_NODE);
+    twai_initiate_recovery();
+  } else if (st.state == TWAI_STATE_STOPPED) {
+    Serial.printf("[NODE %d] CAN stopped, restarting\n", ACTIVE_NODE);
+    twai_start();
+  }
+}
+
+void buildLivePackets(const SensorState& st, const SensorConfig& cfg, uint16_t pkt[8]) {
+  const bool useBaseline = (mode == MODE_CALIB_DRIVE);
+
+  for (uint8_t col = 0; col < 8; col++) {
+    uint16_t bestOtherRows = 0xFFFF;   // rows above the floor map, T always 0
+    uint16_t bestFloorClose = 0xFFFF;  // floor row object closer than baseline, T 0
+    uint16_t bestFloorLong = 0xFFFF;   // cliff/drop: SEND CALIBRATED BASELINE DISTANCE, T 1
+
+    for (uint8_t row = 0; row < 8; row++) {
+      const uint16_t d = st.filt[row * 8 + col];
+      if (d < MIN_VALID || d > MAX_VALID) continue;
+
+      if (!useBaseline) {
+        if (d < bestOtherRows) bestOtherRows = d;
+        continue;
+      }
+
+      if (row < cfg.floorStart) {
+        // Obstacle in the non-floor rows. Forward it, but keep T/elevation bit low.
+        if (d < bestOtherRows) bestOtherRows = d;
+        continue;
+      }
+
+      const uint16_t b = st.baseline[row * 8 + col];
+      if (b > MIN_VALID && b < MAX_VALID) {
+        if (d > b + FLOOR_MARGIN) {
+          // Cliff/drop/elevation event: live floor-row reading is longer/farther
+          // than the calibrated floor value. For this event we DO NOT send the
+          // far live distance. We send the calibrated baseline distance for that
+          // row/column and set T high, so VS Code sees the expected floor value
+          // with the T/elevation/cliff flag.
+          if (b < bestFloorLong) bestFloorLong = b;
+        } else if (d + FLOOR_MARGIN < b) {
+          // Something closer than the floor map in the floor rows. Forward it with T low.
+          if (d < bestFloorClose) bestFloorClose = d;
+        } else {
+          // Same as calibrated floor/background: suppress it.
+        }
+      } else {
+        // No valid floor baseline for this cell: forward the raw floor value with T low.
+        if (d < bestFloorClose) bestFloorClose = d;
+      }
+    }
+
+    uint16_t outD = NO_DETECTION;
+    uint8_t outT = 0;
+
+    if (bestOtherRows <= MAX_VALID) {
+      outD = bestOtherRows;
+      outT = 0;
+    } else if (bestFloorClose <= MAX_VALID) {
+      outD = bestFloorClose;
+      outT = 0;
+    } else if (bestFloorLong <= MAX_VALID) {
+      // T high + distance is the calibrated floor-row baseline distance.
+      outD = bestFloorLong;
+      outT = 1;
+    }
+
+    pkt[col] = ((uint16_t)outT << 15) | ((outD & 0x0FFF) << 3) | col;
+  }
+}
+
+void processSensor(uint8_t n, uint32_t now) {
+  SensorState& st = S[n];
+  const SensorConfig& cfg = CFG[n];
+
+  if (!st.alive) {
+    tryRecover(n, now);
+    return;
+  }
+
+  uint16_t raw[64];
+  if (tofDev[n]->getAllData(raw) != 0) {
+    if (++st.fails >= I2C_MAX_FAILS) markDead(n, now);
+    return;
+  }
+  st.fails = 0;
+
+  uint16_t proj[64];
+  for (uint8_t o = 0; o < 64; o++) {
+    const uint16_t r = raw[st.rotMap[o]];
+    proj[o] = (r < MIN_VALID || r > MAX_VALID) ? PX_INVALID
+            : (uint16_t)(((uint32_t)r * st.cosQ15[o >> 3]) >> 15);
+  }
+
+  for (uint8_t o = 0; o < 64; o++) {
+    if (proj[o] == PX_INVALID) {
+      st.filt[o] = PX_INVALID;
+    } else if (st.filt[o] == PX_INVALID) {
+      st.filt[o] = proj[o];
+    } else {
+      st.filt[o] = (uint16_t)((4u * proj[o] + st.filt[o] + 2u) / 5u);
+    }
+  }
+
+  if (mode == MODE_CALIB) {
+    // Keep calibration as floor-baseline calibration, but count validity per column.
+    for (uint8_t row = cfg.floorStart; row < 8; row++) {
+      for (uint8_t col = 0; col < 8; col++) {
+        const uint8_t i = row * 8 + col;
+        if (proj[i] != PX_INVALID && proj[i] < MAX_VALID) {
+          st.calibSum[i] += proj[i];
+          st.calibCnt[i]++;
+        }
+      }
+    }
+    return;
+  }
+
+  uint16_t pkt[8];
+  buildLivePackets(st, cfg, pkt);
+  sendColumnPackets(cfg.liveId, pkt);
+}
+
+void sendCalibrationStatus(uint8_t phase);
+
+void buildBaselineHalfFrame(uint8_t n, uint8_t half, uint8_t buf[8]) {
+  for (uint8_t i = 0; i < 4; i++) {
+    const uint8_t col = half * 4 + i;
+    uint16_t mn = NO_DETECTION;
+
+    // The ESP map is made only from the predetermined floor rows for this ToF.
+    for (uint8_t row = CFG[n].floorStart; row < 8; row++) {
+      const uint16_t b = S[n].baseline[row * 8 + col];
+      if (b > MIN_VALID && b < mn) mn = b;
+    }
+
+    // Baseline/map packets keep T low. T is only meaningful in live mode 3 output.
+    const uint16_t pkt = ((mn & 0x0FFF) << 3) | col;
+    buf[i * 2]     = pkt & 0xFF;
+    buf[i * 2 + 1] = pkt >> 8;
+  }
+}
+
+void sendBaselineFrame(uint8_t n, uint8_t half) {
+  uint8_t buf[8];
+  buildBaselineHalfFrame(n, half, buf);
+  canSend(CFG[n].baseId + half, buf, 8);
+}
+
+void startBaselineTransfer(uint8_t rounds = BASELINE_TX_ROUNDS) {
+  baselineTxActive = true;
+  baselineTxRoundsLeft = rounds;
+  baselineTxSensor = 0;
+  baselineTxHalf = 0;
+  baselineTxNextMs = millis() + (ACTIVE_NODE - 1) * BASELINE_TX_NODE_STAGGER_MS;
+}
+
+void advanceBaselineTxCursor() {
+  baselineTxHalf++;
+  if (baselineTxHalf >= 2) {
+    baselineTxHalf = 0;
+    baselineTxSensor++;
+    if (baselineTxSensor >= NUM_TOFS) {
+      baselineTxSensor = 0;
+      if (baselineTxRoundsLeft > 0) baselineTxRoundsLeft--;
+      sendCalibrationStatus(3);
+      if (baselineTxRoundsLeft == 0) baselineTxActive = false;
+    }
+  }
+}
+
+void serviceBaselineTransfer(uint32_t now) {
+  if (!baselineTxActive) return;
+  if ((int32_t)(now - baselineTxNextMs) < 0) return;
+  baselineTxNextMs = now + BASELINE_TX_FRAME_INTERVAL_MS;
+
+  uint8_t guard = 0;
+  while (guard++ < NUM_TOFS) {
+    if (S[baselineTxSensor].alive && S[baselineTxSensor].baselineReady) {
+      sendBaselineFrame(baselineTxSensor, baselineTxHalf);
+      advanceBaselineTxCursor();
+      return;
+    }
+    baselineTxSensor++;
+    baselineTxHalf = 0;
+    if (baselineTxSensor >= NUM_TOFS) {
+      baselineTxSensor = 0;
+      if (baselineTxRoundsLeft > 0) baselineTxRoundsLeft--;
+      if (baselineTxRoundsLeft == 0) baselineTxActive = false;
+    }
+  }
+
+  baselineTxActive = false;
+}
+
+
+uint8_t computeAliveMask() {
+  uint8_t m = 0;
+  for (uint8_t n = 0; n < NUM_TOFS; n++) {
+    if (S[n].alive) m |= (1u << n);
+  }
+  return m;
+}
+
+uint8_t computeBaselineReadyMask() {
+  uint8_t m = 0;
+  for (uint8_t n = 0; n < NUM_TOFS; n++) {
+    if (S[n].baselineReady) m |= (1u << n);
+  }
+  return m;
+}
+
+uint8_t computeAnyValidColumnMask() {
+  uint8_t m = 0;
+  for (uint8_t n = 0; n < NUM_TOFS; n++) {
+    m |= S[n].validColumnMask;
+  }
+  return m;
+}
+
+void sendCalibrationStatus(uint8_t phase) {
+  // phase: 1 = started, 2 = done, 3 = baseline resent/on request
+  uint8_t p[8] = {
+    phase,
+    ACTIVE_NODE,
+    computeAliveMask(),
+    computeBaselineReadyMask(),
+    computeAnyValidColumnMask(),
+    (uint8_t)(canTxFailTotal & 0xFF),
+    (uint8_t)(i2cRecoverTotal & 0xFF),
+    bootResetReason
+  };
+  canSend(ID_CALIB_STAT, p, 8);
+}
+
+void finishCalibration() {
+  for (uint8_t n = 0; n < NUM_TOFS; n++) {
+    uint8_t validColumns = 0;
+
+    for (uint8_t i = 0; i < 64; i++) {
+      S[n].baseline[i] = (S[n].calibCnt[i] >= CALIB_MIN_SAMPLES)
+                       ? (uint16_t)(S[n].calibSum[i] / S[n].calibCnt[i])
+                       : 0;
+    }
+
+    for (uint8_t col = 0; col < 8; col++) {
+      for (uint8_t row = CFG[n].floorStart; row < 8; row++) {
+        if (S[n].baseline[row * 8 + col] > MIN_VALID) {
+          validColumns |= (1u << col);
+          break;
+        }
+      }
+    }
+
+    S[n].validColumnMask = validColumns;
+    S[n].baselineReady = (validColumns != 0);
+    resetFilter(n);
+  }
+
+  sendCalibrationStatus(2);
+  startBaselineTransfer(BASELINE_TX_ROUNDS);
+
+  // Keep old behavior: after calibration, stop until master selects mode 3.
+  mode = MODE_HALT;
+  Serial.printf("[NODE %d] calibration complete, baseline masks: ", ACTIVE_NODE);
+  for (uint8_t n = 0; n < NUM_TOFS; n++) Serial.printf("local%u=0x%02X ", n, S[n].validColumnMask);
+  Serial.println();
+}
+
+void setMode(uint8_t m) {
+  if (m > MODE_CALIB_DRIVE) return;
+  if (m == mode && m != MODE_CALIB) {
+    return;
+  }
+
+  mode = (Mode)m;
+  for (uint8_t n = 0; n < NUM_TOFS; n++) resetFilter(n);
+
+  if (mode == MODE_CALIB) {
+    for (uint8_t n = 0; n < NUM_TOFS; n++) {
+      memset(S[n].calibSum, 0, sizeof(S[n].calibSum));
+      memset(S[n].calibCnt, 0, sizeof(S[n].calibCnt));
+      memset(S[n].baseline, 0, sizeof(S[n].baseline));
+      S[n].baselineReady = false;
+      S[n].validColumnMask = 0;
+    }
+    calibEndMs = millis() + CALIB_MS;
+    sendCalibrationStatus(1);
+  }
+
+  if (mode == MODE_CALIB_DRIVE) {
+    // When calibrated drive starts, resend maps again so the PC can recover missed frames.
+    startBaselineTransfer(6);
+  }
+
+  lastTick = millis();
+}
+
+void handleCanRx() {
+  twai_message_t m;
+  while (twai_receive(&m, 0) == ESP_OK) {
+    canRxTotal++;
+    if (m.rtr) continue;
+
+    if (m.identifier == ID_SYSTEM_CTRL && m.data_length_code >= 1) {
+      const bool requestBaselineResend = (m.data_length_code >= 2 && m.data[1] == 0xB1);
+      setMode(m.data[0]);
+      if (requestBaselineResend && computeBaselineReadyMask() != 0) startBaselineTransfer(BASELINE_TX_ROUNDS);
+    } else if (m.identifier == ID_CALIBRATE) {
+      setMode(MODE_CALIB);
+    } else if (m.identifier == ID_MASTER_PING) {
+      const uint8_t masterMode = (m.data_length_code >= 2) ? m.data[1] : 0;
+      if (masterMode == MODE_DRIVE || masterMode == MODE_CALIB_DRIVE) setMode(masterMode);
+
+      // 8-byte node status reply.
+      // Byte 0: current mode
+      // Byte 1..3: local ToF alive flags, unused bytes stay 0
+      // Byte 4: reset reason
+      // Byte 5: CAN TX fail counter low byte
+      // Byte 6: I2C recovery counter low byte
+      // Byte 7: baseline-ready local sensor mask
+      uint8_t p[8] = { (uint8_t)mode, 0, 0, 0, bootResetReason,
+                       (uint8_t)(canTxFailTotal & 0xFF),
+                       (uint8_t)(i2cRecoverTotal & 0xFF),
+                       computeBaselineReadyMask() };
+      for (uint8_t n = 0; n < NUM_TOFS; n++) p[1 + n] = S[n].alive ? 1 : 0;
+      canSend(NODE_REPLY_ID, p, 8);
+    }
+  }
+}
+
+void initWatchdog() {
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+  esp_task_wdt_config_t cfg = {};
+  cfg.timeout_ms = 3000;
+  cfg.trigger_panic = true;
+  esp_task_wdt_reconfigure(&cfg);
+#else
+  esp_task_wdt_init(3, true);
+#endif
+  esp_task_wdt_add(NULL);
+}
+
+const char* resetReasonStr(uint8_t r) {
+  switch (r) {
+    case ESP_RST_POWERON:   return "power-on";
+    case ESP_RST_EXT:       return "external pin";
+    case ESP_RST_SW:        return "software";
+    case ESP_RST_PANIC:     return "panic/exception";
+    case ESP_RST_INT_WDT:   return "interrupt watchdog";
+    case ESP_RST_TASK_WDT:  return "task watchdog";
+    case ESP_RST_WDT:       return "other watchdog";
+    case ESP_RST_DEEPSLEEP: return "deep sleep";
+    case ESP_RST_BROWNOUT:  return "BROWNOUT";
+    default:                return "unknown";
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  bootResetReason = (uint8_t)esp_reset_reason();
+  Serial.printf("[NODE %d] boot, reset cause: %s\n", ACTIVE_NODE, resetReasonStr(bootResetReason));
+
+  initGeometry();
+
+  twai_general_config_t g = TWAI_GENERAL_CONFIG_DEFAULT(CAN_TX_PIN, CAN_RX_PIN, TWAI_MODE_NORMAL);
+  g.rx_queue_len = 32;
+  g.tx_queue_len = 24;
+
+  twai_timing_config_t t = TWAI_TIMING_CONFIG_125KBITS();
+
+  // Accept all standard frames. This avoids missed commands from a too-tight mask.
+  twai_filter_config_t f = TWAI_FILTER_CONFIG_ACCEPT_ALL();
+
+  if (twai_driver_install(&g, &t, &f) == ESP_OK) {
+    twai_start();
+  } else {
+    Serial.println("[CAN] driver install failed");
+  }
+
+  Wire.begin(I2C_SDA, I2C_SCL);
+  Wire.setClock(400000);
+  Wire.setTimeout(10);
+
+  uint8_t aliveCnt = 0;
+  for (uint8_t n = 0; n < NUM_TOFS; n++) {
+    resetFilter(n);
+    memset(S[n].baseline, 0, sizeof(S[n].baseline));
+    S[n].alive = false;
+    S[n].baselineReady = false;
+    S[n].validColumnMask = 0;
+    S[n].lastRecoverMs = millis() - RECOVER_INTERVAL_MS;
+    tryRecover(n, millis());
+    if (S[n].alive) aliveCnt++;
+  }
+
+  initWatchdog();
+  Serial.printf("[NODE %d] ready, %u/%u sensors online\n", ACTIVE_NODE, aliveCnt, NUM_TOFS);
+}
+
+void loop() {
+  esp_task_wdt_reset();
+  handleCanRx();
+
+  const uint32_t now = millis();
+  serviceCanBus(now);
+  serviceBaselineTransfer(now);
+
+  if (mode == MODE_HALT) {
+    delay(1);
+    return;
+  }
+
+  if ((int32_t)(now - (lastTick + TICK_MS)) < 0) {
+    delay(1);
+    return;
+  }
+
+  lastTick += TICK_MS;
+  if (now - lastTick > 2 * TICK_MS) lastTick = now;
+
+  for (uint8_t n = 0; n < NUM_TOFS; n++) processSensor(n, now);
+
+  if (mode == MODE_CALIB && (int32_t)(now - calibEndMs) >= 0) {
+    finishCalibration();
+  }
+
+  tickCount++;
+  if (now - lastRateLog >= 2000) {
+    Serial.printf("[NODE %d] rate %.1f Hz, mode %d, canTxFail %lu, i2cRecover %lu\n",
+                  ACTIVE_NODE,
+                  tickCount * 1000.0f / (now - lastRateLog),
+                  (int)mode,
+                  (unsigned long)canTxFailTotal,
+                  (unsigned long)i2cRecoverTotal);
+    tickCount = 0;
+    lastRateLog = now;
+  }
+}
