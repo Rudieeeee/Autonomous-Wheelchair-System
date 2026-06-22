@@ -88,11 +88,11 @@ Everything else the user input system needs is listed in `requirements.txt`.
 
 ## ROS2 Setup for Mapping, Localization, and Navigation
 
-The mapping, localization, and navigation software is intended to run on Ubuntu with ROS2. The commands below assume Ubuntu 22.04 with ROS2 Humble.
+The mapping, localization, and navigation software is intended to run on Ubuntu with ROS2 Jazzy. The commands below assume Ubuntu 24.04 with ROS2 Jazzy.
 
-### 1. Install ROS2 Humble
+### 1. Install ROS2 Jazzy
 
-Follow the official ROS2 Humble installation steps, or use the summary below:
+Follow the official ROS2 Jazzy installation guide, or use the summary below:
 
 ```bash
 sudo apt update
@@ -108,13 +108,13 @@ http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" | \
 sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
 
 sudo apt update
-sudo apt install ros-humble-desktop -y
+sudo apt install ros-jazzy-desktop -y
 ```
 
 Add ROS2 to the shell startup file:
 
 ```bash
-echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
 source ~/.bashrc
 ```
 
@@ -131,50 +131,52 @@ sudo rosdep init
 rosdep update
 ```
 
+If `sudo rosdep init` says it was already initialized, continue with:
+
+```bash
+rosdep update
+```
+
 ### 3. Install Navigation, Mapping, and Sensor Packages
 
-Install Nav2, SLAM Toolbox, AMCL, RViz, sensor tools, and serial support:
+Install the main ROS2 packages used for mapping, localization, navigation, RViz, rosbridge, and sensor processing:
 
 ```bash
 sudo apt update
 
 sudo apt install -y \
-  ros-humble-navigation2 \
-  ros-humble-nav2-bringup \
-  ros-humble-slam-toolbox \
-  ros-humble-rviz2 \
-  ros-humble-tf2-tools \
-  ros-humble-tf-transformations \
-  ros-humble-robot-localization \
-  ros-humble-laser-geometry \
-  ros-humble-pointcloud-to-laserscan \
-  ros-humble-rosbridge-server \
-  ros-humble-teleop-twist-keyboard \
+  ros-jazzy-navigation2 \
+  ros-jazzy-nav2-bringup \
+  ros-jazzy-slam-toolbox \
+  ros-jazzy-rviz2 \
+  ros-jazzy-tf2-tools \
+  ros-jazzy-tf-transformations \
+  ros-jazzy-robot-localization \
+  ros-jazzy-laser-geometry \
+  ros-jazzy-pointcloud-to-laserscan \
+  ros-jazzy-rosbridge-server \
+  ros-jazzy-teleop-twist-keyboard \
   python3-serial
 ```
 
-### 4. Create or Open the ROS2 Workspace
+### 4. Clone the Repository
 
 ```bash
-mkdir -p ~/Autonomous-Wheelchair-System/src
-cd ~/Autonomous-Wheelchair-System/src
+cd ~
+git clone https://github.com/Rudieeeee/Autonomous-Wheelchair-System.git
+cd ~/Autonomous-Wheelchair-System
 ```
 
-Clone this repository if it is not already present:
-
-```bash
-git clone https://github.com/Rudieeeee/Autonomous-Wheelchair-System.git .
-```
-
-If the repository already exists, go to it instead:
+If the repository already exists:
 
 ```bash
 cd ~/Autonomous-Wheelchair-System
+git pull
 ```
 
 ### 5. Install External ROS2 Packages Used by the System
 
-Some packages may not be available through apt and need to be cloned into the workspace.
+The system uses the Slamtec LiDAR driver and the laser scan merger package. These should be inside the ROS2 workspace `src` folder.
 
 ```bash
 cd ~/Autonomous-Wheelchair-System/src
@@ -183,7 +185,7 @@ git clone https://github.com/Slamtec/sllidar_ros2.git
 git clone https://github.com/mich1342/ros2_laser_scan_merger.git
 ```
 
-If a package already exists, skip that clone or pull the newest version:
+If one of these folders already exists, update it instead:
 
 ```bash
 cd ~/Autonomous-Wheelchair-System/src/sllidar_ros2
@@ -217,7 +219,7 @@ Source the workspace:
 source install/setup.bash
 ```
 
-To source it automatically in new terminals:
+To source the workspace automatically in every new terminal:
 
 ```bash
 echo "source ~/Autonomous-Wheelchair-System/install/setup.bash" >> ~/.bashrc
@@ -228,7 +230,7 @@ source ~/.bashrc
 
 ## Hardware Port Setup
 
-The system uses USB devices such as the LiDARs and Arduino. Give the user access to serial ports:
+The system uses USB devices for the LiDARs and Arduino. Give the user access to serial ports:
 
 ```bash
 sudo usermod -a -G dialout $USER
@@ -251,7 +253,15 @@ Typical examples:
 /dev/ttyACM0  -> Arduino Giga
 ```
 
-The exact port names can change after reconnecting hardware. Update the launch arguments if needed.
+For navigation, the launch file can also use fixed device names:
+
+```text
+/dev/left_lidar
+/dev/right_lidar
+/dev/arduino_wheelchair
+```
+
+These names only work if udev rules have been created. If no udev rules are used, pass the normal `/dev/ttyUSB*` and `/dev/ttyACM*` ports as launch arguments.
 
 ---
 
@@ -259,23 +269,25 @@ The exact port names can change after reconnecting hardware. Update the launch a
 
 ### 1. Mapping
 
-Mapping is used to generate a new indoor map with SLAM Toolbox.
-
-Example command:
+Mapping starts the sensor pipeline and SLAM Toolbox. The mapping launch file includes the LiDARs, static transforms, laser scan merger, pointcloud-to-laserscan node, Arduino sensor node, SLAM Toolbox, and RViz.
 
 ```bash
-ros2 launch map_generator mapping_launch.py \
+cd ~/Autonomous-Wheelchair-System
+source install/setup.bash
+
+ros2 launch map_generator mapping.launch2.py \
   left_lidar_port:=/dev/ttyUSB0 \
   right_lidar_port:=/dev/ttyUSB1 \
-  arduino_port:=/dev/ttyACM0
+  arduino_port:=/dev/ttyACM0 \
+  use_rviz:=true
 ```
 
-Drive or move the wheelchair slowly through the indoor environment while SLAM Toolbox builds the map.
-
-Save the map:
+To save a map manually:
 
 ```bash
-ros2 run nav2_map_server map_saver_cli -f ~/Autonomous-Wheelchair-System/maps/my_map
+ros2 run nav2_map_server map_saver_cli \
+  -f ~/Autonomous-Wheelchair-System/Other-Files/GeneralData/Maps/my_map \
+  --ros-args -p map_subscribe_transient_local:=true
 ```
 
 This creates:
@@ -285,37 +297,67 @@ my_map.yaml
 my_map.pgm
 ```
 
-### 2. Localization
-
-Localization loads a saved map and estimates the wheelchair pose in that map using AMCL.
-
-Example command:
+The mapping launch file also supports automatic repeated map saving:
 
 ```bash
-ros2 launch localization localization_launch.py \
-  map:=~/Autonomous-Wheelchair-System/maps/my_map.yaml \
+ros2 launch map_generator mapping.launch2.py \
   left_lidar_port:=/dev/ttyUSB0 \
   right_lidar_port:=/dev/ttyUSB1 \
-  arduino_port:=/dev/ttyACM0
+  arduino_port:=/dev/ttyACM0 \
+  save_map:=/home/rudrh/Autonomous-Wheelchair-System/Other-Files/GeneralData/Maps/test_map \
+  auto_save_map:=true \
+  auto_save_period:=60.0 \
+  use_rviz:=true
 ```
 
-In RViz, use the initial pose tool to set the approximate starting pose of the wheelchair if needed.
+### 2. Localization
+
+Localization starts the sensor pipeline, map server, AMCL, lifecycle manager, RViz, and a delayed global localization call.
+
+```bash
+cd ~/Autonomous-Wheelchair-System
+source install/setup.bash
+
+ros2 launch localization localization.launch.py \
+  map:=/home/rudrh/Autonomous-Wheelchair-System/Other-Files/GeneralData/Maps/tellegen.yaml \
+  left_lidar_port:=/dev/ttyUSB0 \
+  right_lidar_port:=/dev/ttyUSB1 \
+  arduino_port:=/dev/ttyACM0 \
+  use_rviz:=true
+```
+
+If needed, set the starting pose in RViz using the **2D Pose Estimate** tool.
 
 ### 3. Navigation
 
-Navigation starts localization and the Nav2 path-planning stack.
+Navigation starts localization first and then starts the Nav2 planner, controller, behavior tree navigator, behavior server, velocity smoother, safety limiter, and joystick command converter after a delay.
 
-Example command:
+With fixed udev port names:
 
 ```bash
-ros2 launch navigation navigation_launch.py \
-  map:=~/Autonomous-Wheelchair-System/maps/my_map.yaml \
-  left_lidar_port:=/dev/ttyUSB0 \
-  right_lidar_port:=/dev/ttyUSB1 \
-  arduino_port:=/dev/ttyACM0
+cd ~/Autonomous-Wheelchair-System
+source install/setup.bash
+
+ros2 launch navigation navigation.launch.py \
+  map:=/home/rudrh/Autonomous-Wheelchair-System/Other-Files/GeneralData/Maps/ampere.yaml \
+  left_lidar_port:=/dev/left_lidar \
+  right_lidar_port:=/dev/right_lidar \
+  arduino_port:=/dev/arduino_wheelchair \
+  use_rviz:=true
 ```
 
-The navigation stack uses the current wheelchair pose, the saved map, and obstacle data to generate and follow a path to the selected destination.
+Without udev rules, use the normal USB ports:
+
+```bash
+ros2 launch navigation navigation.launch.py \
+  map:=/home/rudrh/Autonomous-Wheelchair-System/Other-Files/GeneralData/Maps/ampere.yaml \
+  left_lidar_port:=/dev/ttyUSB0 \
+  right_lidar_port:=/dev/ttyUSB1 \
+  arduino_port:=/dev/ttyACM0 \
+  use_rviz:=true
+```
+
+The navigation stack publishes velocity commands, limits them, smooths them, applies ToF safety filtering, and converts the safe velocity command into joystick commands for the wheelchair controller.
 
 ### 4. Rosbridge for User Input Connection
 
@@ -344,13 +386,15 @@ Common topics used in the system include:
 /amcl_pose             Estimated wheelchair pose from AMCL
 /map                   Occupancy grid map
 /plan                  Planned navigation path
-/cmd_vel               Velocity command from Nav2
+/cmd_vel_raw           Raw velocity command from Nav2 controller
+/cmd_vel_limited       Limited velocity command
+/cmd_vel               Smoothed velocity command
+/cmd_vel_safe          Safety-filtered velocity command
+/joystick_cmd          Joystick command sent to the wheelchair interface
 /wheelchair/nav_goal   User-selected navigation goal
 /wheelchair/status     Navigation status feedback
 /wheelchair/estop      Emergency stop signal
 ```
-
----
 
 ## Reports and Documentation
 
