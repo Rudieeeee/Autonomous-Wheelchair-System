@@ -9,6 +9,7 @@ def generate_launch_description():
     left_lidar_port = LaunchConfiguration('left_lidar_port')
     right_lidar_port = LaunchConfiguration('right_lidar_port')
     arduino_port = LaunchConfiguration('arduino_port')
+    uwb_arduino_port = LaunchConfiguration('uwb_arduino_port')
 
     merger_params = PathJoinSubstitution([
         FindPackageShare('ros2_laser_scan_merger'),
@@ -125,6 +126,38 @@ def generate_launch_description():
         ],
     )
 
+    uwb_serial_node = Node(
+        package='map_generator',
+        executable='uwb_serial_node',
+        name='uwb_serial_node',
+        output='screen',
+        parameters=[
+            {
+                'serial_port': uwb_arduino_port,
+                'baud_rate': 115200,
+
+                'anchor_1_id': '1111',
+                'anchor_2_id': '2222',
+                'anchor_3_id': '3333',
+
+                'anchor_1_x': 0.0,
+                'anchor_1_y': 0.0,
+                'anchor_2_x': 1.0,
+                'anchor_2_y': 0.0,
+                'anchor_3_x': 0.0,
+                'anchor_3_y': 0.8,
+
+                'min_distance_m': 0.05,
+                'max_distance_m': 8.0,
+                'max_jump_m': 1.0,
+                'filter_window': 5,
+                'range_timeout_s': 1.0,
+
+                'target_frame': 'base_footprint',
+            }
+        ],
+    )
+
     return LaunchDescription([
         DeclareLaunchArgument(
             'left_lidar_port',
@@ -138,7 +171,10 @@ def generate_launch_description():
             'arduino_port',
             default_value='/dev/arduino_wheelchair',
         ),
-
+        DeclareLaunchArgument(
+            'uwb_arduino_port',
+            default_value='/dev/arduino_uwb',
+        ),
         base_to_left_laser,
         base_to_right_laser,
         base_to_imu,
@@ -153,4 +189,10 @@ def generate_launch_description():
             period=2.0,
             actions=[tof64_scan_node],
         ),
+
+         TimerAction(
+            period=2.5,
+            actions=[uwb_serial_node],
+        ),       
+
     ])

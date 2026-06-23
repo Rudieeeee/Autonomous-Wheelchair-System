@@ -33,6 +33,7 @@ def generate_launch_description():
     left_lidar_port = LaunchConfiguration('left_lidar_port')
     right_lidar_port = LaunchConfiguration('right_lidar_port')
     arduino_port = LaunchConfiguration('arduino_port')
+    uwb_arduino_port = LaunchConfiguration('uwb_arduino_port')
 
     sensors_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -46,6 +47,8 @@ def generate_launch_description():
             'left_lidar_port': left_lidar_port,
             'right_lidar_port': right_lidar_port,
             'arduino_port': arduino_port,
+            'uwb_arduino_port': uwb_arduino_port,
+            
         }.items(),
     )
 
@@ -178,6 +181,12 @@ def generate_launch_description():
             'arduino_port',
             default_value='/dev/ttyACM0',
             description='Serial port for the Arduino sensor node.',
+        ),
+        
+        DeclareLaunchArgument(
+            'uwb_arduino_port',
+            default_value='/dev/arduino_uwb',
+            description='Serial port for the separate UWB Arduino.',
         ),
 
         DeclareLaunchArgument(

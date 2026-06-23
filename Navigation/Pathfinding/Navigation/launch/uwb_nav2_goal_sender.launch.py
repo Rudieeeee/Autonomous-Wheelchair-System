@@ -1,0 +1,339 @@
+from launch import LaunchDescription
+from launch.actions import (
+    DeclareLaunchArgument,
+    IncludeLaunchDescription,
+    LogInfo,
+    TimerAction,
+)
+from launch.conditions import IfCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
+
+
+def generate_launch_description():
+    map_file = LaunchConfiguration('map')
+    use_rviz = LaunchConfiguration('use_rviz')
+
+    left_lidar_port = LaunchConfiguration('left_lidar_port')
+    right_lidar_port = LaunchConfiguration('right_lidar_port')
+    arduino_port = LaunchConfiguration('arduino_port')
+    uwb_arduino_port = LaunchConfiguration('uwb_arduino_port')
+
+    nav2_params = PathJoinSubstitution([
+        FindPackageShare('navigation'),
+        'config',
+        'nav2_params.yaml',
+    ])
+
+    bt_xml = PathJoinSubstitution([
+        FindPackageShare('navigation'),
+        'behavior_trees',
+        'wheelchair_obstacle_replan.xml',
+    ])
+
+    rviz_config = PathJoinSubstitution([
+        FindPackageShare('navigation'),
+        'rviz',
+        'navigation.rviz',
+    ])
+
+    localization_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            FindPackageShare('localization'),
+            '/launch/localization.launch.py',
+        ]),
+        launch_arguments={
+            'map': map_file,
+            'left_lidar_port': left_lidar_port,
+            'right_lidar_port': right_lidar_port,
+            'arduino_port': arduino_port,
+            'uwb_arduino_port': uwb_arduino_port,
+            'use_rviz': 'false',
+        }.items(),
+    )
+
+    planner_server = Node(
+        package='nav2_planner',
+        executable='planner_server',
+        name='planner_server',
+        output='screen',
+        parameters=[nav2_params],
+    )
+
+    controller_server = Node(
+        package='nav2_controller',
+        executable='controller_server',
+        name='controller_server',
+        output='screen',
+        parameters=[nav2_params],
+        remappings=[
+            ('/cmd_vel', '/cmd_vel_raw'),
+        ],
+    )
+
+    conditional_cmd_vel_limiter = Node(
+        package='navigation',
+        executable='conditional_cmd_vel_limiter',
+        name='conditional_cmd_vel_limiter',
+        output='screen',
+        parameters=[
+            {
+                'input_topic': '/cmd_vel_raw',
+                'output_topic': '/cmd_vel_limited',
+                'linear_zero_threshold': 0.02,
+                'moving_angular_limit': 0.25,
+                'pure_rotation_angular_limit': 10.0,
+            }
+        ],
+    )
+
+    bt_navigator = Node(
+        package='nav2_bt_navigator',
+        executable='bt_navigator',
+        name='bt_navigator',
+        output='screen',
+        parameters=[
+            nav2_params,
+            {
+                'navigate_to_pose.default_nav_to_pose_bt_xml': bt_xml,
+            },
+        ],
+    )
+
+    behavior_server = Node(
+        package='nav2_behaviors',
+        executable='behavior_server',
+        name='behavior_server',
+        output='screen',
+        parameters=[nav2_params],
+    )
+
+    velocity_smoother = Node(
+        package='nav2_velocity_smoother',
+        executable='velocity_smoother',
+        name='velocity_smoother',
+        output='screen',
+        parameters=[nav2_params],
+        remappings=[
+            ('/cmd_vel', '/cmd_vel_limited'),
+            ('/cmd_vel_smoothed', '/cmd_vel'),
+        ],
+    )
+
+    tof_safety_limiter = Node(
+        package='navigation',
+        executable='tof_safety_limiter',
+        name='tof_safety_limiter',
+        output='screen',
+        parameters=[nav2_params],
+    )
+
+    cmd_vel_to_joystick = Node(
+        package='navigation',
+        executable='cmd_vel_to_joystick_pid',
+        name='cmd_vel_to_joystick_pid',
+        output='screen',
+        parameters=[
+            {
+                # IMPORTANT:
+                # This must listen to the safety-filtered command, not raw /cmd_vel.
+                'cmd_vel_topic': '/cmd_vel_safe',
+
+                'odom_topic': '/odom',
+                'joystick_topic': '/joystick_cmd',
+                'calibration_file': 'joystick_calibration.json',
+
+                'publish_rate_hz': 20.0,
+                'timeout_seconds': 0.5,
+                'odom_timeout_seconds': 0.5,
+                'send_nothing_without_cmd_vel_publisher': False,
+                'require_fresh_odom': True,
+
+                'max_joystick_x': 100,
+                'max_joystick_y': 100,
+                'invert_x': True,
+                'invert_y': False,
+
+                'linear_cmd_deadband': 0.04,
+                'angular_cmd_deadband': 0.05,
+                'measured_stop_linear_deadband': 0.03,
+                'measured_stop_angular_deadband': 0.03,
+                'measured_velocity_filter_alpha': 0.35,
+
+                'linear_kp': 25.0,
+                'linear_ki': 3.0,
+                'linear_kd': 0.0,
+                'linear_integral_limit': 1.0,
+                'linear_pid_output_limit': 15.0,
+
+                'angular_kp': 25.0,
+                'angular_ki': 3.0,
+                'angular_kd': 0.0,
+                'angular_integral_limit': 1.0,
+                'angular_pid_output_limit': 15.0,
+
+                'max_joystick_x_delta_per_s': 80.0,
+                'max_joystick_y_delta_per_s': 80.0,
+
+                'fallback_max_linear_speed': 1.39,
+                'fallback_max_angular_speed': 0.42,
+                'fallback_min_forward_joystick': 25,
+                'fallback_min_backward_joystick': 40,
+                'fallback_min_turn_joystick': 25,
+
+                'require_accurate_amcl': True,
+                'amcl_pose_topic': '/amcl_pose',
+                'max_x_covariance': 0.04,
+                'max_y_covariance': 0.04,
+                'max_yaw_covariance': 0.03,
+                'min_good_amcl_messages': 5,
+                'amcl_timeout_seconds': 10.0,
+
+                # Before AMCL is accepted, run this repeating search movement:
+                # 100, 0    for 3 sec
+                # 0, 100    for 1 sec
+                # 0, -100   for 1 sec
+                # -100, 0   for 3 sec
+                # repeat
+                'amcl_block_joystick_x': 100,
+                'amcl_block_joystick_y': 0,
+
+                # Used only before AMCL is accepted.
+                # This now checks both the lidar scan and the ToF scan.
+                # After AMCL, Nav2 local_costmap and tof_safety_limiter handle safety.
+                'use_obstacle_gate': True,
+                'scan_topics': ['/scan', '/tof_scan'],
+                'full_scan_stop_distance_m': 0.90,
+                'scan_timeout_seconds': 0.5,
+            }
+        ],
+    )
+    uwb_nav2_goal_sender = Node(
+        package='navigation',
+        executable='uwb_nav2_goal_sender',
+        name='uwb_nav2_goal_sender',
+        output='screen',
+        parameters=[
+            {
+                'target_topic': '/uwb/target_base',
+                'robot_frame': 'base_footprint',
+                'global_frame': 'map',
+
+                'follow_distance_m': 1.20,
+                'goal_update_period_s': 5.00,
+                'target_timeout_s': 1.00,
+
+                'min_target_distance_m': 1.00,
+                'max_target_distance_m': 8.00,
+                'min_goal_update_distance_m': 0.40,
+
+                'nav_action_name': 'navigate_to_pose',
+            }
+        ],
+    )
+
+    lifecycle_manager_navigation = Node(
+        package='nav2_lifecycle_manager',
+        executable='lifecycle_manager',
+        name='lifecycle_manager_navigation',
+        output='screen',
+        parameters=[
+            {
+                'use_sim_time': False,
+                'autostart': True,
+                'node_names': [
+                    'planner_server',
+                    'controller_server',
+                    'bt_navigator',
+                    'behavior_server',
+                    'velocity_smoother',
+                ],
+            }
+        ],
+    )
+
+    rviz = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='rviz',
+        output='screen',
+        arguments=['-d', rviz_config],
+        condition=IfCondition(use_rviz),
+)
+
+    delayed_navigation = TimerAction(
+    period=12.0,
+    actions=[
+        planner_server,
+        controller_server,
+        bt_navigator,
+        behavior_server,
+        conditional_cmd_vel_limiter,
+        velocity_smoother,
+        tof_safety_limiter,
+        cmd_vel_to_joystick,
+        lifecycle_manager_navigation,
+    ],
+)
+
+    delayed_uwb_goal_sender = TimerAction(
+        period=18.0,
+        actions=[
+            uwb_nav2_goal_sender,
+        ],
+    )
+
+    delayed_rviz = TimerAction(
+        period=15.0,
+        actions=[
+            LogInfo(msg='STARTING RVIZ FROM NAVIGATION LAUNCH NOW'),
+            rviz,
+        ],
+    )
+
+    return LaunchDescription([
+        DeclareLaunchArgument(
+            'map',
+            default_value=(
+                '/home/rudrh/Autonomous-Wheelchair-System/'
+                'Other-Files/GeneralData/Maps/ampere.yaml'
+            ),
+            description='Full path to the saved map YAML file.',
+        ),
+
+        DeclareLaunchArgument(
+            'left_lidar_port',
+            default_value='/dev/left_lidar',
+            description='Serial port for the left LiDAR.',
+        ),
+
+        DeclareLaunchArgument(
+            'right_lidar_port',
+            default_value='/dev/right_lidar',
+            description='Serial port for the right LiDAR.',
+        ),
+
+        DeclareLaunchArgument(
+            'arduino_port',
+            default_value='/dev/arduino_wheelchair',
+            description='Serial port for the Arduino sensor node and serial joystick output.',
+        ),
+        DeclareLaunchArgument(
+            'uwb_arduino_port',
+            default_value='/dev/arduino_uwb',
+            description='Serial port for the UWB Arduino.',
+        ),
+
+        DeclareLaunchArgument(
+            'use_rviz',
+            default_value='true',
+            description='Start navigation RViz if true.',
+        ),
+
+        localization_launch,
+        delayed_navigation,
+        delayed_uwb_goal_sender,
+        delayed_rviz,
+    ])
