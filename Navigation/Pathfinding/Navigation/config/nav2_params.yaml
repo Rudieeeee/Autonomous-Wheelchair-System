@@ -44,7 +44,7 @@ controller_server:
     FollowPath:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
 
-      desired_linear_vel: 0.20
+      desired_linear_vel: 1.5
 
       lookahead_dist: 0.35
       min_lookahead_dist: 0.25
@@ -157,44 +157,15 @@ global_costmap:
       footprint: "[[0.45, 0.30], [0.45, -0.30], [-0.45, -0.30], [-0.45, 0.30]]"
       footprint_padding: 0.05
 
-      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+      plugins: ["static_layer", "inflation_layer"]
 
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: true
 
-      obstacle_layer:
-        plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: true
-        observation_sources: scan tof_scan
-
-        scan:
-          topic: /scan
-          max_obstacle_height: 2.0
-          clearing: true
-          marking: true
-          data_type: "LaserScan"
-          raytrace_max_range: 7.0
-          raytrace_min_range: 0.0
-          obstacle_max_range: 7.5
-          obstacle_min_range: 0.0
-          obstacle_persistence: 0.0
-
-        tof_scan:
-          topic: /tof_scan
-          max_obstacle_height: 2.0
-          clearing: true
-          marking: true
-          data_type: "LaserScan"
-          raytrace_max_range: 2.0
-          raytrace_min_range: 0.0
-          obstacle_max_range: 1.5
-          obstacle_min_range: 0.05
-          obstacle_persistence: 0.0
-
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 0.30
+        inflation_radius: 0.40
         cost_scaling_factor: 0.8
 
       always_send_full_costmap: true
@@ -274,7 +245,7 @@ tof_safety_limiter:
     angular_threshold: 0.05
 
     max_slowdown_scale: 0.50
-    stop_distance: 0.70
+    stop_distance: 0.90
 
     forward_slowdown_distance: 1.70
     turning_slowdown_distance: 1.10

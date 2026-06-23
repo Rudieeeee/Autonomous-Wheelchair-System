@@ -265,7 +265,7 @@ def generate_launch_description():
             'map',
             default_value=(
                 '/home/rudrh/Autonomous-Wheelchair-System/'
-                'Other-Files/GeneralData/Maps/ampere.yaml'
+                'Other-Files/GeneralData/Maps/tellegen.yaml'
             ),
             description='Full path to the saved map YAML file.',
         ),
