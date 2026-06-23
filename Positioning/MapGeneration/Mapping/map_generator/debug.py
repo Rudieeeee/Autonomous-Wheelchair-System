@@ -3,14 +3,15 @@
 import math
 import threading
 import time
-import serial
+from collections import deque
+from typing import Optional
 
+import serial
 import rclpy
 from rclpy.node import Node
-
 from geometry_msgs.msg import Quaternion, TransformStamped
 from nav_msgs.msg import Odometry
-from sensor_msgs.msg import Imu
+from sensor_msgs.msg import Imu, LaserScan
 from std_msgs.msg import Int16MultiArray
 from tf2_ros import TransformBroadcaster
 
@@ -18,31 +19,23 @@ from tf2_ros import TransformBroadcaster
 def normalize_angle(angle_rad: float) -> float:
     while angle_rad > math.pi:
         angle_rad -= 2.0 * math.pi
-
     while angle_rad < -math.pi:
         angle_rad += 2.0 * math.pi
-
     return angle_rad
 
 
-def euler_to_quaternion(
-    roll_rad: float,
-    pitch_rad: float,
-    yaw_rad: float,
-) -> Quaternion:
+def euler_to_quaternion(roll_rad: float, pitch_rad: float, yaw_rad: float) -> Quaternion:
     cy = math.cos(yaw_rad * 0.5)
     sy = math.sin(yaw_rad * 0.5)
     cp = math.cos(pitch_rad * 0.5)
     sp = math.sin(pitch_rad * 0.5)
     cr = math.cos(roll_rad * 0.5)
     sr = math.sin(roll_rad * 0.5)
-
     q = Quaternion()
     q.w = cr * cp * cy + sr * sp * sy
     q.x = sr * cp * cy - cr * sp * sy
     q.y = cr * sp * cy + sr * cp * sy
     q.z = cr * cp * sy - sr * sp * cy
-
     return q
 
 
@@ -50,823 +43,593 @@ def yaw_to_quaternion(yaw_rad: float) -> Quaternion:
     return euler_to_quaternion(0.0, 0.0, yaw_rad)
 
 
-class ArduinoSensorNode(Node):
+class CombinedArduinoSensorNode(Node):
     def __init__(self):
-        super().__init__("arduino_sensor_node")
+        super().__init__('combined_arduino_sensor_node')
 
-        # -----------------------------
-        # Parameters
-        # -----------------------------
-        self.declare_parameter("serial_port", "/dev/ttyACM0")
-        self.declare_parameter("baud_rate", 115200)
-        self.declare_parameter("timer_period_s", 0.01)
+        # Serial
+        self.declare_parameter('serial_port', '/dev/arduino_wheelchair')
+        self.declare_parameter('baud_rate', 1000000)
+        self.declare_parameter('timer_period_s', 0.01)
+        self.declare_parameter('clear_serial_buffers_on_start', True)
+        self.declare_parameter('serial_startup_delay_s', 2.0)
+        self.declare_parameter('startup_skip_lines', 20)
 
-        self.declare_parameter("clear_serial_buffers_on_start", True)
-        self.declare_parameter("serial_startup_delay_s", 2.0)
-        self.declare_parameter("startup_skip_lines", 20)
+        # Odometry / IMU
+        self.declare_parameter('wheel_diameter_m', 0.35)
+        self.declare_parameter('magnets_per_wheel', 12)
+        self.declare_parameter('wheel_base_m', 0.55)
+        self.declare_parameter('speed_window_s', 1.0)
+        self.declare_parameter('min_speed_dt_s', 0.05)
+        self.declare_parameter('speed_timeout_s', 1.25)
+        self.declare_parameter('speed_lowpass_alpha', 0.35)
+        self.declare_parameter('max_reasonable_speed_mps', 3.0)
+        self.declare_parameter('max_reasonable_angular_radps', 8.0)
+        self.declare_parameter('odom_frame', 'odom')
+        self.declare_parameter('base_frame', 'base_footprint')
+        self.declare_parameter('imu_frame', 'imu_link')
+        self.declare_parameter('publish_odom', True)
+        self.declare_parameter('publish_tf', True)
+        self.declare_parameter('publish_imu', True)
+        self.declare_parameter('use_imu_yaw', True)
+        self.declare_parameter('left_tick_sign', 1.0)
+        self.declare_parameter('right_tick_sign', 1.0)
 
-        self.declare_parameter("wheel_diameter_m", 0.35)
-        self.declare_parameter("magnets_per_wheel", 12)
-        self.declare_parameter("wheel_base_m", 0.55)
+        # Joystick serial output
+        self.declare_parameter('joystick_cmd_topic', '/joystick_cmd')
+        self.declare_parameter('enable_joystick_serial_output', True)
 
-        self.declare_parameter("odom_frame", "odom")
-        self.declare_parameter("base_frame", "base_footprint")
-        self.declare_parameter("imu_frame", "imu_link")
-
-        self.declare_parameter("publish_odom", True)
-        self.declare_parameter("publish_tf", True)
-        self.declare_parameter("publish_imu", True)
-
-        self.declare_parameter("use_imu_yaw", True)
-
-        self.declare_parameter("left_tick_sign", 1.0)
-        self.declare_parameter("right_tick_sign", 1.0)
-
-        self.declare_parameter("joystick_cmd_topic", "/joystick_cmd")
-        self.declare_parameter("enable_joystick_serial_output", True)
-
-        # Debug parameters.
-        # debug_no_data_period_s: how often to print when in_waiting == 0.
-        # debug_summary_period_s: how often to print counters.
-        # debug_raw_serial: print every received raw serial line.
-        self.declare_parameter("debug_enabled", True)
-        self.declare_parameter("debug_no_data_period_s", 1.0)
-        self.declare_parameter("debug_summary_period_s", 2.0)
-        self.declare_parameter("debug_raw_serial", True)
-        self.declare_parameter("debug_publish_messages", False)
-
-        self.serial_port_name = self.get_parameter("serial_port").value
-        self.baud_rate = int(self.get_parameter("baud_rate").value)
-        self.timer_period_s = float(self.get_parameter("timer_period_s").value)
-
-        self.clear_serial_buffers_on_start = bool(
-            self.get_parameter("clear_serial_buffers_on_start").value
+        # ToF LaserScan
+        self.declare_parameter('scan_topic', '/tof_scan')
+        self.declare_parameter('range_min', 0.05)
+        self.declare_parameter('range_max', 4.0)
+        self.declare_parameter('angle_min', -math.pi)
+        self.declare_parameter('angle_max', math.pi)
+        self.declare_parameter('angle_increment', math.radians(1.0))
+        self.declare_parameter('use_inf_for_empty_bins', True)
+        self.declare_parameter('send_tof_start_sequence', True)
+        self.declare_parameter('calibration_delay_sec', 5.0)
+        self.declare_parameter('compared_delay_sec', 5.0)
+        self.declare_parameter(
+            'sensor_poses',
+            [
+                0.0,    0.0, 0.0,
+               -0.042,  0.0, 0.0,
+               -0.084,  0.0, 0.0,
+               -0.126,  0.0, 0.0,
+               -0.168,  0.0, 0.0,
+               -0.210,  0.0, 0.0,
+               -0.252,  0.0, 0.0,
+               -0.294,  0.0, 0.0,
+            ],
         )
-        self.serial_startup_delay_s = float(
-            self.get_parameter("serial_startup_delay_s").value
-        )
-        self.startup_skip_lines = int(self.get_parameter("startup_skip_lines").value)
-
-        self.wheel_diameter_m = float(self.get_parameter("wheel_diameter_m").value)
-        self.magnets_per_wheel = int(self.get_parameter("magnets_per_wheel").value)
-        self.wheel_base_m = float(self.get_parameter("wheel_base_m").value)
-
-        self.odom_frame = self.get_parameter("odom_frame").value
-        self.base_frame = self.get_parameter("base_frame").value
-        self.imu_frame = self.get_parameter("imu_frame").value
-
-        self.publish_odom_enabled = bool(self.get_parameter("publish_odom").value)
-        self.publish_tf_enabled = bool(self.get_parameter("publish_tf").value)
-        self.publish_imu_enabled = bool(self.get_parameter("publish_imu").value)
-
-        self.use_imu_yaw = bool(self.get_parameter("use_imu_yaw").value)
-
-        self.left_tick_sign = float(self.get_parameter("left_tick_sign").value)
-        self.right_tick_sign = float(self.get_parameter("right_tick_sign").value)
-
-        self.joystick_cmd_topic = self.get_parameter("joystick_cmd_topic").value
-        self.enable_joystick_serial_output = bool(
-            self.get_parameter("enable_joystick_serial_output").value
+        self.declare_parameter(
+            'column_angles_deg',
+            [-22.5, -16.1, -9.6, -3.2, 3.2, 9.6, 16.1, 22.5],
         )
 
-        self.debug_enabled = bool(self.get_parameter("debug_enabled").value)
-        self.debug_no_data_period_s = float(
-            self.get_parameter("debug_no_data_period_s").value
-        )
-        self.debug_summary_period_s = float(
-            self.get_parameter("debug_summary_period_s").value
-        )
-        self.debug_raw_serial = bool(self.get_parameter("debug_raw_serial").value)
-        self.debug_publish_messages = bool(
-            self.get_parameter("debug_publish_messages").value
-        )
+        # Debug
+        self.declare_parameter('debug_enabled', True)
+        self.declare_parameter('debug_non_data', False)
+        self.declare_parameter('debug_publish_messages', False)
 
+        # Load params
+        self.serial_port_name = self.get_parameter('serial_port').value
+        self.baud_rate = int(self.get_parameter('baud_rate').value)
+        self.timer_period_s = float(self.get_parameter('timer_period_s').value)
+        self.clear_serial_buffers_on_start = bool(self.get_parameter('clear_serial_buffers_on_start').value)
+        self.serial_startup_delay_s = float(self.get_parameter('serial_startup_delay_s').value)
+        self.startup_skip_lines = int(self.get_parameter('startup_skip_lines').value)
+
+        self.wheel_diameter_m = float(self.get_parameter('wheel_diameter_m').value)
+        self.magnets_per_wheel = int(self.get_parameter('magnets_per_wheel').value)
+        self.wheel_base_m = float(self.get_parameter('wheel_base_m').value)
+        self.speed_window_s = float(self.get_parameter('speed_window_s').value)
+        self.min_speed_dt_s = float(self.get_parameter('min_speed_dt_s').value)
+        self.speed_timeout_s = float(self.get_parameter('speed_timeout_s').value)
+        self.speed_lowpass_alpha = float(self.get_parameter('speed_lowpass_alpha').value)
+        self.max_reasonable_speed_mps = float(self.get_parameter('max_reasonable_speed_mps').value)
+        self.max_reasonable_angular_radps = float(self.get_parameter('max_reasonable_angular_radps').value)
+        self.odom_frame = self.get_parameter('odom_frame').value
+        self.base_frame = self.get_parameter('base_frame').value
+        self.imu_frame = self.get_parameter('imu_frame').value
+        self.publish_odom_enabled = bool(self.get_parameter('publish_odom').value)
+        self.publish_tf_enabled = bool(self.get_parameter('publish_tf').value)
+        self.publish_imu_enabled = bool(self.get_parameter('publish_imu').value)
+        self.use_imu_yaw = bool(self.get_parameter('use_imu_yaw').value)
+        self.left_tick_sign = float(self.get_parameter('left_tick_sign').value)
+        self.right_tick_sign = float(self.get_parameter('right_tick_sign').value)
+
+        self.joystick_cmd_topic = self.get_parameter('joystick_cmd_topic').value
+        self.enable_joystick_serial_output = bool(self.get_parameter('enable_joystick_serial_output').value)
+
+        self.scan_topic = self.get_parameter('scan_topic').value
+        self.range_min = float(self.get_parameter('range_min').value)
+        self.range_max = float(self.get_parameter('range_max').value)
+        self.angle_min = float(self.get_parameter('angle_min').value)
+        self.angle_max = float(self.get_parameter('angle_max').value)
+        self.angle_increment = float(self.get_parameter('angle_increment').value)
+        self.use_inf_for_empty_bins = bool(self.get_parameter('use_inf_for_empty_bins').value)
+        self.send_tof_start_sequence = bool(self.get_parameter('send_tof_start_sequence').value)
+        self.calibration_delay_sec = float(self.get_parameter('calibration_delay_sec').value)
+        self.compared_delay_sec = float(self.get_parameter('compared_delay_sec').value)
+
+        self.debug_enabled = bool(self.get_parameter('debug_enabled').value)
+        self.debug_non_data = bool(self.get_parameter('debug_non_data').value)
+        self.debug_publish_messages = bool(self.get_parameter('debug_publish_messages').value)
+
+        sensor_poses_flat = self.get_parameter('sensor_poses').value
+        column_angles_deg = self.get_parameter('column_angles_deg').value
+        if len(sensor_poses_flat) != 24:
+            raise RuntimeError('sensor_poses must contain exactly 24 numbers')
+        self.sensor_poses = []
+        for i in range(0, len(sensor_poses_flat), 3):
+            self.sensor_poses.append((float(sensor_poses_flat[i]), float(sensor_poses_flat[i + 1]), float(sensor_poses_flat[i + 2])))
+        if len(column_angles_deg) != 8:
+            raise RuntimeError('column_angles_deg must contain exactly 8 angles')
+        self.column_angles_rad = [math.radians(float(a)) for a in column_angles_deg]
+        self.scan_bins = int(math.ceil((self.angle_max - self.angle_min) / self.angle_increment))
+
+        # Odometry state
         self.wheel_circumference_m = math.pi * self.wheel_diameter_m
         self.distance_per_tick_m = self.wheel_circumference_m / self.magnets_per_wheel
-
-        # -----------------------------
-        # Runtime state
-        # -----------------------------
-        self.serial_lock = threading.Lock()
-
         self.x = 0.0
         self.y = 0.0
         self.yaw_rad = 0.0
-
         self.previous_data = None
         self.initial_imu_yaw_rad = None
+        self.velocity_history = deque()
+        self.filtered_linear_velocity_mps = 0.0
+        self.filtered_angular_velocity_radps = 0.0
+        self.last_motion_time_s = None
 
-        # Debug counters.
-        self.timer_calls = 0
-        self.no_data_count = 0
+        # Counters
         self.raw_line_count = 0
-        self.empty_line_count = 0
-        self.non_data_line_count = 0
+        self.data_count = 0
+        self.tof_count = 0
+        self.bad_tof_count = 0
+        self.non_data_count = 0
         self.parse_fail_count = 0
-        self.valid_data_count = 0
+        self.invalid_dt_count = 0
         self.odom_init_count = 0
         self.odom_publish_count = 0
         self.imu_publish_count = 0
         self.tf_publish_count = 0
-        self.invalid_dt_count = 0
-        self.serial_exception_count = 0
         self.joystick_write_count = 0
         self.joystick_write_fail_count = 0
 
-        self.last_no_data_log_time = time.monotonic()
-        self.last_summary_log_time = time.monotonic()
-        self.last_valid_data_wall_time = None
-        self.last_raw_line_wall_time = None
-
-        # -----------------------------
         # ROS publishers/subscribers
-        # -----------------------------
-        self.get_logger().info("DEBUG INIT: creating ROS publishers/subscribers")
-
-        self.odom_pub = self.create_publisher(Odometry, "/odom", 10)
-        self.imu_pub = self.create_publisher(Imu, "/imu/data", 10)
+        self.odom_pub = self.create_publisher(Odometry, '/odom', 10)
+        self.imu_pub = self.create_publisher(Imu, '/imu/data', 10)
+        self.scan_pub = self.create_publisher(LaserScan, self.scan_topic, 10)
         self.tf_broadcaster = TransformBroadcaster(self)
+        self.joystick_sub = self.create_subscription(Int16MultiArray, self.joystick_cmd_topic, self.joystick_cmd_callback, 10)
 
-        self.joystick_sub = self.create_subscription(
-            Int16MultiArray,
-            self.joystick_cmd_topic,
-            self.joystick_cmd_callback,
-            10,
+        # Serial: opened only once here
+        self.serial_lock = threading.Lock()
+        self.running = True
+        self.serial_port = serial.Serial(
+            self.serial_port_name,
+            self.baud_rate,
+            timeout=0.01,
+            write_timeout=0.2,
+            exclusive=True,
         )
 
-        # -----------------------------
-        # Serial open
-        # -----------------------------
-        self.get_logger().info(
-            "DEBUG SERIAL OPEN: "
-            f"port={self.serial_port_name}, baud={self.baud_rate}, "
-            "timeout=0.01, write_timeout=0.01, exclusive=True"
-        )
-
-        try:
-            self.serial_port = serial.Serial(
-                self.serial_port_name,
-                self.baud_rate,
-                timeout=0.01,
-                write_timeout=0.01,
-                exclusive=True,
-            )
-        except serial.SerialException as error:
-            self.get_logger().error(
-                f"DEBUG SERIAL OPEN FAILED: could not open {self.serial_port_name}: {error}"
-            )
-            raise error
-
-        self.get_logger().info(
-            "DEBUG SERIAL OPEN OK: "
-            f"is_open={self.serial_port.is_open}, "
-            f"name={self.serial_port.name}, "
-            f"baudrate={self.serial_port.baudrate}, "
-            f"timeout={self.serial_port.timeout}, "
-            f"write_timeout={self.serial_port.write_timeout}"
-        )
-
-        # -----------------------------
-        # Startup buffer handling
-        # -----------------------------
         if self.clear_serial_buffers_on_start:
-            self.get_logger().info(
-                "DEBUG STARTUP BUFFER: clear_serial_buffers_on_start=True, "
-                f"sleeping {self.serial_startup_delay_s}s before reset_input_buffer()"
-            )
-
             if self.serial_startup_delay_s > 0.0:
                 time.sleep(self.serial_startup_delay_s)
+            with self.serial_lock:
+                self.serial_port.reset_input_buffer()
+                self.serial_port.reset_output_buffer()
 
-            try:
-                with self.serial_lock:
-                    waiting_before_clear = self.serial_port.in_waiting
-                    self.get_logger().info(
-                        "DEBUG STARTUP BUFFER: "
-                        f"in_waiting before clear={waiting_before_clear}"
-                    )
-                    self.serial_port.reset_input_buffer()
-                    self.serial_port.reset_output_buffer()
-                    waiting_after_clear = self.serial_port.in_waiting
+        self.get_logger().info(f'Connected to {self.serial_port_name} at {self.baud_rate} baud')
+        self.get_logger().info('One serial reader handles DATA -> /odom,/imu and TOF64 -> /tof_scan')
 
-                self.get_logger().info(
-                    "DEBUG STARTUP BUFFER: serial input/output buffers cleared, "
-                    f"in_waiting after clear={waiting_after_clear}"
-                )
-            except serial.SerialException as error:
-                self.get_logger().warn(
-                    f"DEBUG STARTUP BUFFER FAILED: could not clear serial buffers: {error}"
-                )
-        else:
-            self.get_logger().info(
-                "DEBUG STARTUP BUFFER: clear_serial_buffers_on_start=False, not clearing buffers"
-            )
+        self.send_protocol_line('START')
 
-        self.get_logger().info(
-            f"Connected to {self.serial_port_name} at {self.baud_rate} baud"
-        )
-
-        self.send_protocol_line("START")
-
-        self.get_logger().info(
-            "Expected Arduino format: "
-            "DATA,time_ms,left_ticks,right_ticks,left_state,right_state,"
-            "yaw_deg,pitch_deg,roll_deg"
-        )
-
-        self.get_logger().info(
-            f"Joystick command topic: {self.joystick_cmd_topic}, "
-            f"enabled={self.enable_joystick_serial_output}"
-        )
-
-        self.get_logger().info(
-            "DEBUG PARAMS: "
-            f"wheel_diameter_m={self.wheel_diameter_m}, "
-            f"wheel_circumference_m={self.wheel_circumference_m}, "
-            f"magnets_per_wheel={self.magnets_per_wheel}, "
-            f"distance_per_tick_m={self.distance_per_tick_m}, "
-            f"wheel_base_m={self.wheel_base_m}, "
-            f"use_imu_yaw={self.use_imu_yaw}, "
-            f"clear_serial_buffers_on_start={self.clear_serial_buffers_on_start}, "
-            f"serial_startup_delay_s={self.serial_startup_delay_s}, "
-            f"startup_skip_lines={self.startup_skip_lines}, "
-            f"publish_odom={self.publish_odom_enabled}, "
-            f"publish_tf={self.publish_tf_enabled}, "
-            f"publish_imu={self.publish_imu_enabled}, "
-            f"debug_enabled={self.debug_enabled}, "
-            f"debug_raw_serial={self.debug_raw_serial}"
-        )
-
-        self.get_logger().info(
-            f"DEBUG TIMER: creating read_serial timer with period={self.timer_period_s}s"
-        )
+        if self.send_tof_start_sequence:
+            self.sequence_thread = threading.Thread(target=self.tof_start_sequence, daemon=True)
+            self.sequence_thread.start()
 
         self.timer = self.create_timer(self.timer_period_s, self.read_serial)
 
-    def debug_log_summary_if_needed(self):
-        if not self.debug_enabled:
-            return
-
-        now = time.monotonic()
-        if now - self.last_summary_log_time < self.debug_summary_period_s:
-            return
-
-        self.last_summary_log_time = now
-
-        seconds_since_raw = None
-        if self.last_raw_line_wall_time is not None:
-            seconds_since_raw = round(now - self.last_raw_line_wall_time, 3)
-
-        seconds_since_valid = None
-        if self.last_valid_data_wall_time is not None:
-            seconds_since_valid = round(now - self.last_valid_data_wall_time, 3)
-
-        try:
-            with self.serial_lock:
-                waiting = self.serial_port.in_waiting
-                is_open = self.serial_port.is_open
-        except Exception as error:
-            waiting = "error"
-            is_open = "error"
-            self.get_logger().warn(
-                f"DEBUG SUMMARY: could not read serial state: {error}"
-            )
-
-        self.get_logger().warn(
-            "DEBUG SUMMARY: "
-            f"timer_calls={self.timer_calls}, "
-            f"in_waiting={waiting}, is_open={is_open}, "
-            f"raw_lines={self.raw_line_count}, valid_data={self.valid_data_count}, "
-            f"non_data={self.non_data_line_count}, parse_fail={self.parse_fail_count}, "
-            f"empty={self.empty_line_count}, no_data={self.no_data_count}, "
-            f"invalid_dt={self.invalid_dt_count}, odom_pub={self.odom_publish_count}, "
-            f"tf_pub={self.tf_publish_count}, imu_pub={self.imu_publish_count}, "
-            f"seconds_since_raw={seconds_since_raw}, "
-            f"seconds_since_valid={seconds_since_valid}, "
-            f"previous_data_exists={self.previous_data is not None}"
-        )
-
     def send_protocol_line(self, line: str):
-        if not hasattr(self, "serial_port"):
+        if not hasattr(self, 'serial_port') or not self.serial_port.is_open:
             return
-
-        if not self.serial_port.is_open:
-            return
-
         try:
             with self.serial_lock:
-                self.serial_port.write((line + "\n").encode("ascii"))
+                self.serial_port.write((line + '\n').encode('ascii'))
                 self.serial_port.flush()
-
-            self.get_logger().info(f"DEBUG PROTOCOL WRITE OK: {line}")
         except serial.SerialException as error:
-            self.get_logger().error(
-                f"Serial protocol write error while sending {line!r}: {error}"
-            )
+            self.get_logger().error(f'Serial write error while sending {line!r}: {error}')
+
+    def tof_start_sequence(self):
+        # 1 = ToF live stream, 2 = ESP calibrate, 3 = compared/calibrated stream.
+        self.send_protocol_line('1')
+        self.get_logger().info('Sent ToF command 1: live stream')
+
+        end_time = time.monotonic() + self.calibration_delay_sec
+        while self.running and time.monotonic() < end_time:
+            time.sleep(0.05)
+        if not self.running:
+            return
+
+        self.send_protocol_line('2')
+        self.get_logger().info('Sent ToF command 2: calibration')
+
+        end_time = time.monotonic() + self.compared_delay_sec
+        while self.running and time.monotonic() < end_time:
+            time.sleep(0.05)
+        if not self.running:
+            return
+
+        self.send_protocol_line('3')
+        self.get_logger().info('Sent ToF command 3: calibrated compared stream')
 
     def joystick_cmd_callback(self, msg: Int16MultiArray):
-        self.get_logger().info(
-            f"DEBUG JOYSTICK CALLBACK: received msg.data={list(msg.data)}"
-        )
-
         if not self.enable_joystick_serial_output:
-            self.get_logger().warn(
-                "DEBUG JOYSTICK CALLBACK: serial output disabled, not writing to Arduino"
-            )
             return
-
         if len(msg.data) < 2:
-            self.get_logger().warn(
-                f"Invalid joystick_cmd message: expected [x, y], got {msg.data}"
-            )
+            self.get_logger().warn(f'Invalid joystick_cmd message: expected [x, y], got {msg.data}')
             return
-
-        x = int(msg.data[0])
-        y = int(msg.data[1])
-
-        x = max(-100, min(100, x))
-        y = max(-100, min(100, y))
-
-        line = f"J,{x},{y}\n"
-
+        x = max(-100, min(100, int(msg.data[0])))
+        y = max(-100, min(100, int(msg.data[1])))
         try:
             with self.serial_lock:
-                before_waiting = self.serial_port.in_waiting
-                self.serial_port.write(line.encode("ascii"))
-                after_waiting = self.serial_port.in_waiting
-
+                self.serial_port.write(f'J,{x},{y}\n'.encode('ascii'))
+                self.serial_port.flush()
             self.joystick_write_count += 1
-            self.get_logger().info(
-                "DEBUG JOYSTICK WRITE OK: "
-                f"line={line.strip()}, writes={self.joystick_write_count}, "
-                f"in_waiting_before={before_waiting}, in_waiting_after={after_waiting}"
-            )
         except serial.SerialException as error:
             self.joystick_write_fail_count += 1
-            self.get_logger().error(
-                f"Serial joystick write error: {error}; failures={self.joystick_write_fail_count}"
-            )
-
-    def parse_data_line(self, line: str):
-        parts = line.split(",")
-
-        if len(parts) != 9:
-            self.get_logger().warn(
-                "DEBUG PARSE FAIL: wrong number of comma parts, "
-                f"n_parts={len(parts)}, parts={parts}, line={line!r}"
-            )
-            return None
-
-        if parts[0] != "DATA":
-            self.get_logger().warn(
-                f"DEBUG PARSE FAIL: first field is not DATA, first={parts[0]!r}, line={line!r}"
-            )
-            return None
-
-        try:
-            data = {
-                "time_ms": int(parts[1]),
-                "left_ticks": int(parts[2]),
-                "right_ticks": int(parts[3]),
-                "left_state": int(parts[4]),
-                "right_state": int(parts[5]),
-                "yaw_deg": float(parts[6]),
-                "pitch_deg": float(parts[7]),
-                "roll_deg": float(parts[8]),
-            }
-        except ValueError as error:
-            self.get_logger().warn(
-                f"DEBUG PARSE FAIL: ValueError={error}, parts={parts}, line={line!r}"
-            )
-            return None
-
-        self.get_logger().info(
-            "DEBUG PARSE OK: "
-            f"time_ms={data['time_ms']}, left_ticks={data['left_ticks']}, "
-            f"right_ticks={data['right_ticks']}, yaw_deg={data['yaw_deg']}"
-        )
-        return data
+            self.get_logger().error(f'Serial joystick write error: {error}; failures={self.joystick_write_fail_count}')
 
     def read_serial(self):
-        self.timer_calls += 1
-        self.debug_log_summary_if_needed()
-
         lines_read = 0
-        max_lines_per_timer = 50
-
+        max_lines_per_timer = 100
         while lines_read < max_lines_per_timer:
             try:
                 with self.serial_lock:
-                    waiting = self.serial_port.in_waiting
-
-                    if waiting <= 0:
-                        self.no_data_count += 1
-
-                        now = time.monotonic()
-                        if (
-                            self.debug_enabled
-                            and now - self.last_no_data_log_time >= self.debug_no_data_period_s
-                        ):
-                            self.last_no_data_log_time = now
-                            self.get_logger().warn(
-                                "DEBUG SERIAL NO DATA: "
-                                f"in_waiting=0, is_open={self.serial_port.is_open}, "
-                                f"timer_calls={self.timer_calls}, "
-                                f"no_data_count={self.no_data_count}, "
-                                f"lines_read_this_timer={lines_read}"
-                            )
+                    if self.serial_port.in_waiting <= 0:
                         break
-
-                    if self.debug_enabled:
-                        self.get_logger().info(
-                            "DEBUG SERIAL BEFORE READ: "
-                            f"in_waiting={waiting}, lines_read_this_timer={lines_read}"
-                        )
-
                     raw_line = self.serial_port.readline()
-
-                    if self.debug_enabled:
-                        waiting_after = self.serial_port.in_waiting
-                        self.get_logger().info(
-                            "DEBUG SERIAL AFTER READ: "
-                            f"raw_len={len(raw_line)}, in_waiting_after={waiting_after}"
-                        )
-
             except serial.SerialException as error:
-                self.serial_exception_count += 1
-                self.get_logger().error(
-                    f"Serial read error: {error}; serial_exception_count={self.serial_exception_count}"
-                )
+                self.get_logger().error(f'Serial read error: {error}')
                 return
 
             if not raw_line:
-                self.empty_line_count += 1
-                self.get_logger().warn(
-                    "DEBUG SERIAL EMPTY READ: readline() returned empty bytes even though in_waiting was positive"
-                )
                 break
 
             lines_read += 1
             self.raw_line_count += 1
-            self.last_raw_line_wall_time = time.monotonic()
-
-            try:
-                line = raw_line.decode("utf-8", errors="ignore").strip()
-            except Exception as error:
-                self.parse_fail_count += 1
-                self.get_logger().warn(
-                    f"DEBUG DECODE FAIL: error={error}, raw_line={raw_line!r}"
-                )
-                continue
-
+            line = raw_line.decode('utf-8', errors='ignore').strip()
             if not line:
-                self.empty_line_count += 1
-                self.get_logger().warn(
-                    f"DEBUG SERIAL BLANK LINE: raw_line={raw_line!r}"
-                )
                 continue
-
-            if self.debug_raw_serial:
-                self.get_logger().info(f"RAW SERIAL: {line}")
 
             if self.startup_skip_lines > 0:
                 self.startup_skip_lines -= 1
-                self.get_logger().info(
-                    "DEBUG STARTUP SKIP: "
-                    f"skipped line={line!r}, remaining={self.startup_skip_lines}"
-                )
                 continue
 
-            if not line.startswith("DATA"):
-                self.non_data_line_count += 1
-                self.get_logger().warn(
-                    f"Non-DATA line received: {line}; non_data_count={self.non_data_line_count}"
-                )
+            if line.startswith('DATA'):
+                data = self.parse_data_line(line)
+                if data is None:
+                    self.parse_fail_count += 1
+                    self.get_logger().warn(f'Could not parse DATA line: {line[:120]}')
+                    continue
+                self.data_count += 1
+                self.update_odometry(data)
                 continue
 
-            data = self.parse_data_line(line)
-
-            if data is None:
-                self.parse_fail_count += 1
-                parts = line.split(",")
-                self.get_logger().warn(
-                    "Could not parse DATA line. "
-                    f"n_parts={len(parts)}, parts={parts}, parse_fail_count={self.parse_fail_count}"
-                )
+            if line.startswith('TOF64'):
+                decoded = self.parse_tof64_line(line)
+                if decoded is None:
+                    self.bad_tof_count += 1
+                    self.get_logger().warn(f'Bad TOF64 line: {line[:120]}')
+                    continue
+                self.tof_count += 1
+                self.publish_scan(decoded)
                 continue
 
-            self.valid_data_count += 1
-            self.last_valid_data_wall_time = time.monotonic()
-            self.get_logger().info(
-                f"VALID DATA #{self.valid_data_count}: {data}"
-            )
-            self.update_odometry(data)
+            if line.startswith('DBG_'):
+                self.get_logger().info(line)
+                continue
 
-        if self.debug_enabled and lines_read >= max_lines_per_timer:
-            self.get_logger().warn(
-                "DEBUG SERIAL MAX LINES: reached max_lines_per_timer=50 in one timer callback; "
-                "serial stream may be faster than processing/logging"
-            )
+            self.non_data_count += 1
+            if self.debug_non_data:
+                self.get_logger().warn(f'Ignored serial line: {line[:120]}')
+
+    # =========================
+    # DATA -> odometry / IMU
+    # =========================
+    def parse_data_line(self, line: str):
+        parts = line.split(',')
+        if len(parts) != 9 or parts[0] != 'DATA':
+            return None
+        try:
+            return {
+                'time_ms': int(parts[1]),
+                'left_ticks': int(parts[2]),
+                'right_ticks': int(parts[3]),
+                'left_state': int(parts[4]),
+                'right_state': int(parts[5]),
+                'yaw_deg': float(parts[6]),
+                'pitch_deg': float(parts[7]),
+                'roll_deg': float(parts[8]),
+            }
+        except ValueError:
+            return None
+
+    def signed_total_ticks(self, data):
+        return (float(data['left_ticks']) * self.left_tick_sign, float(data['right_ticks']) * self.right_tick_sign)
+
+    def push_velocity_sample(self, time_s: float, data, yaw_rad: float):
+        left_ticks, right_ticks = self.signed_total_ticks(data)
+        self.velocity_history.append({'time_s': time_s, 'left_ticks': left_ticks, 'right_ticks': right_ticks, 'yaw_rad': yaw_rad})
+        while len(self.velocity_history) > 2 and time_s - self.velocity_history[0]['time_s'] > self.speed_window_s:
+            self.velocity_history.popleft()
+
+    def estimate_window_velocity(self, current_time_s: float):
+        if len(self.velocity_history) < 2:
+            return (self.filtered_linear_velocity_mps, self.filtered_angular_velocity_radps)
+
+        newest = self.velocity_history[-1]
+        oldest = self.velocity_history[0]
+        window_dt = newest['time_s'] - oldest['time_s']
+        if window_dt < self.min_speed_dt_s:
+            return (self.filtered_linear_velocity_mps, self.filtered_angular_velocity_radps)
+
+        delta_left_ticks = newest['left_ticks'] - oldest['left_ticks']
+        delta_right_ticks = newest['right_ticks'] - oldest['right_ticks']
+        ticks_changed = abs(delta_left_ticks) > 0.0 or abs(delta_right_ticks) > 0.0
+
+        if ticks_changed:
+            self.last_motion_time_s = newest['time_s']
+            left_speed_mps = delta_left_ticks * self.distance_per_tick_m / window_dt
+            right_speed_mps = delta_right_ticks * self.distance_per_tick_m / window_dt
+            raw_linear_velocity_mps = (left_speed_mps + right_speed_mps) / 2.0
+            raw_angular_from_wheels = (right_speed_mps - left_speed_mps) / self.wheel_base_m
+            if self.use_imu_yaw:
+                yaw_delta = normalize_angle(newest['yaw_rad'] - oldest['yaw_rad'])
+                raw_angular_velocity_radps = yaw_delta / window_dt
+            else:
+                raw_angular_velocity_radps = raw_angular_from_wheels
+        elif self.last_motion_time_s is not None and current_time_s - self.last_motion_time_s < self.speed_timeout_s:
+            raw_linear_velocity_mps = self.filtered_linear_velocity_mps
+            raw_angular_velocity_radps = self.filtered_angular_velocity_radps
+        else:
+            raw_linear_velocity_mps = 0.0
+            raw_angular_velocity_radps = 0.0
+
+        if abs(raw_linear_velocity_mps) > self.max_reasonable_speed_mps:
+            raw_linear_velocity_mps = self.filtered_linear_velocity_mps
+        if abs(raw_angular_velocity_radps) > self.max_reasonable_angular_radps:
+            raw_angular_velocity_radps = self.filtered_angular_velocity_radps
+
+        alpha = max(0.0, min(1.0, self.speed_lowpass_alpha))
+        self.filtered_linear_velocity_mps = alpha * raw_linear_velocity_mps + (1.0 - alpha) * self.filtered_linear_velocity_mps
+        self.filtered_angular_velocity_radps = alpha * raw_angular_velocity_radps + (1.0 - alpha) * self.filtered_angular_velocity_radps
+        return (self.filtered_linear_velocity_mps, self.filtered_angular_velocity_radps)
 
     def update_odometry(self, data):
-        self.get_logger().info(
-            "DEBUG ODOM UPDATE ENTER: "
-            f"previous_data_exists={self.previous_data is not None}, data_time_ms={data['time_ms']}"
-        )
+        current_time_s = data['time_ms'] / 1000.0
 
         if self.previous_data is None:
             self.previous_data = data
-            self.initial_imu_yaw_rad = math.radians(data["yaw_deg"])
+            self.initial_imu_yaw_rad = math.radians(data['yaw_deg'])
+            self.yaw_rad = 0.0
+            self.push_velocity_sample(current_time_s, data, self.yaw_rad)
             self.odom_init_count += 1
-
-            self.get_logger().info(
-                "Received first DATA line. Odometry initialized. "
-                f"odom_init_count={self.odom_init_count}, "
-                f"initial_imu_yaw_rad={self.initial_imu_yaw_rad}"
-            )
+            self.get_logger().info('Received first DATA line. Odometry initialized.')
             return
 
-        current_time_ms = data["time_ms"]
-        previous_time_ms = self.previous_data["time_ms"]
-
-        dt = (current_time_ms - previous_time_ms) / 1000.0
-
-        self.get_logger().info(
-            "DEBUG ODOM TIMING: "
-            f"current_time_ms={current_time_ms}, previous_time_ms={previous_time_ms}, dt={dt}"
-        )
-
+        dt = (data['time_ms'] - self.previous_data['time_ms']) / 1000.0
         if dt <= 0.0:
             self.invalid_dt_count += 1
-            self.get_logger().warn(
-                f"Invalid dt={dt}. current_time_ms={current_time_ms}, "
-                f"previous_time_ms={previous_time_ms}. Skipping odometry update. "
-                f"invalid_dt_count={self.invalid_dt_count}"
-            )
             self.previous_data = data
             return
 
-        delta_left_ticks = data["left_ticks"] - self.previous_data["left_ticks"]
-        delta_right_ticks = data["right_ticks"] - self.previous_data["right_ticks"]
-
-        raw_delta_left_ticks = delta_left_ticks
-        raw_delta_right_ticks = delta_right_ticks
-
-        delta_left_ticks *= self.left_tick_sign
-        delta_right_ticks *= self.right_tick_sign
+        delta_left_ticks = (data['left_ticks'] - self.previous_data['left_ticks']) * self.left_tick_sign
+        delta_right_ticks = (data['right_ticks'] - self.previous_data['right_ticks']) * self.right_tick_sign
 
         left_distance_m = delta_left_ticks * self.distance_per_tick_m
         right_distance_m = delta_right_ticks * self.distance_per_tick_m
+        distance_m = (left_distance_m + right_distance_m) / 2.0
 
-        left_speed_mps = left_distance_m / dt
-        right_speed_mps = right_distance_m / dt
-
-        linear_velocity_mps = (left_speed_mps + right_speed_mps) / 2.0
-
-        angular_velocity_radps_from_wheels = (
-            right_speed_mps - left_speed_mps
-        ) / self.wheel_base_m
+        left_increment_speed_mps = left_distance_m / dt
+        right_increment_speed_mps = right_distance_m / dt
+        angular_velocity_radps_from_wheels = (right_increment_speed_mps - left_increment_speed_mps) / self.wheel_base_m
 
         previous_yaw_rad = self.yaw_rad
-        imu_yaw_rad = math.radians(data["yaw_deg"])
-
+        imu_yaw_rad = math.radians(data['yaw_deg'])
         if self.use_imu_yaw:
             self.yaw_rad = normalize_angle(imu_yaw_rad - self.initial_imu_yaw_rad)
-            angular_velocity_radps = normalize_angle(
-                self.yaw_rad - previous_yaw_rad
-            ) / dt
-            yaw_source = "imu"
         else:
-            self.yaw_rad = normalize_angle(
-                self.yaw_rad + angular_velocity_radps_from_wheels * dt
-            )
-            angular_velocity_radps = angular_velocity_radps_from_wheels
-            yaw_source = "wheel_ticks"
-
-        distance_m = (left_distance_m + right_distance_m) / 2.0
+            self.yaw_rad = normalize_angle(self.yaw_rad + angular_velocity_radps_from_wheels * dt)
 
         heading_delta = normalize_angle(self.yaw_rad - previous_yaw_rad)
         heading_mid = normalize_angle(previous_yaw_rad + heading_delta / 2.0)
-
-        old_x = self.x
-        old_y = self.y
-
         self.x += distance_m * math.cos(heading_mid)
         self.y += distance_m * math.sin(heading_mid)
 
-        self.get_logger().info(
-            "DEBUG ODOM CALC: "
-            f"raw_delta_left_ticks={raw_delta_left_ticks}, "
-            f"raw_delta_right_ticks={raw_delta_right_ticks}, "
-            f"signed_delta_left_ticks={delta_left_ticks}, "
-            f"signed_delta_right_ticks={delta_right_ticks}, "
-            f"left_distance_m={left_distance_m:.6f}, "
-            f"right_distance_m={right_distance_m:.6f}, "
-            f"linear_velocity_mps={linear_velocity_mps:.6f}, "
-            f"angular_velocity_radps={angular_velocity_radps:.6f}, "
-            f"yaw_source={yaw_source}, previous_yaw_rad={previous_yaw_rad:.6f}, "
-            f"yaw_rad={self.yaw_rad:.6f}, old_x={old_x:.6f}, old_y={old_y:.6f}, "
-            f"new_x={self.x:.6f}, new_y={self.y:.6f}"
-        )
-
+        self.push_velocity_sample(current_time_s, data, self.yaw_rad)
+        linear_velocity_mps, angular_velocity_radps = self.estimate_window_velocity(current_time_s)
         stamp = self.get_clock().now().to_msg()
-
-        self.get_logger().info(
-            "DEBUG ODOM PUBLISH DECISION: "
-            f"publish_odom={self.publish_odom_enabled}, "
-            f"publish_tf={self.publish_tf_enabled}, "
-            f"publish_imu={self.publish_imu_enabled}, "
-            f"stamp={stamp.sec}.{stamp.nanosec:09d}"
-        )
 
         if self.publish_odom_enabled:
             self.publish_odom(stamp, linear_velocity_mps, angular_velocity_radps)
-        else:
-            self.get_logger().warn("DEBUG ODOM SKIP: publish_odom is disabled")
-
         if self.publish_tf_enabled:
             self.publish_tf(stamp)
-        else:
-            self.get_logger().warn("DEBUG TF SKIP: publish_tf is disabled")
-
         if self.publish_imu_enabled:
             self.publish_imu(stamp, data, angular_velocity_radps)
-        else:
-            self.get_logger().warn("DEBUG IMU SKIP: publish_imu is disabled")
 
         self.previous_data = data
-        self.get_logger().info(
-            "DEBUG ODOM UPDATE EXIT: previous_data updated to current DATA line"
-        )
 
-    def publish_odom(
-        self,
-        stamp,
-        linear_velocity_mps: float,
-        angular_velocity_radps: float,
-    ):
+    def publish_odom(self, stamp, linear_velocity_mps: float, angular_velocity_radps: float):
         quat = yaw_to_quaternion(self.yaw_rad)
-
         odom_msg = Odometry()
-
         odom_msg.header.stamp = stamp
         odom_msg.header.frame_id = self.odom_frame
         odom_msg.child_frame_id = self.base_frame
-
         odom_msg.pose.pose.position.x = self.x
         odom_msg.pose.pose.position.y = self.y
         odom_msg.pose.pose.position.z = 0.0
         odom_msg.pose.pose.orientation = quat
-
         odom_msg.twist.twist.linear.x = linear_velocity_mps
         odom_msg.twist.twist.linear.y = 0.0
         odom_msg.twist.twist.linear.z = 0.0
-
         odom_msg.twist.twist.angular.x = 0.0
         odom_msg.twist.twist.angular.y = 0.0
         odom_msg.twist.twist.angular.z = angular_velocity_radps
-
         odom_msg.pose.covariance[0] = 0.05
         odom_msg.pose.covariance[7] = 0.05
-        odom_msg.pose.covariance[35] = 0.10
-
-        odom_msg.twist.covariance[0] = 0.10
-        odom_msg.twist.covariance[35] = 0.20
-
+        odom_msg.pose.covariance[35] = 0.1
+        odom_msg.twist.covariance[0] = 0.1
+        odom_msg.twist.covariance[35] = 0.2
         self.odom_pub.publish(odom_msg)
         self.odom_publish_count += 1
 
-        if self.debug_publish_messages:
-            self.get_logger().info(
-                "DEBUG ODOM PUBLISHED: "
-                f"count={self.odom_publish_count}, frame={self.odom_frame}, "
-                f"child={self.base_frame}, x={self.x:.6f}, y={self.y:.6f}, "
-                f"yaw_rad={self.yaw_rad:.6f}, v={linear_velocity_mps:.6f}, "
-                f"w={angular_velocity_radps:.6f}"
-            )
-        elif self.odom_publish_count % 20 == 0:
-            self.get_logger().info(
-                f"DEBUG ODOM PUBLISHED SUMMARY: count={self.odom_publish_count}"
-            )
-
     def publish_tf(self, stamp):
         quat = yaw_to_quaternion(self.yaw_rad)
-
         tf_msg = TransformStamped()
-
         tf_msg.header.stamp = stamp
         tf_msg.header.frame_id = self.odom_frame
         tf_msg.child_frame_id = self.base_frame
-
         tf_msg.transform.translation.x = self.x
         tf_msg.transform.translation.y = self.y
         tf_msg.transform.translation.z = 0.0
         tf_msg.transform.rotation = quat
-
         self.tf_broadcaster.sendTransform(tf_msg)
         self.tf_publish_count += 1
 
-        if self.debug_publish_messages:
-            self.get_logger().info(
-                "DEBUG TF PUBLISHED: "
-                f"count={self.tf_publish_count}, {self.odom_frame}->{self.base_frame}, "
-                f"x={self.x:.6f}, y={self.y:.6f}, yaw_rad={self.yaw_rad:.6f}"
-            )
-
     def publish_imu(self, stamp, data, angular_velocity_radps: float):
         imu_msg = Imu()
-
         imu_msg.header.stamp = stamp
         imu_msg.header.frame_id = self.imu_frame
-
-        roll_rad = math.radians(data["roll_deg"])
-        pitch_rad = math.radians(data["pitch_deg"])
-        yaw_rad = self.yaw_rad
-
-        imu_msg.orientation = euler_to_quaternion(roll_rad, pitch_rad, yaw_rad)
-
+        imu_msg.orientation = euler_to_quaternion(math.radians(data['roll_deg']), math.radians(data['pitch_deg']), self.yaw_rad)
         imu_msg.angular_velocity.x = 0.0
         imu_msg.angular_velocity.y = 0.0
         imu_msg.angular_velocity.z = angular_velocity_radps
-
         imu_msg.linear_acceleration.x = 0.0
         imu_msg.linear_acceleration.y = 0.0
         imu_msg.linear_acceleration.z = 0.0
-
-        imu_msg.orientation_covariance[0] = 0.10
-        imu_msg.orientation_covariance[4] = 0.10
-        imu_msg.orientation_covariance[8] = 0.10
-
+        imu_msg.orientation_covariance[0] = 0.1
+        imu_msg.orientation_covariance[4] = 0.1
+        imu_msg.orientation_covariance[8] = 0.1
         imu_msg.angular_velocity_covariance[0] = 99999.0
         imu_msg.angular_velocity_covariance[4] = 99999.0
-        imu_msg.angular_velocity_covariance[8] = 0.20
-
+        imu_msg.angular_velocity_covariance[8] = 0.2
         imu_msg.linear_acceleration_covariance[0] = -1.0
-
         self.imu_pub.publish(imu_msg)
         self.imu_publish_count += 1
 
-        if self.debug_publish_messages:
-            self.get_logger().info(
-                "DEBUG IMU PUBLISHED: "
-                f"count={self.imu_publish_count}, frame={self.imu_frame}, "
-                f"roll_deg={data['roll_deg']}, pitch_deg={data['pitch_deg']}, "
-                f"yaw_rad={yaw_rad:.6f}, angular_z={angular_velocity_radps:.6f}"
-            )
+    # =========================
+    # TOF64 -> LaserScan
+    # =========================
+    def parse_tof64_line(self, line: str) -> Optional[dict]:
+        parts = line.split(',')
+        if len(parts) != 4 or parts[0] != 'TOF64':
+            return None
+        try:
+            time_ms = int(parts[1])
+            seq = int(parts[2])
+            hex_data = parts[3].strip()
+        except ValueError:
+            return None
+        if len(hex_data) != 64 * 4:
+            return None
+
+        points = []
+        for i in range(64):
+            word_hex = hex_data[i * 4:(i + 1) * 4]
+            try:
+                packed = int(word_hex, 16)
+            except ValueError:
+                return None
+            distance_mm = packed >> 3
+            column = packed & 0x07
+            tof_id = i // 8
+            points.append({'tof_id': tof_id, 'column': column, 'distance_m': distance_mm / 1000.0})
+
+        return {'time_ms': time_ms, 'seq': seq, 'points': points}
+
+    def publish_scan(self, decoded: dict):
+        stamp = self.get_clock().now().to_msg()
+        empty_value = math.inf if self.use_inf_for_empty_bins else float('nan')
+        ranges = [empty_value for _ in range(self.scan_bins)]
+
+        for p in decoded['points']:
+            tof_id = p['tof_id']
+            col = p['column']
+            distance_m = p['distance_m']
+
+            if tof_id < 0 or tof_id >= len(self.sensor_poses):
+                continue
+            if col < 0 or col >= len(self.column_angles_rad):
+                continue
+            if distance_m < self.range_min or distance_m > self.range_max:
+                continue
+
+            sensor_x, sensor_y, sensor_yaw = self.sensor_poses[tof_id]
+            global_angle = float(sensor_yaw) + self.column_angles_rad[col]
+            point_x = float(sensor_x) + distance_m * math.cos(global_angle)
+            point_y = float(sensor_y) + distance_m * math.sin(global_angle)
+            scan_angle = math.atan2(point_y, point_x)
+            scan_range = math.hypot(point_x, point_y)
+
+            if scan_range < self.range_min or scan_range > self.range_max:
+                continue
+            if scan_angle < self.angle_min or scan_angle >= self.angle_max:
+                continue
+
+            bin_index = int((scan_angle - self.angle_min) / self.angle_increment)
+            if bin_index < 0 or bin_index >= self.scan_bins:
+                continue
+
+            current = ranges[bin_index]
+            if math.isinf(current) or math.isnan(current) or scan_range < current:
+                ranges[bin_index] = scan_range
+
+        scan = LaserScan()
+        scan.header.stamp = stamp
+        scan.header.frame_id = self.base_frame
+        scan.angle_min = self.angle_min
+        scan.angle_max = self.angle_min + self.scan_bins * self.angle_increment
+        scan.angle_increment = self.angle_increment
+        scan.time_increment = 0.0
+        scan.scan_time = 0.0666667
+        scan.range_min = self.range_min
+        scan.range_max = self.range_max
+        scan.ranges = ranges
+        self.scan_pub.publish(scan)
 
     def destroy_node(self):
-        self.get_logger().warn(
-            "DEBUG DESTROY ENTER: "
-            f"raw_lines={self.raw_line_count}, valid_data={self.valid_data_count}, "
-            f"odom_pub={self.odom_publish_count}, tf_pub={self.tf_publish_count}, "
-            f"imu_pub={self.imu_publish_count}, no_data={self.no_data_count}, "
-            f"serial_exceptions={self.serial_exception_count}"
-        )
-
-        if hasattr(self, "serial_port"):
-            self.get_logger().warn(
-                "DEBUG DESTROY SERIAL STATE: "
-                f"is_open={self.serial_port.is_open}, name={self.serial_port.name}"
-            )
-
-        if hasattr(self, "serial_port") and self.serial_port.is_open:
+        self.running = False
+        if hasattr(self, 'serial_port') and self.serial_port.is_open:
             try:
                 with self.serial_lock:
-                    self.serial_port.write(b"STOP\n")
+                    self.serial_port.write(b'0\n')
+                    self.serial_port.write(b'STOP\n')
                     self.serial_port.flush()
                     time.sleep(0.05)
                     self.serial_port.close()
-                self.get_logger().info(
-                    "Serial port closed after sending STOP protocol command."
-                )
+                self.get_logger().info('Serial port closed after sending 0 and STOP.')
             except Exception as error:
-                self.get_logger().warn(
-                    f"Error while closing serial port: {error}"
-                )
-
-        self.get_logger().warn("DEBUG DESTROY EXIT: calling super().destroy_node()")
+                self.get_logger().warn(f'Error while closing serial port: {error}')
         super().destroy_node()
 
 
 def main(args=None):
     rclpy.init(args=args)
-
-    node = ArduinoSensorNode()
-
+    node = CombinedArduinoSensorNode()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
-        node.get_logger().warn("DEBUG MAIN: KeyboardInterrupt received")
-    except Exception as error:
-        node.get_logger().error(f"DEBUG MAIN: unexpected exception: {error}")
-        raise
+        pass
     finally:
-        node.get_logger().warn("DEBUG MAIN: shutting down node")
         node.destroy_node()
-
         if rclpy.ok():
             rclpy.shutdown()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

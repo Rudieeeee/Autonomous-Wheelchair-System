@@ -1,7 +1,7 @@
 package.xml
 setup.cfg
 setup.py
-behavior_trees/wheelchair_obstacle_replanning.xml
+behavior_trees/wheelchair_obstacle_replan.xml
 config/nav2_mapping_params.yaml
 config/nav2_params.yaml
 config/nav2_params_tof64.yaml

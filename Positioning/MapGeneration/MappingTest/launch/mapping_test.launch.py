@@ -42,8 +42,8 @@ def generate_launch_description():
             'odom_frame': odom_frame,
             'map_frame': map_frame,
             'scan_topic': '/scan',
-            'transform_timeout': '2.0',
-            'tf_buffer_duration': '60.0',
+            'transform_timeout': '0.2',
+            'tf_buffer_duration': '20.0',
         }.items(),
     )
 
@@ -113,7 +113,7 @@ def generate_launch_description():
         DeclareLaunchArgument('angle_min', default_value='-3.06201518195'),
         DeclareLaunchArgument('angle_max', default_value='3.06201518195'),
         DeclareLaunchArgument('range_min', default_value='0.1'),
-        DeclareLaunchArgument('range_max', default_value='50.0'),
+        DeclareLaunchArgument('range_max', default_value='12.0'),
 
         DeclareLaunchArgument('laser_frame', default_value='laser'),
         DeclareLaunchArgument('base_frame', default_value='base_footprint'),
