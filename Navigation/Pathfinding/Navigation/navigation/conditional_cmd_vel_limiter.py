@@ -13,7 +13,7 @@ class ConditionalCmdVelLimiter(Node):
         self.declare_parameter("output_topic", "/cmd_vel_limited")
 
         self.declare_parameter("linear_zero_threshold", 0.02)
-        self.declare_parameter("moving_angular_limit", 0.25)
+        self.declare_parameter("moving_angular_limit", 1)
         self.declare_parameter("pure_rotation_angular_limit", 10.0)
 
         self.input_topic = self.get_parameter("input_topic").value

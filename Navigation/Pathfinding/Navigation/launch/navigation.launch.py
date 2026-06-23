@@ -177,9 +177,9 @@ def generate_launch_description():
 
                 'fallback_max_linear_speed': 1.39,
                 'fallback_max_angular_speed': 0.42,
-                'fallback_min_forward_joystick': 25,
+                'fallback_min_forward_joystick': 60,
                 'fallback_min_backward_joystick': 40,
-                'fallback_min_turn_joystick': 25,
+                'fallback_min_turn_joystick': 50,
 
                 'require_accurate_amcl': True,
                 'amcl_pose_topic': '/amcl_pose',

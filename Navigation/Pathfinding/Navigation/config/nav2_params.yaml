@@ -38,7 +38,7 @@ controller_server:
     general_goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
       stateful: true
-      xy_goal_tolerance: 0.05
+      xy_goal_tolerance: 0.25
       yaw_goal_tolerance: 6.28 
 
     FollowPath:
@@ -53,7 +53,7 @@ controller_server:
       transform_tolerance: 0.3
       use_velocity_scaled_lookahead_dist: true
 
-      min_approach_linear_velocity: 0.01
+      min_approach_linear_velocity: 0.2
       approach_velocity_scaling_dist: 0.9
 
       use_collision_detection: true
@@ -62,9 +62,9 @@ controller_server:
       use_regulated_linear_velocity_scaling: true
       use_cost_regulated_linear_velocity_scaling: true
       regulated_linear_scaling_min_radius: 0.55
-      regulated_linear_scaling_min_speed: 0.01
+      regulated_linear_scaling_min_speed: 0.2
 
-      use_rotate_to_heading: true
+      use_rotate_to_heading: false
       rotate_to_heading_angular_vel: 10.0
       rotate_to_heading_min_angle: 0.436332313
       max_angular_accel: 10.0
