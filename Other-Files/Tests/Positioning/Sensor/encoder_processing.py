@@ -2,9 +2,13 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# --- CONFIGURATION ---
+
 TICKS_PER_REV = 20
+
 D_TRUE_STRAIGHT = 5.00
+
+R_TRUE = 0.175
+B_TRUE = 0.550
 
 FILE_STRAIGHT = r"C:\Users\Paion\EE\BEP\Autonomous-Wheelchair-System\Other-Files\Tests\Positioning\Sensor\forward_drive_test5m.csv"
 FILE_SPIN = r"C:\Users\Paion\EE\BEP\Autonomous-Wheelchair-System\Other-Files\Tests\Positioning\Sensor\spin_test.csv"
@@ -21,6 +25,7 @@ def load_encoder_csv(filepath):
     ]
 
     missing = [col for col in required_cols if col not in df.columns]
+
     if missing:
         raise ValueError(f"Missing columns in {filepath}: {missing}")
 
@@ -29,91 +34,261 @@ def load_encoder_csv(filepath):
     if df.empty:
         raise ValueError(f"No valid rows found in {filepath}")
 
+    return df.reset_index(drop=True)
+
+
+def zero_data(df):
+    df = df.copy().reset_index(drop=True)
+
+    df["time_ms"] = np.subtract(
+        df["time_ms"],
+        df["time_ms"].iloc[0]
+    )
+
+    df["left_ticks_raw"] = df["left_ticks"].copy()
+    df["right_ticks_raw"] = df["right_ticks"].copy()
+
+    df["left_ticks"] = np.subtract(
+        df["left_ticks"],
+        df["left_ticks"].iloc[0]
+    )
+
+    df["right_ticks"] = np.subtract(
+        df["right_ticks"],
+        df["right_ticks"].iloc[0]
+    )
+
+    yaw_rad = np.radians(df["yaw_deg"].values)
+    yaw_unwrapped_rad = np.unwrap(yaw_rad)
+
+    df["yaw_zeroed_deg"] = np.degrees(
+        np.subtract(
+            yaw_unwrapped_rad,
+            yaw_unwrapped_rad[0]
+        )
+    )
+
     return df
 
 
-# =====================================================================
-# PHASE 1: EFFECTIVE ROLLING RADIUS CALIBRATION
-# =====================================================================
-print("--- Processing Phase 1: Effective Wheel Rolling Radius ---")
-
-df_straight = load_encoder_csv(FILE_STRAIGHT)
-
-delta_ticks_L = abs(df_straight["left_ticks"].iloc[-1] - df_straight["left_ticks"].iloc[0])
-delta_ticks_R = abs(df_straight["right_ticks"].iloc[-1] - df_straight["right_ticks"].iloc[0])
-avg_ticks = (delta_ticks_L + delta_ticks_R) / 2.0
-
-if avg_ticks == 0:
-    raise ValueError("Straight test has zero encoder ticks. Wheel radius cannot be calculated.")
-
-R_eff = (D_TRUE_STRAIGHT * TICKS_PER_REV) / (2.0 * np.pi * avg_ticks)
-quantization_error = (2.0 * np.pi * R_eff) / TICKS_PER_REV
-
-print(f"Total Left Ticks:  {delta_ticks_L}")
-print(f"Total Right Ticks: {delta_ticks_R}")
-print(f"Calculated Effective Wheel Radius R: {R_eff:.4f} m")
-print(f"Sensor Quantization Step Size Q:     {quantization_error:.4f} m/tick\n")
+def ticks_to_distance(ticks, wheel_radius):
+    return np.multiply(
+        np.divide(ticks, TICKS_PER_REV),
+        2.0 * np.pi * wheel_radius
+    )
 
 
-# =====================================================================
-# PHASE 2: EFFECTIVE TRACK WIDTH CALIBRATION
-# =====================================================================
-print("--- Processing Phase 2: Effective Kinematic Track Width ---")
+def radius_from_right_ticks(distance_m, right_ticks):
+    if abs(right_ticks) == 0:
+        raise ValueError("Right encoder has zero ticks. Radius cannot be calculated.")
 
-df_spin = load_encoder_csv(FILE_SPIN)
-
-raw_yaw_rad = np.radians(df_spin["yaw_deg"].values)
-unwrapped_yaw_rad = np.unwrap(raw_yaw_rad)
-
-total_imu_delta_theta = abs(unwrapped_yaw_rad[-1] - unwrapped_yaw_rad[0])
-
-if total_imu_delta_theta == 0:
-    raise ValueError("Spin test has zero IMU yaw change. Track width cannot be calculated.")
-
-spin_ticks_L = df_spin["left_ticks"].iloc[-1] - df_spin["left_ticks"].iloc[0]
-spin_ticks_R = df_spin["right_ticks"].iloc[-1] - df_spin["right_ticks"].iloc[0]
-
-distance_L = (spin_ticks_L / TICKS_PER_REV) * 2.0 * np.pi * R_eff
-distance_R = (spin_ticks_R / TICKS_PER_REV) * 2.0 * np.pi * R_eff
-
-B_eff = abs(distance_R - distance_L) / total_imu_delta_theta
-
-print(f"Total Turn IMU Rotation: {np.degrees(total_imu_delta_theta):.2f} degrees")
-print(f"Calculated Effective Track Width B: {B_eff:.4f} m")
+    return np.divide(
+        distance_m * TICKS_PER_REV,
+        2.0 * np.pi * abs(right_ticks)
+    )
 
 
-# =====================================================================
-# PHASE 3: GRAPHING ODOMETRY VS IMU
-# =====================================================================
-calculated_distances_L = (
-    (df_spin["left_ticks"] - df_spin["left_ticks"].iloc[0])
-    / TICKS_PER_REV
-) * 2.0 * np.pi * R_eff
+def percent_error(estimated, measured):
+    if measured == 0:
+        return np.nan
 
-calculated_distances_R = (
-    (df_spin["right_ticks"] - df_spin["right_ticks"].iloc[0])
-    / TICKS_PER_REV
-) * 2.0 * np.pi * R_eff
+    return np.multiply(
+        np.divide(
+            np.subtract(estimated, measured),
+            measured
+        ),
+        100.0
+    )
 
-encoder_yaw_rad = (calculated_distances_R - calculated_distances_L) / B_eff
-encoder_yaw_deg = np.degrees(encoder_yaw_rad)
 
-imu_yaw_deg = np.degrees(unwrapped_yaw_rad - unwrapped_yaw_rad[0])
+def expected_ticks_for_distance(distance_m, wheel_radius):
+    wheel_circumference = 2.0 * np.pi * wheel_radius
 
-time_axis_sec = (df_spin["time_ms"] - df_spin["time_ms"].iloc[0]) / 1000.0
+    revolutions = np.divide(
+        distance_m,
+        wheel_circumference
+    )
+
+    return np.multiply(
+        revolutions,
+        TICKS_PER_REV
+    )
+
+
+print()
+print("Processing straight drive using right encoder only")
+print()
+
+df_straight_raw = load_encoder_csv(FILE_STRAIGHT)
+df_straight = zero_data(df_straight_raw)
+
+right_ticks_straight = abs(df_straight["right_ticks"].iloc[-1])
+left_ticks_straight = abs(df_straight["left_ticks"].iloc[-1])
+
+R_eff = radius_from_right_ticks(
+    D_TRUE_STRAIGHT,
+    right_ticks_straight
+)
+
+R_error = np.subtract(R_eff, R_TRUE)
+R_error_percent = percent_error(R_eff, R_TRUE)
+
+expected_right_ticks = expected_ticks_for_distance(
+    D_TRUE_STRAIGHT,
+    R_TRUE
+)
+
+print(f"Left ticks ignored:                {left_ticks_straight}")
+print(f"Right ticks used:                  {right_ticks_straight}")
+print(f"Expected right ticks:              {expected_right_ticks:.2f}")
+print()
+print(f"Measured wheel radius:             {R_TRUE:.4f} m")
+print(f"Estimated wheel radius:            {R_eff:.4f} m")
+print(f"Wheel radius error:                {R_error:.4f} m")
+print(f"Wheel radius error percentage:     {R_error_percent:.2f} percent")
+print()
+
+
+right_distance_est = ticks_to_distance(
+    df_straight["right_ticks"],
+    R_eff
+)
+
+time_straight_sec = np.divide(
+    df_straight["time_ms"],
+    1000.0
+)
 
 plt.figure(figsize=(10, 5))
-plt.plot(time_axis_sec, imu_yaw_deg, label="BNO085 IMU yaw", linewidth=2)
-plt.plot(time_axis_sec, encoder_yaw_deg, "--", label="Calibrated wheel odometry", alpha=0.8)
 
-plt.title("Kinematic Track Width Calibration Profile")
-plt.xlabel("Experiment Time [s]")
-plt.ylabel("Accumulated Turn Rotation [deg]")
-plt.grid(True, linestyle="--")
+plt.plot(
+    time_straight_sec,
+    right_distance_est,
+    label="Estimated encoder distance using right encoder",
+    linewidth=2
+)
+
+plt.axhline(
+    y=D_TRUE_STRAIGHT,
+    linestyle=":",
+    label="Measured final distance"
+)
+
+plt.title("Estimated Distance From Right Encoder")
+plt.xlabel("Experiment time [s]")
+plt.ylabel("Distance [m]")
+plt.grid(True)
 plt.legend()
 plt.tight_layout()
-
-plt.savefig("odometry_calibration_results.png", dpi=300)
-
-print("\n[SUCCESS] Calibration plot exported as 'odometry_calibration_results.png'")
+plt.savefig("right_encoder_distance.png", dpi=300)
 plt.show()
+
+
+print("Processing spin test")
+print()
+
+df_spin_raw = load_encoder_csv(FILE_SPIN)
+df_spin = zero_data(df_spin_raw)
+
+spin_right_ticks = df_spin["right_ticks"].iloc[-1]
+spin_left_ticks = df_spin["left_ticks"].iloc[-1]
+
+imu_yaw_deg = df_spin["yaw_zeroed_deg"].values
+imu_final_yaw_deg = imu_yaw_deg[-1]
+
+print(f"Spin left ticks ignored:           {spin_left_ticks}")
+print(f"Spin right ticks used:             {spin_right_ticks}")
+print()
+print("Encoder based wheelbase estimate is not valid because the left encoder is corrupted.")
+print(f"Measured wheelbase used instead:   {B_TRUE:.4f} m")
+print()
+
+
+right_distance_spin = ticks_to_distance(
+    df_spin["right_ticks"],
+    R_eff
+)
+
+left_distance_spin_assumed = np.multiply(
+    right_distance_spin,
+    -1.0
+)
+
+encoder_yaw_rad = np.divide(
+    np.subtract(
+        right_distance_spin,
+        left_distance_spin_assumed
+    ),
+    B_TRUE
+)
+
+encoder_yaw_deg = np.degrees(encoder_yaw_rad)
+
+if imu_final_yaw_deg < 0:
+    encoder_yaw_deg = np.multiply(
+        encoder_yaw_deg,
+        -1.0
+    )
+
+encoder_final_yaw_deg = encoder_yaw_deg.iloc[-1]
+
+yaw_error_deg = np.subtract(
+    encoder_final_yaw_deg,
+    imu_final_yaw_deg
+)
+
+yaw_error_percent = percent_error(
+    encoder_final_yaw_deg,
+    imu_final_yaw_deg
+)
+
+print(f"Final IMU yaw:                     {imu_final_yaw_deg:.2f} deg")
+print(f"Final encoder yaw estimate:        {encoder_final_yaw_deg:.2f} deg")
+print(f"Yaw error:                         {yaw_error_deg:.2f} deg")
+print(f"Yaw error percentage:              {yaw_error_percent:.2f} percent")
+print()
+
+
+time_spin_sec = np.divide(
+    df_spin["time_ms"],
+    1000.0
+)
+
+plt.figure(figsize=(10, 5))
+
+plt.plot(
+    time_spin_sec,
+    imu_yaw_deg,
+    label="IMU yaw",
+    linewidth=2
+)
+
+plt.plot(
+    time_spin_sec,
+    encoder_yaw_deg,
+    linestyle=":",
+    label="Encoder yaw estimate using right encoder and measured wheelbase",
+    linewidth=2
+)
+
+plt.title("IMU Yaw Compared With Right Encoder Yaw Estimate")
+plt.xlabel("Experiment time [s]")
+plt.ylabel("Accumulated yaw [deg]")
+plt.grid(True)
+plt.legend()
+plt.tight_layout()
+plt.savefig("imu_vs_right_encoder_yaw.png", dpi=300)
+plt.show()
+
+
+print("Summary")
+print()
+print(f"Wheel radius measured:             {R_TRUE:.4f} m")
+print(f"Wheel radius estimated:            {R_eff:.4f} m")
+print(f"Wheel radius error percentage:     {R_error_percent:.2f} percent")
+print()
+print(f"Wheelbase measured:                {B_TRUE:.4f} m")
+print("Wheelbase estimated:               not valid with only one working encoder")
+print()
+print("Saved plot: right_encoder_distance.png")
+print("Saved plot: imu_vs_right_encoder_yaw.png")
