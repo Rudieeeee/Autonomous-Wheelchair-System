@@ -150,6 +150,7 @@ class QtVoiceObserver(QObject, VoiceObserver):
     navigate     = pyqtSignal(dict)
     create_point = pyqtSignal()
     dev_command  = pyqtSignal(str)
+    stop_driving = pyqtSignal()
 
     def __init__(self) -> None:
         QObject.__init__(self)
@@ -173,6 +174,7 @@ class QtVoiceObserver(QObject, VoiceObserver):
     def on_create_point(self) -> None:                   self.create_point.emit()
     def on_navigate(self, payload: dict) -> None:        self.navigate.emit(payload)
     def on_dev_command(self, command: str) -> None:      self.dev_command.emit(command)
+    def on_stop_driving(self) -> None:                   self.stop_driving.emit()
 
 
 def _state_for_gui(s: str) -> State:
@@ -300,6 +302,10 @@ def main() -> None:
     # below the threshold — so the chair waits for a good fix, then drives.
     _COV_GATE = 0.5
     _loc = {"cov": float("inf")}            # latest covariance metric (inf = unknown)
+    # Latest AMCL pose in the ROS2 map frame, refreshed on every /amcl_pose
+    # update.  "jarvis stop" sends this back out as the goal so the chair is
+    # told to drive to where it already is, which ends the current drive.
+    _pose = {"x": None, "y": None, "yaw": 0.0}
     _pending: dict | None = None            # held goal awaiting a confident fix
     _pending_lock = threading.Lock()
 
@@ -348,6 +354,7 @@ def main() -> None:
         released = None
         with _pending_lock:
             _loc["cov"] = cov
+            _pose["x"], _pose["y"], _pose["yaw"] = x, y, yaw
             if _pending is not None and cov < _COV_GATE:
                 released, _pending = _pending, None
         if released is not None:
@@ -477,6 +484,40 @@ def main() -> None:
         ros2.publish_estop(active)
 
     win.estop_requested.connect(_on_estop)
+
+    # Voice "stop" → end the current drive by sending the chair's current AMCL
+    # pose back out as the goal.  Nav2 then plans to where the chair already
+    # is and finishes immediately, so it stops driving without killing the
+    # nav stack, the voice subsystem, or the GUI.  Any goal that was held
+    # waiting for a tighter fix is dropped so it cannot fire later.
+    def _on_stop_driving() -> None:
+        nonlocal _pending
+        with _pending_lock:
+            _pending = None
+            x, y, yaw = _pose["x"], _pose["y"], _pose["yaw"]
+        if x is None or y is None:
+            # No pose yet (localization not up): fall back to the hard e-stop
+            # so a spoken stop still halts the chair.
+            ros2.publish_estop(True)
+            logger.warning("Stop — no AMCL pose yet, sent e-stop instead.")
+            win.request_set_reply.emit("Stopping, Master.")
+            win.request_set_robot_state.emit("ESTOP")
+            return
+        payload = {
+            "mode": "stop",
+            "destination_id": "STOP_HERE",
+            "destination_phrase": "stop",
+            "ros_x": x, "ros_y": y, "ros_yaw": yaw,
+            "confidence": 1.0,
+            "confirmed": True,
+            "timestamp": time.time(),
+        }
+        ros2.publish_nav_goal(payload)
+        ros2.publish_goal_pose(x, y, yaw)
+        logger.info("Stop — current pose sent as goal: (%.3f, %.3f) yaw=%.3f", x, y, yaw)
+        win.request_set_reply.emit("Stopping here, Master.")
+
+    voice_bridge.stop_driving.connect(_on_stop_driving)
 
     ros2.start()
     _mem_snap("+ ROS2 bridge started")               # MEMORY PROFILING

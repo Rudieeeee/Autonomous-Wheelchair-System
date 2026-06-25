@@ -73,6 +73,12 @@ _STT_NOISE_WORDS: frozenset = frozenset({
 # Average per-word confidence threshold.  Results below this are also dropped.
 _STT_MIN_CONF: float = 0.45
 
+# How close a spoken word must be to "jarvis" (difflib ratio, 0-1) before the
+# wake gate treats it as the wake word even though it is not in the alias list.
+# 0.8 catches one-or-two-letter slips ("jarvas", "jervis", "darvis") while
+# staying well clear of ordinary words so the chair does not false-wake.
+_WAKE_FUZZY_THRESHOLD: float = 0.8
+
 
 def _strip_edge_noise_words(text: str) -> str:
     """
@@ -112,9 +118,23 @@ _NAV_VERB_RE = re.compile(
     re.IGNORECASE,
 )
 
-# "stop" by itself (with optional politeness / emphasis words)
+# Emergency motion stop.  Matches a bare "stop" and the natural ways a
+# rider tells the chair to quit moving ("stop driving", "stop moving",
+# "stop the chair", "halt").  These all halt the chair immediately through
+# the e-stop path.  The object words are kept deliberately narrow so this
+# never swallows the operator commands "stop mapping / localization /
+# navigation" or the "stop listening" sleep command, which route to their
+# own handlers below.  A leading "jarvis" and a trailing "please" / "now"
+# are tolerated so "jarvis stop driving" and "stop please" both match.
 _STOP_ONLY_RE = re.compile(
-    r'^\s*(?:please\s+)?(?:emergency\s+)?stop[.!]?\s*$',
+    r'^\s*(?:jarvis[\s,]+)?(?:please\s+)?(?:emergency\s+)?'
+    r'(?:'
+    r'stop(?:\s+(?:right\s+now|now|driving|moving|going|the\s+(?:chair|wheelchair|car)))?'
+    r'|halt'
+    r'|brake'
+    r'|freeze'
+    r')'
+    r'(?:[\s,]+(?:please|now|jarvis))?[.!]?\s*$',
     re.IGNORECASE,
 )
 
@@ -137,6 +157,97 @@ _SLEEP_RE = re.compile(
     r'(?:[\s,]+jarvis)?[.!]?\s*$',
     re.IGNORECASE,
 )
+
+# ---------------------------------------------------------------------------
+# Operator / developer commands (resolved locally, no LLM)
+# ---------------------------------------------------------------------------
+# These were the slowest and least reliable spoken commands because each one
+# had to survive a Vosk transcript and a Groq classification before the
+# matching launcher button fired.  A garbled "stop navigation" came back as
+# chatter and dropped the whole conversation.  Matching them here makes them
+# react the same way the fast navigation path does, with no network round
+# trip and no dependence on the model.  Order matters: the broad "stop all"
+# is checked before the per-subsystem stops so "stop all navigation" is not
+# read as a navigation-only stop.  Vosk often clips "localization" to
+# "localize" / "local", so both are accepted.
+_DEV_CMD_PATTERNS = [
+    ("stop_all", re.compile(
+        r'\b(?:stop|shut\s*down|shutdown|kill|end|quit)\s+(?:everything|all)\b'
+        r'|\bshut\s+everything\s+down\b'
+        r'|\bstop\s+all\s+systems\b', re.IGNORECASE)),
+    ("start_all", re.compile(
+        r'\b(?:start|launch|boot|bring\s+up|begin)\s+(?:everything|all)\b'
+        r'|\blaunch\s+everything\b', re.IGNORECASE)),
+    ("stop_mapping", re.compile(
+        r'\b(?:stop|end|quit|halt|finish)\s+(?:the\s+)?mapping\b', re.IGNORECASE)),
+    ("start_mapping", re.compile(
+        r'\b(?:start|begin|launch|initialize|initialise)\s+(?:the\s+)?mapping\b',
+        re.IGNORECASE)),
+    ("stop_localization", re.compile(
+        r'\b(?:stop|end|quit|halt)\s+(?:the\s+)?local(?:ization|isation|ize|ise|izing|ising)?\b',
+        re.IGNORECASE)),
+    ("start_localization", re.compile(
+        r'\b(?:start|begin|launch|initialize|initialise)\s+(?:the\s+)?'
+        r'local(?:ization|isation|ize|ise|izing|ising)?\b', re.IGNORECASE)),
+    ("stop_navigation", re.compile(
+        r'\b(?:stop|end|quit|halt|cancel)\s+(?:the\s+)?navigation\b', re.IGNORECASE)),
+    ("start_navigation", re.compile(
+        r'\b(?:start|begin|launch|initialize|initialise)\s+(?:the\s+)?navigation\b',
+        re.IGNORECASE)),
+]
+
+
+def _match_dev_command(text: str) -> Optional[str]:
+    """Resolve an operator command from a transcript without the LLM.
+
+    Returns the dev-command string (the same value the LLM would put in
+    ``Intent.destination``) or ``None`` if nothing matches and the command
+    should fall through to the normal pipeline.
+    """
+    for cmd, pattern in _DEV_CMD_PATTERNS:
+        if pattern.search(text):
+            return cmd
+    return None
+
+
+# Spoken acknowledgements for the locally-resolved dev commands.  "{address}"
+# is filled in at runtime so they match the address used everywhere else.
+_DEV_CMD_REPLIES: dict = {
+    "start_mapping":       "Starting mapping, {address}.",
+    "stop_mapping":        "Stopping mapping, {address}.",
+    "start_localization":  "Starting localization, {address}.",
+    "stop_localization":   "Stopping localization, {address}.",
+    "start_navigation":    "Starting navigation, {address}.",
+    "stop_navigation":     "Stopping navigation, {address}.",
+    "start_all":           "Starting all systems, {address}.",
+    "stop_all":            "Stopping all systems, {address}.",
+}
+
+# ---------------------------------------------------------------------------
+# Map show / hide commands (resolved locally, no LLM)
+# ---------------------------------------------------------------------------
+# "show me the map" is the demo's most-used command, yet it was routed to the
+# LLM where a slightly garbled transcript came back as "chatter" and dropped
+# the whole conversation.  These patterns resolve the map intent the same way
+# FastNavigator resolves navigation, so a clear map phrase never depends on
+# the network or the model's mood.  A show verb plus a map noun anywhere in
+# the utterance is enough.
+_MAP_SHOW_RE = re.compile(
+    r'\b(?:show|see|view|open|display|bring\s+up|pull\s+up|put\s+up|give)\b'
+    r'[\w\s]*\b(?:map|floor\s*plan|layout)\b',
+    re.IGNORECASE,
+)
+_MAP_HIDE_RE = re.compile(
+    r'\b(?:hide|close|dismiss|remove|clear|take\s+away|get\s+rid\s+of)\b'
+    r'[\w\s]*\b(?:map|floor\s*plan|layout)\b',
+    re.IGNORECASE,
+)
+
+# Vosk reliably mangles "the map" into "them up" ("map" is short and out of
+# context), so "show me the map" arrives as "show me them up".  The bigram is
+# corrected before any matcher sees it so both the map regex above and the LLM
+# read the phrase the user actually said.
+_MAP_PHRASE_RE = re.compile(r'\bthem\s+up\b', re.IGNORECASE)
 
 # ---------------------------------------------------------------------------
 # Homophone correction
@@ -218,6 +329,7 @@ def _normalise_homophones(text: str) -> str:
     if not text:
         return text
     text = text.lower()
+    text = _MAP_PHRASE_RE.sub("the map", text)
     text = _PHRASE_RE.sub(lambda m: _PHRASE_SUBS[m.group(1)], text)
     text = _HOMOPHONE_RE.sub(lambda m: _HOMOPHONE_SUBS[m.group(1)], text)
     text = _fix_elevator_numbers(text)
@@ -362,7 +474,7 @@ class VoiceConfig:
     # The rest are real mishearings observed in noisy open-day testing.
     wake_word_aliases: list = field(default_factory=lambda: [
         "harvest", "harvard", "nervous", "therapist", "jurors", "server", "service", "services", "carvers", "garbage",
-        "jervis", "orvis",
+        "jervis", "orvis", "drivers", "brothers",
     ])
     awake_timeout_s: float = 30.0
     wake_acknowledgement: str = "What do you want?"
@@ -1018,6 +1130,8 @@ class WakeWordGate:
         self.wake_words = [self.wake_word] + [
             w.lower() for w in getattr(config, "wake_word_aliases", [])
         ]
+        # Set form for O(1) exact lookups during the fuzzy fallback below.
+        self._wake_word_set = set(self.wake_words)
         self.awake_timeout_s = config.awake_timeout_s
         self._awake_until = 0.0
         self._active = False
@@ -1026,16 +1140,37 @@ class WakeWordGate:
     def is_awake(self) -> bool:
         return self._active and time.time() < self._awake_until
 
+    def _is_wake_word(self, word: str) -> bool:
+        """True if a single spoken word is the wake word or a near-miss of it.
+
+        The fixed alias list only covers mishearings we have already seen.
+        Vosk invents a fresh one most sessions ("jarvas", "darvis", "jervis"),
+        so each token is also compared phonetically to "jarvis" and accepted
+        when it is close enough.  This is what lets the chair wake on a
+        misheard name instead of forcing the user to repeat themselves.
+        """
+        w = word.strip(" ,.:;!?-'\"")
+        if not w:
+            return False
+        if w in self._wake_word_set:
+            return True
+        return (difflib.SequenceMatcher(None, w, self.wake_word).ratio()
+                >= _WAKE_FUZZY_THRESHOLD)
+
     def filter(self, transcript: str) -> Optional[Union[str, _WakeAwoken]]:
         text = transcript.lower().strip()
         if not text:
             return None
 
-        # Wake on the first matching wake word (or alias) found in the text.
-        hit = next((w for w in self.wake_words if w in text), None)
-        if hit is not None:
-            idx = text.find(hit) + len(hit)
-            tail = text[idx:].lstrip(" ,.:;!?-")
+        # Wake on the first word that is the wake word, a known alias, or a
+        # close mishearing of "jarvis" (see _is_wake_word).
+        words = text.split()
+        wake_idx = next(
+            (i for i, w in enumerate(words) if self._is_wake_word(w)),
+            None,
+        )
+        if wake_idx is not None:
+            tail = " ".join(words[wake_idx + 1:]).lstrip(" ,.:;!?-")
             self._enter_conversation()
             return tail if tail else AWOKEN
 
@@ -1173,7 +1308,9 @@ Classify each user utterance into ONE of six intents:
               "bring me to", "drive to", "let's go to", "i want to go to",
               "head to". Naming a place WITHOUT such a verb is NOT a
               command. Destination MUST be one of the valid destinations.
-              "stop" alone is always navigate (emergency stop).
+              Any stop or halt phrase ("stop", "stop driving", "stop the
+              chair", "halt") is NOT navigate. Classify it as dev_command
+              with destination "emergency_stop".
 
   show_map  — the user wants to see the venue map. Triggers: "show me
               the map", "show the map", "open the map", "where am i",
@@ -1201,6 +1338,7 @@ Classify each user utterance into ONE of six intents:
               "developer mode" / "dev mode" / "switch to developer"     → "mode_developer"
               "user mode" / "switch to user" / "visitor mode"          → "mode_user"
               "emergency stop" / "activate e-stop" / "e stop"          → "emergency_stop"
+              "stop" / "stop driving" / "stop the chair" / "halt"       → "emergency_stop"
 
   question  — the user is asking you anything: facts, time, weather,
               jokes, opinions, status, small talk questions. Answer
@@ -1241,7 +1379,9 @@ Examples:
 "take me to lab a"             -> {"intent":"navigate","destination":"lab a","reply":"On my way to lab A, Master."}
 "bring me to the entrance"     -> {"intent":"navigate","destination":"entrance","reply":"Heading to the entrance, Master."}
 "i want to go to the cafeteria"-> {"intent":"navigate","destination":"cafeteria","reply":"Going to the cafeteria, Master."}
-"stop"                         -> {"intent":"navigate","destination":"stop","reply":"Stopping, Master."}
+"stop"                         -> {"intent":"dev_command","destination":"emergency_stop","reply":"Stopping immediately, Master."}
+"stop driving"                 -> {"intent":"dev_command","destination":"emergency_stop","reply":"Stopping immediately, Master."}
+"stop navigation"              -> {"intent":"dev_command","destination":"stop_navigation","reply":"Stopping navigation, Master."}
 "show me the map"              -> {"intent":"show_map","destination":null,"reply":"Of course, Master."}
 "open the floor plan"          -> {"intent":"show_map","destination":null,"reply":"Right away, Master."}
 "close the map"                -> {"intent":"hide_map","destination":null,"reply":"Closing the map, Master."}
@@ -1847,6 +1987,7 @@ class VoiceObserver:
     def on_create_point(self) -> None: ...
     def on_navigate(self, payload: dict) -> None: ...
     def on_dev_command(self, command: str) -> None: ...
+    def on_stop_driving(self) -> None: ...
 
 
 # -----------------------------------------------------------------------------
@@ -2097,6 +2238,13 @@ class VoiceController:
                 if result is None:
                     if self.config.show_partials:
                         partial = self.engine.partial().get("partial", "")
+                        # A lone "the"/"a" partial is Vosk chewing on room
+                        # noise, not the user.  Suppress it so a stray "the"
+                        # does not sit flashing on screen between commands.
+                        p_words = partial.split()
+                        if (len(p_words) == 1
+                                and p_words[0].lower() in _STT_NOISE_WORDS):
+                            partial = ""
                         if partial and partial != last_partial:
                             print(f"\r[live ] {partial:<70}",
                                   end="", flush=True)
@@ -2161,6 +2309,12 @@ class VoiceController:
                     self.observer.on_reply(reply)
                     self._broadcast_state("SPEAKING")
                     self.speaker.say(reply, drain=False)
+                    # Throw away the mic backlog that piled up while "Yes,
+                    # Master?" was playing.  Without this the loop decodes a
+                    # second or two of stale room audio first, which both
+                    # delays the real command and smears it together with
+                    # whatever leaked in (the garbled finals after a wake).
+                    self._drop_stale_audio("after wake ack")
                     self._broadcast_state("AWAITING COMMAND")
                     continue
 
@@ -2174,9 +2328,19 @@ class VoiceController:
                     self.fast_navigator.match(command, address=self._address)
                     if self.fast_navigator is not None else None
                 )
+                # A clear map command is also a finished sentence, so it skips
+                # the silence window too and reacts immediately.
+                map_hit = bool(_MAP_SHOW_RE.search(command)
+                               or _MAP_HIDE_RE.search(command))
+                # Operator commands ("stop navigation", "start mapping", ...)
+                # are finished sentences too, so they skip the silence window
+                # and react immediately like the stop and map commands.
+                dev_hit = _match_dev_command(command) is not None
                 if (_STOP_ONLY_RE.match(command)
                         or _SLEEP_RE.match(command)
-                        or fast_hit is not None):
+                        or fast_hit is not None
+                        or map_hit
+                        or dev_hit):
                     self._handle_command(command, final_text)
                     if _committer is not None:
                         _committer.reset()
@@ -2334,6 +2498,26 @@ class VoiceController:
             print(f"[drain] dropped {dropped} stale chunks ({reason})")
         return dropped
 
+    def _trigger_stop_driving(self) -> None:
+        """End the current drive in response to a spoken stop command.
+
+        Hands off to ``on_stop_driving()``, which main.py turns into a goal at
+        the chair's current AMCL pose.  Nav2 then plans to where the chair
+        already is and finishes at once, so it stops driving without killing
+        the nav stack, the voice subsystem, or the GUI.  The earlier nav-goal
+        route never stopped the chair because main.py rejects any goal that is
+        not a map marker, which is why a bare emit did nothing.
+        """
+        reply = f"Stopping here, {self._address}."
+        self.observer.on_reply(reply)
+        self._broadcast_state("SPEAKING")
+        self.speaker.say(reply)
+        self.observer.on_stop_driving()
+        self._pending_clarify = None
+        self.wake_gate.end_conversation()
+        self.intent_classifier.reset_history()
+        self._broadcast_state("LISTENING")
+
     def _handle_command(self, command: str, full_transcript: str) -> None:
         # ---- Homophone correction ----
         # Fix the common Vosk verb swaps (wake/break -> take, road -> go,
@@ -2343,6 +2527,16 @@ class VoiceController:
         if corrected != command:
             print(f"[Homophone] '{command}' -> '{corrected}'")
             command = corrected
+
+        # ---- Emergency motion stop (highest priority, no LLM) ----
+        # Checked before everything else, including a pending "Did you mean
+        # X?" question, so a spoken stop always halts the chair no matter what
+        # state Jarvis is in.  This covers "stop", "stop driving", "stop the
+        # chair", "halt", and the like (see _STOP_ONLY_RE).
+        if _STOP_ONLY_RE.match(command):
+            print("[FastStop] stop driving (LLM skipped)")
+            self._trigger_stop_driving()
+            return
 
         # ---- Explicit sleep command ("go to sleep" / "stop listening") ----
         # Spoken twin of the wake word: the user dismisses Jarvis on demand
@@ -2390,6 +2584,47 @@ class VoiceController:
                     self._broadcast_state("LISTENING")
                 return
 
+        # ---- Fast path: map show / hide (no LLM) ----
+        # The map command is the one the visitors use most, so it is resolved
+        # locally.  Routing it through the LLM meant a single misheard word
+        # ("show me them up") came back as chatter and dropped the
+        # conversation; the local match never does that.
+        if _MAP_SHOW_RE.search(command):
+            print("[FastMap] show_map  (LLM skipped)")
+            reply = f"Of course, {self._address}."
+            self.observer.on_reply(reply)
+            self._broadcast_state("SPEAKING")
+            self.speaker.say(reply)
+            self.observer.on_show_map()
+            self._broadcast_state("LISTENING")
+            return
+        if _MAP_HIDE_RE.search(command):
+            print("[FastMap] hide_map  (LLM skipped)")
+            reply = f"Closing the map, {self._address}."
+            self.observer.on_reply(reply)
+            self._broadcast_state("SPEAKING")
+            self.speaker.say(reply)
+            self.observer.on_hide_map()
+            self._broadcast_state("LISTENING")
+            return
+
+        # ---- Fast path: operator / developer commands (no LLM) ----
+        # Start / stop mapping, localization, navigation, and the all-in-one
+        # commands resolve locally so they no longer depend on a Groq round
+        # trip or the model classifying a clipped transcript correctly.
+        dev_cmd = _match_dev_command(command)
+        if dev_cmd is not None:
+            print(f"[FastDev] {dev_cmd}  (LLM skipped)")
+            reply = _DEV_CMD_REPLIES.get(
+                dev_cmd, f"Done, {self._address}."
+            ).format(address=self._address)
+            self.observer.on_reply(reply)
+            self._broadcast_state("SPEAKING")
+            self.speaker.say(reply)
+            self.observer.on_dev_command(dev_cmd)
+            self._broadcast_state("LISTENING")
+            return
+
         # ---- Parallel LLM + FastNav race ----
         # Submit the LLM call to the background thread immediately so the
         # Groq HTTP request is in flight while FastNav does its < 1 ms check.
@@ -2419,12 +2654,10 @@ class VoiceController:
                 self.observer.on_reply(reply)
 
                 if loc_id == "EMERGENCY_STOP":
-                    self._broadcast_state("SPEAKING")
-                    self.speaker.say(reply)
-                    self.emitter.emit(hit)
-                    self.wake_gate.end_conversation()
-                    self.intent_classifier.reset_history()
-                    self._broadcast_state("LISTENING")
+                    # A stop is a halt, not a destination.  End the drive by
+                    # resending the current pose as the goal (the plain nav-goal
+                    # path rejects it as "not a map marker").
+                    self._trigger_stop_driving()
                     return
 
                 # Voice confirmation before moving
@@ -2474,6 +2707,11 @@ class VoiceController:
             self.speaker.say(reply)
             self.observer.on_create_point()
         elif intent.intent_type == "dev_command":
+            # A stop that only the LLM caught still ends the drive the same way
+            # the fast path does, by resending the current pose as the goal.
+            if intent.destination in ("emergency_stop", "stop_driving"):
+                self._trigger_stop_driving()
+                return
             self.observer.on_reply(reply)
             self._broadcast_state("SPEAKING")
             self.speaker.say(reply)

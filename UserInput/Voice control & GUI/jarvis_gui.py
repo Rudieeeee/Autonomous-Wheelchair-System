@@ -77,7 +77,7 @@ from PyQt6.QtWidgets import (
 )
 
 
-WINDOWS_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+WINDOWS_PROJECT_ROOT = Path(__file__).resolve().parents[0]
 
 WSL_PROJECT_ROOT = PurePosixPath("/home/rudrh/Autonomous-Wheelchair-System")
 
