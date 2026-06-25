@@ -642,7 +642,16 @@ class Ros2WebsocketBridge(Ros2BridgeBase):
         self._send(ws, {"op": "subscribe", "topic": TOPIC_AMCL_POSE, "type": MSG_POSE_COV})
         self._send(ws, {"op": "subscribe", "topic": TOPIC_PATH,      "type": MSG_PATH})
         # rosbridge replays the last latched /map message automatically on subscribe.
-        self._send(ws, {"op": "subscribe", "topic": TOPIC_MAP,       "type": MSG_OCC_GRID})
+        self._send(ws, {
+            "op": "subscribe",
+            "topic": TOPIC_MAP,
+            "type": MSG_OCC_GRID,
+            "qos": {
+                "reliability": "reliable",
+                "durability": "transient_local",
+                "depth": 1
+            }
+        })
         self._set_connected(True)
 
     def _on_message(self, ws, raw: str) -> None:
