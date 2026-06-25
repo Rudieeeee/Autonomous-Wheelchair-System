@@ -77,7 +77,7 @@ from PyQt6.QtWidgets import (
 )
 
 
-WINDOWS_PROJECT_ROOT = Path(__file__).resolve().parents[0]
+WINDOWS_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 WSL_PROJECT_ROOT = PurePosixPath("/home/rudrh/Autonomous-Wheelchair-System")
 
@@ -159,11 +159,15 @@ _TOF_CALIB_CMD = (
     f"python3 {q(PROJECT_ROOT / 'Integration' / 'Sensors' / 'ToF' / 'ToF.py')}"
 )
 
-# IMU: calibration runs automatically in firmware setup() on the Arduino/BNO055.
-# No Python entry point exists — this just prints an explanation to the log.
-_IMU_CALIB_CMD = (
-    "echo 'IMU calibration is handled by the Arduino firmware (BNO055 setup).' "
-    "&& echo 'Check getCalStatus() in DFRobot_BNO055.cpp for calibration state.'"
+# Sensor status: launches a ROS2 checker that subscribes to the real sensor topics
+# from the launch files and reports whether data is being received.
+_SENSOR_STATUS_CMD = (
+    f"cd {q(PROJECT_ROOT)} && "
+    f"{source(ROS_SETUP)} && "
+    f"{source(MAPPING_WS / 'install' / 'setup.bash')} && "
+    f"{source(LOCALIZATION_WS / 'install' / 'setup.bash')} && "
+    f"{source(NAVIGATION_WS / 'install' / 'setup.bash')} && "
+    f"python3 {q(PROJECT_ROOT / 'Other-Files' / 'DeveloperTools' / 'sensor_status.py')}"
 )
 
 # CANBUS: read-only status check — shows whether the can0 interface is up.
@@ -213,6 +217,10 @@ def _launch_proc(cmd: str, name: str):
             for line in proc.stdout:
                 stripped = line.rstrip()
                 LogPanel.feed(f"[{name}] {stripped}")
+                if name == "Sensor Status":
+                    popup_cls = globals().get("SensorStatusWindow")
+                    if popup_cls is not None:
+                        popup_cls.feed(stripped)
                 print(f"[{name}] {stripped}")
         except Exception:
             pass
@@ -1731,6 +1739,143 @@ class LogPanel(QWidget):
 
 
 # =============================================================================
+# Sensor status popup
+# =============================================================================
+class SensorStatusWindow(QDialog):
+    """Small live sensor-status window.
+
+    It receives only the output of the Sensor Status process. Press ESC, click the
+    CLOSE button, or press the SENSOR STATUS button again to stop the process and
+    close this window.
+    """
+
+    stop_requested = pyqtSignal()
+    _queue: queue.Queue = queue.Queue()
+
+    @classmethod
+    def feed(cls, line: str) -> None:
+        """Push one Sensor Status log line from the launcher thread."""
+        cls._queue.put_nowait(line)
+
+    @classmethod
+    def clear_queue(cls) -> None:
+        """Remove old lines before a new Sensor Status run starts."""
+        while not cls._queue.empty():
+            try:
+                cls._queue.get_nowait()
+            except queue.Empty:
+                break
+
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        self._closing_from_owner = False
+        self.setWindowTitle("Sensor Status")
+        self.resize(720, 420)
+        self.setMinimumSize(520, 300)
+
+        title = QLabel("SENSOR STATUS")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet(
+            f"color: {Theme.ACCENT_BRIGHT.name()};"
+            "font-family: 'Segoe UI';"
+            "font-size: 14px;"
+            "font-weight: 700;"
+            "letter-spacing: 5px;"
+            "background: transparent;"
+        )
+
+        hint = QLabel("Press ESC or click CLOSE to stop Sensor Status.")
+        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        hint.setStyleSheet(
+            f"color: {Theme.TEXT_DIM.name()};"
+            "font-family: 'Segoe UI';"
+            "font-size: 11px;"
+            "letter-spacing: 2px;"
+            "background: transparent;"
+        )
+
+        self._text = QTextEdit()
+        self._text.setReadOnly(True)
+        self._text.setStyleSheet(
+            "background: rgba(4,10,24,245);"
+            f"color: {Theme.TEXT_PRIMARY.name()};"
+            "border: 1px solid rgba(80,170,255,90);"
+            "border-radius: 6px;"
+            "font-family: 'Consolas', 'Courier New';"
+            "font-size: 11px;"
+            "padding: 8px;"
+        )
+
+        close_btn = QPushButton("  CLOSE")
+        close_btn.setMinimumHeight(34)
+        close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        close_btn.clicked.connect(self.stop_requested.emit)
+        close_btn.setStyleSheet(
+            "QPushButton {"
+            "  background-color: rgba(80,170,255,120);"
+            "  color: white;"
+            "  border: 1px solid rgba(150,210,255,180);"
+            "  border-radius: 5px;"
+            "  font-family: 'Segoe UI'; font-size: 11px; font-weight: 700;"
+            "  letter-spacing: 3px; padding: 5px 18px;"
+            "}"
+            "QPushButton:hover { background-color: rgba(80,170,255,180); }"
+        )
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(14, 14, 14, 14)
+        layout.setSpacing(10)
+        layout.addWidget(title)
+        layout.addWidget(hint)
+        layout.addWidget(self._text, 1)
+        layout.addWidget(close_btn, 0, Qt.AlignmentFlag.AlignRight)
+
+        self.setStyleSheet(
+            "QDialog {"
+            "  background-color: rgb(4, 10, 24);"
+            "  border: 1px solid rgba(80,170,255,110);"
+            "}"
+        )
+
+        self._poll = QTimer(self)
+        self._poll.timeout.connect(self._drain)
+        self._poll.start(100)
+
+    def _drain(self) -> None:
+        added = False
+        lines = []
+        while not SensorStatusWindow._queue.empty():
+            try:
+                lines.append(SensorStatusWindow._queue.get_nowait())
+                added = True
+            except queue.Empty:
+                break
+        if added:
+            current = self._text.toPlainText()
+            combined = (current + "\n" if current else "") + "\n".join(lines)
+            all_lines = combined.splitlines()[-600:]
+            self._text.setPlainText("\n".join(all_lines))
+            sb = self._text.verticalScrollBar()
+            sb.setValue(sb.maximum())
+
+    def keyPressEvent(self, ev: QKeyEvent) -> None:
+        if ev.key() == Qt.Key.Key_Escape:
+            self.stop_requested.emit()
+            ev.accept()
+            return
+        super().keyPressEvent(ev)
+
+    def close_from_owner(self) -> None:
+        self._closing_from_owner = True
+        self.close()
+
+    def closeEvent(self, ev) -> None:
+        if not self._closing_from_owner:
+            self.stop_requested.emit()
+        ev.accept()
+
+
+# =============================================================================
 # Main window
 # =============================================================================
 class JarvisWindow(QMainWindow):
@@ -1790,6 +1935,7 @@ class JarvisWindow(QMainWindow):
         self._navigation_proc   = None
         self._tof_proc          = None
         self._imu_proc          = None
+        self._sensor_status_window = None
         self._canbus_proc       = None
         self._sensor_proc       = None
 
@@ -2019,7 +2165,7 @@ class JarvisWindow(QMainWindow):
         self._tof_btn.clicked.connect(self._on_tof_clicked)
         self._apply_launcher_btn_style(self._tof_btn, running=False)
 
-        self._imu_btn = QPushButton("  IMU CALIBRATION")
+        self._imu_btn = QPushButton("  SENSOR STATUS")
         self._imu_btn.setMinimumHeight(36)
         self._imu_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._imu_btn.clicked.connect(self._on_imu_clicked)
@@ -2478,19 +2624,20 @@ class JarvisWindow(QMainWindow):
             (self._localization_proc, "Localization"),
             (self._mapping_proc,      "Mapping"),
             (self._tof_proc,          "TOF Cal"),
-            (self._imu_proc,          "IMU Cal"),
+            (self._imu_proc,          "Sensor Status"),
             (self._canbus_proc,       "CANBUS"),
             (self._sensor_proc,       "Sensors"),
         ):
             _kill_proc(proc, name)
         self._mapping_proc = self._localization_proc = self._navigation_proc = None
         self._tof_proc = self._imu_proc = self._canbus_proc = self._sensor_proc = None
+        self._close_sensor_status_window()
         for btn, label in (
             (self._mapping_btn,      "  START MAPPING"),
             (self._localization_btn, "  START LOCALIZATION"),
             (self._navigation_btn,   "  START NAVIGATION"),
             (self._tof_btn,          "  TOF CALIBRATION"),
-            (self._imu_btn,          "  IMU CALIBRATION"),
+            (self._imu_btn,          "  SENSOR STATUS"),
             (self._canbus_btn,       "  NODE STATUS (CANBUS)"),
             (self._sensor_btn,       "  SENSOR READOUTS"),
         ):
@@ -2564,16 +2711,31 @@ class JarvisWindow(QMainWindow):
             self._apply_launcher_btn_style(self._tof_btn, running=True)
             self._tof_btn.setText("  STOP TOF CAL")
 
+    def _close_sensor_status_window(self) -> None:
+        if self._sensor_status_window is not None:
+            self._sensor_status_window.close_from_owner()
+            self._sensor_status_window = None
+
+    def _stop_sensor_status(self) -> None:
+        if self._imu_proc is not None and self._imu_proc.poll() is None:
+            _kill_proc(self._imu_proc, "Sensor Status")
+        self._imu_proc = None
+        self._close_sensor_status_window()
+        self._apply_launcher_btn_style(self._imu_btn, running=False)
+        self._imu_btn.setText("  SENSOR STATUS")
+
     def _on_imu_clicked(self) -> None:
         if self._imu_proc is not None and self._imu_proc.poll() is None:
-            _kill_proc(self._imu_proc, "IMU Cal")
-            self._imu_proc = None
-            self._apply_launcher_btn_style(self._imu_btn, running=False)
-            self._imu_btn.setText("  IMU CALIBRATION")
+            self._stop_sensor_status()
         else:
-            self._imu_proc = _launch_proc(_IMU_CALIB_CMD, "IMU Cal")
+            SensorStatusWindow.clear_queue()
+            self._sensor_status_window = SensorStatusWindow(self)
+            self._sensor_status_window.stop_requested.connect(self._stop_sensor_status)
+            self._sensor_status_window.show()
+
+            self._imu_proc = _launch_proc(_SENSOR_STATUS_CMD, "Sensor Status")
             self._apply_launcher_btn_style(self._imu_btn, running=True)
-            self._imu_btn.setText("  STOP IMU CAL")
+            self._imu_btn.setText("  STOP SENSOR STATUS")
 
     def _on_canbus_clicked(self) -> None:
         if self._canbus_proc is not None and self._canbus_proc.poll() is None:
