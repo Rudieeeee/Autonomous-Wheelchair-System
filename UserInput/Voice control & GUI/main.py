@@ -492,16 +492,21 @@ def main() -> None:
     # waiting for a tighter fix is dropped so it cannot fire later.
     def _on_stop_driving() -> None:
         nonlocal _pending
+        # Clear any highlighted destination so the marker turns back blue and
+        # the other markers regain full opacity. "" deselects (the str signal
+        # cannot carry None).
+        win.request_set_selected_destination.emit("")
         with _pending_lock:
             _pending = None
             x, y, yaw = _pose["x"], _pose["y"], _pose["yaw"]
         if x is None or y is None:
-            # No pose yet (localization not up): fall back to the hard e-stop
-            # so a spoken stop still halts the chair.
-            ros2.publish_estop(True)
-            logger.warning("Stop — no AMCL pose yet, sent e-stop instead.")
-            win.request_set_reply.emit("Stopping, Master.")
-            win.request_set_robot_state.emit("ESTOP")
+            # No pose yet (localization not up): there is no current pose to
+            # plan to, so stop the navigation stack instead. This kills the
+            # running nav launch so the chair stops planning and driving.
+            win.request_dev_command.emit("stop_navigation")
+            logger.warning("Stop — no AMCL pose yet, stopped navigation instead.")
+            win.request_set_reply.emit("Stopping navigation, Master.")
+            win.request_set_robot_state.emit("IDLE")
             return
         payload = {
             "mode": "stop",

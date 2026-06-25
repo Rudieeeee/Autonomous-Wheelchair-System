@@ -77,7 +77,7 @@ from PyQt6.QtWidgets import (
 )
 
 
-WINDOWS_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+WINDOWS_PROJECT_ROOT = Path(__file__).resolve().parents[0]
 
 WSL_PROJECT_ROOT = PurePosixPath("/home/rudrh/Autonomous-Wheelchair-System")
 
@@ -159,6 +159,13 @@ _TOF_CALIB_CMD = (
     f"python3 {q(PROJECT_ROOT / 'Integration' / 'Sensors' / 'ToF' / 'ToF.py')}"
 )
 
+# IMU: calibration runs automatically in firmware setup() on the Arduino/BNO055.
+# No Python entry point exists — this just prints an explanation to the log.
+_IMU_CALIB_CMD = (
+    "echo 'IMU calibration is handled by the Arduino firmware (BNO055 setup).' "
+    "&& echo 'Check getCalStatus() in DFRobot_BNO055.cpp for calibration state.'"
+)
+
 # Sensor status: launches a ROS2 checker that subscribes to the real sensor topics
 # from the launch files and reports whether data is being received.
 _SENSOR_STATUS_CMD = (
@@ -177,6 +184,13 @@ _CANBUS_CMD = "sudo ip link show can0"
 _SENSOR_CMD = (
     f"python3 {q(PROJECT_ROOT / 'Integration' / 'Sensors' / 'ToF' / 'ToF_ascii_plot.py')}"
 )
+
+# Tracking mode: a plain Python file on the WSL side, run the same way as the
+# other launchers run (Windows fires it through wsl.exe, see _launch_proc).
+# It is not a ROS2 launch, just a single script, so there is no workspace
+# sourcing here.  TODO: set TRACKING_PY to the real file path.
+TRACKING_PY = PROJECT_ROOT / "Navigation" / "Tracking" / "tracking.py"
+_TRACKING_CMD = f"python3 {q(TRACKING_PY)}"
 
 
 def _launch_proc(cmd: str, name: str):
@@ -1024,7 +1038,17 @@ class MapOverlay(QWidget):
         self._map_origin_y   = oy
         self._map_resolution = res
 
-        # Top bar: title + close hint.
+        # Top bar: small Jarvis logo + title/state on the left, live
+        # transcript in the middle, close hint on the right.  The mini logo
+        # and transcript keep the user aware of what Jarvis is doing while
+        # the map covers the main orb.
+        self._mini_orb = JarvisOrb()
+        self._mini_orb.setMinimumSize(0, 0)
+        self._mini_orb.setFixedSize(60, 60)
+        self._mini_orb.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
+        )
+
         self._title_label = QLabel("LIDAR MAP")
         title = self._title_label
         title.setStyleSheet(
@@ -1032,6 +1056,30 @@ class MapOverlay(QWidget):
             "font-family: 'Segoe UI'; font-size: 22px; font-weight: 600; "
             "letter-spacing: 4px;"
         )
+
+        # Live voice state, mirrored from the main console.
+        self._mini_state_label = QLabel(State.IDLE.value)
+        self._mini_state_label.setStyleSheet(
+            f"color: {Theme.ACCENT.name()}; "
+            "font-family: 'Segoe UI'; font-size: 11px; font-weight: 600; "
+            "letter-spacing: 5px;"
+        )
+
+        title_box = QVBoxLayout()
+        title_box.setSpacing(2)
+        title_box.setContentsMargins(0, 0, 0, 0)
+        title_box.addWidget(title)
+        title_box.addWidget(self._mini_state_label)
+
+        # Live transcript (partial / final), mirrored from the main console.
+        self._mini_transcript_label = QLabel("")
+        self._mini_transcript_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._mini_transcript_label.setWordWrap(True)
+        self._mini_transcript_label.setStyleSheet(
+            f"color: {Theme.TEXT_PRIMARY.name()}; "
+            "font-family: 'Segoe UI'; font-size: 15px; font-weight: 300;"
+        )
+
         hint = QLabel("Click a marker to navigate  ·  ESC to close")
         hint.setStyleSheet(
             f"color: {Theme.TEXT_DIM.name()}; "
@@ -1041,8 +1089,12 @@ class MapOverlay(QWidget):
         self._hint_label = hint
 
         top_bar = QHBoxLayout()
-        top_bar.setContentsMargins(40, 20, 40, 10)
-        top_bar.addWidget(title)
+        top_bar.setContentsMargins(40, 16, 40, 10)
+        top_bar.addWidget(self._mini_orb)
+        top_bar.addSpacing(14)
+        top_bar.addLayout(title_box)
+        top_bar.addStretch()
+        top_bar.addWidget(self._mini_transcript_label, 2)
         top_bar.addStretch()
         top_bar.addWidget(hint)
 
@@ -1088,6 +1140,24 @@ class MapOverlay(QWidget):
 
     def has_map(self) -> bool:
         return not self._pixmap.isNull()
+
+    # Mini console mirror -------------------------------------------------
+    def set_mini_state(self, state) -> None:
+        """Drive the small logo + state label from the main voice state."""
+        if isinstance(state, str):
+            try:
+                state = State(state)
+            except ValueError:
+                return
+        self._mini_orb.set_state(state)
+        self._mini_state_label.setText(state.value)
+
+    def set_mini_partial(self, text: str) -> None:
+        self._mini_transcript_label.setText(f"“{text}…”" if text else "")
+
+    def set_mini_final(self, text: str) -> None:
+        if text:
+            self._mini_transcript_label.setText(f"“{text}”")
 
     def fade_in(self) -> None:
         self.show()
@@ -1362,7 +1432,13 @@ class MapOverlay(QWidget):
         The voice path passes a lower-cased name (main.py stores waypoints lower-cased),
         while the markers keep their original casing. Resolve to the marker's canonical
         name so a case mismatch never silently skips the highlight.
+
+        An empty string clears the selection. The str-typed Qt signal cannot
+        carry None, so the stop path emits "" to deselect. A cleared marker
+        turns back blue and the others regain full opacity.
         """
+        if not name:
+            name = None
         if name is not None:
             for pt in self._map_points:
                 if pt["name"].lower() == name.lower():
@@ -1935,9 +2011,11 @@ class JarvisWindow(QMainWindow):
         self._navigation_proc   = None
         self._tof_proc          = None
         self._imu_proc          = None
+        self._sensor_status_proc   = None
         self._sensor_status_window = None
         self._canbus_proc       = None
         self._sensor_proc       = None
+        self._tracking_proc     = None
 
         # Current view mode: "user" | "developer"
         self._mode: str = "developer"
@@ -2165,11 +2243,17 @@ class JarvisWindow(QMainWindow):
         self._tof_btn.clicked.connect(self._on_tof_clicked)
         self._apply_launcher_btn_style(self._tof_btn, running=False)
 
-        self._imu_btn = QPushButton("  SENSOR STATUS")
+        self._imu_btn = QPushButton("  IMU CALIBRATION")
         self._imu_btn.setMinimumHeight(36)
         self._imu_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._imu_btn.clicked.connect(self._on_imu_clicked)
         self._apply_launcher_btn_style(self._imu_btn, running=False)
+
+        self._sensor_status_btn = QPushButton("  SENSOR STATUS")
+        self._sensor_status_btn.setMinimumHeight(36)
+        self._sensor_status_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._sensor_status_btn.clicked.connect(self._on_sensor_status_clicked)
+        self._apply_launcher_btn_style(self._sensor_status_btn, running=False)
 
         self._canbus_btn = QPushButton("  NODE STATUS (CANBUS)")
         self._canbus_btn.setMinimumHeight(36)
@@ -2194,6 +2278,7 @@ class JarvisWindow(QMainWindow):
         _dev_inner.setContentsMargins(0, 0, 0, 0)
         _dev_inner.addWidget(self._tof_btn)
         _dev_inner.addWidget(self._imu_btn)
+        _dev_inner.addWidget(self._sensor_status_btn)
         _dev_inner.addWidget(self._canbus_btn)
         _dev_inner.addWidget(self._sensor_btn)
         _dev_inner.addWidget(self._create_marker_btn)
@@ -2300,16 +2385,20 @@ class JarvisWindow(QMainWindow):
                 return
         self._orb.set_state(state)
         self._state_label.setText(state.value)
+        self._map.set_mini_state(state)
 
     def set_partial(self, text: str) -> None:
         if not text:
             self._transcript_label.setText("")
+            self._map.set_mini_partial("")
             return
         self._transcript_label.setText(f"“{text}…”")
+        self._map.set_mini_partial(text)
 
     def set_final(self, text: str) -> None:
         if text:
             self._transcript_label.setText(f"“{text}”")
+            self._map.set_mini_final(text)
 
     def set_reply(self, text: str) -> None:
         self._reply_label.setText(text or "")
@@ -2624,20 +2713,25 @@ class JarvisWindow(QMainWindow):
             (self._localization_proc, "Localization"),
             (self._mapping_proc,      "Mapping"),
             (self._tof_proc,          "TOF Cal"),
-            (self._imu_proc,          "Sensor Status"),
+            (self._imu_proc,          "IMU Cal"),
+            (self._sensor_status_proc, "Sensor Status"),
             (self._canbus_proc,       "CANBUS"),
             (self._sensor_proc,       "Sensors"),
+            (self._tracking_proc,     "Tracking"),
         ):
             _kill_proc(proc, name)
         self._mapping_proc = self._localization_proc = self._navigation_proc = None
         self._tof_proc = self._imu_proc = self._canbus_proc = self._sensor_proc = None
+        self._sensor_status_proc = None
+        self._tracking_proc = None
         self._close_sensor_status_window()
         for btn, label in (
             (self._mapping_btn,      "  START MAPPING"),
             (self._localization_btn, "  START LOCALIZATION"),
             (self._navigation_btn,   "  START NAVIGATION"),
             (self._tof_btn,          "  TOF CALIBRATION"),
-            (self._imu_btn,          "  SENSOR STATUS"),
+            (self._imu_btn,          "  IMU CALIBRATION"),
+            (self._sensor_status_btn, "  SENSOR STATUS"),
             (self._canbus_btn,       "  NODE STATUS (CANBUS)"),
             (self._sensor_btn,       "  SENSOR READOUTS"),
         ):
@@ -2659,7 +2753,6 @@ class JarvisWindow(QMainWindow):
         # Developer-only widgets.
         self._ros2_chip.setVisible(is_dev)
         self._loc_cov_chip.setVisible(is_dev)
-        self._transcript_label.setVisible(is_dev)
         self._launcher_widget.setVisible(is_dev)
         self._dev_tools_widget.setVisible(is_dev)
         self._log_panel.setVisible(is_dev)
@@ -2711,21 +2804,32 @@ class JarvisWindow(QMainWindow):
             self._apply_launcher_btn_style(self._tof_btn, running=True)
             self._tof_btn.setText("  STOP TOF CAL")
 
+    def _on_imu_clicked(self) -> None:
+        if self._imu_proc is not None and self._imu_proc.poll() is None:
+            _kill_proc(self._imu_proc, "IMU Cal")
+            self._imu_proc = None
+            self._apply_launcher_btn_style(self._imu_btn, running=False)
+            self._imu_btn.setText("  IMU CALIBRATION")
+        else:
+            self._imu_proc = _launch_proc(_IMU_CALIB_CMD, "IMU Cal")
+            self._apply_launcher_btn_style(self._imu_btn, running=True)
+            self._imu_btn.setText("  STOP IMU CAL")
+
     def _close_sensor_status_window(self) -> None:
         if self._sensor_status_window is not None:
             self._sensor_status_window.close_from_owner()
             self._sensor_status_window = None
 
     def _stop_sensor_status(self) -> None:
-        if self._imu_proc is not None and self._imu_proc.poll() is None:
-            _kill_proc(self._imu_proc, "Sensor Status")
-        self._imu_proc = None
+        if self._sensor_status_proc is not None and self._sensor_status_proc.poll() is None:
+            _kill_proc(self._sensor_status_proc, "Sensor Status")
+        self._sensor_status_proc = None
         self._close_sensor_status_window()
-        self._apply_launcher_btn_style(self._imu_btn, running=False)
-        self._imu_btn.setText("  SENSOR STATUS")
+        self._apply_launcher_btn_style(self._sensor_status_btn, running=False)
+        self._sensor_status_btn.setText("  SENSOR STATUS")
 
-    def _on_imu_clicked(self) -> None:
-        if self._imu_proc is not None and self._imu_proc.poll() is None:
+    def _on_sensor_status_clicked(self) -> None:
+        if self._sensor_status_proc is not None and self._sensor_status_proc.poll() is None:
             self._stop_sensor_status()
         else:
             SensorStatusWindow.clear_queue()
@@ -2733,9 +2837,9 @@ class JarvisWindow(QMainWindow):
             self._sensor_status_window.stop_requested.connect(self._stop_sensor_status)
             self._sensor_status_window.show()
 
-            self._imu_proc = _launch_proc(_SENSOR_STATUS_CMD, "Sensor Status")
-            self._apply_launcher_btn_style(self._imu_btn, running=True)
-            self._imu_btn.setText("  STOP SENSOR STATUS")
+            self._sensor_status_proc = _launch_proc(_SENSOR_STATUS_CMD, "Sensor Status")
+            self._apply_launcher_btn_style(self._sensor_status_btn, running=True)
+            self._sensor_status_btn.setText("  STOP SENSOR STATUS")
 
     def _on_canbus_clicked(self) -> None:
         if self._canbus_proc is not None and self._canbus_proc.poll() is None:
@@ -2797,6 +2901,13 @@ class JarvisWindow(QMainWindow):
             self._on_estop_clicked()
         elif command == "create_marker":
             self.enter_placement_mode()
+        elif command == "start_tracking":
+            if self._tracking_proc is None or self._tracking_proc.poll() is not None:
+                self._tracking_proc = _launch_proc(_TRACKING_CMD, "Tracking")
+        elif command == "stop_tracking":
+            if self._tracking_proc is not None and self._tracking_proc.poll() is None:
+                _kill_proc(self._tracking_proc, "Tracking")
+                self._tracking_proc = None
 
     # ------------------------------------------------------------------
     # Misc

@@ -1,10 +1,10 @@
 """
 voice_control.py — Voice Control Subsystem for Smart Wheelchair BAP
 ===================================================================
-
+ 
 Wake-word activated, LLM-gated, conversational voice control with
 optional GUI-friendly observer hooks.
-
+ 
 Behavior:
   • Idle until the user says "Jarvis".
   • On wake, Jarvis replies "Yes, Master?" and stays in conversation
@@ -23,11 +23,11 @@ Behavior:
   • The chair only moves on "navigate". Mentioning a place is not enough.
   • A neural DeepFilterDenoiser (DeepFilterNet3) suppresses background
     noise and competing voices before the audio reaches Vosk.
-
+ 
 Recommended microphone: Plantronics Voyager 5200 UC (BT300M adapter)
   → Use device 24: Headset Microphone (Plantronics BT300M), WASAPI
     (lowest latency Windows audio path; device index already set below)
-
+ 
 Setup:
   1) pip install -r requirements.txt
   2) Get a free Groq API key at https://console.groq.com
@@ -36,9 +36,9 @@ Setup:
   4) Run:  python main.py        (GUI + voice)
         or python voice_control.py  (CLI fallback, no GUI)
 """
-
+ 
 from __future__ import annotations
-
+ 
 import asyncio
 import concurrent.futures
 import json
@@ -52,14 +52,14 @@ import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Callable, List, Optional, Tuple, Union
-
+ 
 import numpy as np
 import sounddevice as sd
 from vosk import KaldiRecognizer, Model, SetLogLevel
-
-
+ 
+ 
 SetLogLevel(-1)
-
+ 
 # ---------------------------------------------------------------------------
 # Noise / hallucination rejection constants
 # ---------------------------------------------------------------------------
@@ -72,19 +72,26 @@ _STT_NOISE_WORDS: frozenset = frozenset({
 })
 # Average per-word confidence threshold.  Results below this are also dropped.
 _STT_MIN_CONF: float = 0.45
-
+ 
+# Dangling words Vosk parks on at the end of a finished command while it waits
+# for a noun that never arrives ("take me to the office" lands as a partial
+# stuck on "... office the").  When the live partial stalls on one of these
+# with real words ahead of it, we treat it as a finished sentence and commit
+# early instead of waiting for Vosk's own endpoint (see VoiceController.run).
+_STT_TRAILING_TERMINATORS: frozenset = frozenset({"the", "a", "an", "of"})
+ 
 # How close a spoken word must be to "jarvis" (difflib ratio, 0-1) before the
 # wake gate treats it as the wake word even though it is not in the alias list.
 # 0.8 catches one-or-two-letter slips ("jarvas", "jervis", "darvis") while
 # staying well clear of ordinary words so the chair does not false-wake.
 _WAKE_FUZZY_THRESHOLD: float = 0.8
-
-
+ 
+ 
 def _strip_edge_noise_words(text: str) -> str:
     """
     Trim filler words like a dangling "the" off the front and back of a
     final transcript.
-
+ 
     Vosk often tacks a trailing "the" or "a" onto the end of an utterance
     when it is still deciding whether more words are coming.  That dangling
     word holds the live partial open longer before it commits to a final,
@@ -100,7 +107,21 @@ def _strip_edge_noise_words(text: str) -> str:
     while words and words[-1].lower() in _STT_NOISE_WORDS:
         words.pop()
     return " ".join(words)
-
+ 
+ 
+def _drop_all_the(text: str) -> str:
+    """Remove every standalone "the" token from a transcript.
+ 
+    "the" is the word Vosk parks on when it hears noise or waits for a noun
+    that never arrives, and it adds nothing to a navigation or operator
+    command.  Dropping it everywhere, not just off the ends, stops a line
+    from ever starting or ending on "the" and keeps the recognizer from
+    holding the partial open for the word after it.  "take the me to the
+    office the" becomes "me to office".
+    """
+    kept = [w for w in text.split() if w.lower() != "the"]
+    return " ".join(kept)
+ 
 # ---------------------------------------------------------------------------
 # Fast navigation verb regex
 # Matches explicit motion commands BEFORE sending to the LLM.
@@ -117,7 +138,7 @@ _NAV_VERB_RE = re.compile(
     r')',
     re.IGNORECASE,
 )
-
+ 
 # Emergency motion stop.  Matches a bare "stop" and the natural ways a
 # rider tells the chair to quit moving ("stop driving", "stop moving",
 # "stop the chair", "halt").  These all halt the chair immediately through
@@ -137,7 +158,7 @@ _STOP_ONLY_RE = re.compile(
     r'(?:[\s,]+(?:please|now|jarvis))?[.!]?\s*$',
     re.IGNORECASE,
 )
-
+ 
 # Explicit "go to sleep" command — the spoken twin of the wake word.
 # Lets the user dismiss Jarvis on demand ("go to sleep", "stop listening",
 # "naptime", "shut down") instead of waiting for the conversation window to
@@ -157,7 +178,7 @@ _SLEEP_RE = re.compile(
     r'(?:[\s,]+jarvis)?[.!]?\s*$',
     re.IGNORECASE,
 )
-
+ 
 # ---------------------------------------------------------------------------
 # Operator / developer commands (resolved locally, no LLM)
 # ---------------------------------------------------------------------------
@@ -194,12 +215,18 @@ _DEV_CMD_PATTERNS = [
     ("start_navigation", re.compile(
         r'\b(?:start|begin|launch|initialize|initialise)\s+(?:the\s+)?navigation\b',
         re.IGNORECASE)),
+    ("stop_tracking", re.compile(
+        r'\b(?:stop|end|quit|halt|disable|exit|cancel)\s+(?:the\s+)?tracking(?:\s+mode)?\b',
+        re.IGNORECASE)),
+    ("start_tracking", re.compile(
+        r'\b(?:start|begin|launch|enable|activate|enter)\s+(?:the\s+)?tracking(?:\s+mode)?\b',
+        re.IGNORECASE)),
 ]
-
-
+ 
+ 
 def _match_dev_command(text: str) -> Optional[str]:
     """Resolve an operator command from a transcript without the LLM.
-
+ 
     Returns the dev-command string (the same value the LLM would put in
     ``Intent.destination``) or ``None`` if nothing matches and the command
     should fall through to the normal pipeline.
@@ -208,8 +235,8 @@ def _match_dev_command(text: str) -> Optional[str]:
         if pattern.search(text):
             return cmd
     return None
-
-
+ 
+ 
 # Spoken acknowledgements for the locally-resolved dev commands.  "{address}"
 # is filled in at runtime so they match the address used everywhere else.
 _DEV_CMD_REPLIES: dict = {
@@ -221,8 +248,10 @@ _DEV_CMD_REPLIES: dict = {
     "stop_navigation":     "Stopping navigation, {address}.",
     "start_all":           "Starting all systems, {address}.",
     "stop_all":            "Stopping all systems, {address}.",
+    "start_tracking":      "Starting tracking mode, {address}.",
+    "stop_tracking":       "Stopping tracking mode, {address}.",
 }
-
+ 
 # ---------------------------------------------------------------------------
 # Map show / hide commands (resolved locally, no LLM)
 # ---------------------------------------------------------------------------
@@ -242,13 +271,13 @@ _MAP_HIDE_RE = re.compile(
     r'[\w\s]*\b(?:map|floor\s*plan|layout)\b',
     re.IGNORECASE,
 )
-
+ 
 # Vosk reliably mangles "the map" into "them up" ("map" is short and out of
 # context), so "show me the map" arrives as "show me them up".  The bigram is
 # corrected before any matcher sees it so both the map regex above and the LLM
 # read the phrase the user actually said.
 _MAP_PHRASE_RE = re.compile(r'\bthem\s+up\b', re.IGNORECASE)
-
+ 
 # ---------------------------------------------------------------------------
 # Homophone correction
 # ---------------------------------------------------------------------------
@@ -262,6 +291,10 @@ _HOMOPHONE_SUBS: dict = {
     "wake":   "take",
     "break":  "take",
     "road":   "go",
+    # "stop" loses its leading s under noise and comes back as "top". Folding
+    # it back keeps the emergency stop working when the rider clips the word.
+    # Whole-word only, so "laptop" and the like are untouched.
+    "top":    "stop",
     # "elevator" is a long word Vosk often clips to "elevate".
     "elevate": "elevator",
     # "please" is short and easily clipped; "police" is its most common
@@ -274,19 +307,23 @@ _HOMOPHONE_RE = re.compile(
     r'\b(' + '|'.join(re.escape(k) for k in _HOMOPHONE_SUBS) + r')\b',
     re.IGNORECASE,
 )
-
+ 
 # Multi-word mishearings, fixed before the single-word swaps above so the
 # leftover word ("their"/"there") is not stranded.  Vosk splits "elevator"
-# into "elevate their" / "elevate there" surprisingly often.
+# into "elevate their" / "elevate there" surprisingly often.  "the top" is
+# the most common way a clipped "stop" comes back (the leading s is lost and
+# Vosk pads the gap with "the"), so it folds straight to "stop" here. The
+# bare "top" -> "stop" swap below catches the rest.
 _PHRASE_SUBS: dict = {
     "elevate their": "elevator",
     "elevate there": "elevator",
+    "the top": "stop",
 }
 _PHRASE_RE = re.compile(
     r'\b(' + '|'.join(re.escape(k) for k in _PHRASE_SUBS) + r')\b',
     re.IGNORECASE,
 )
-
+ 
 # Floor numbers spoken straight after "elevator" are routinely misheard as
 # their function-word homophones ("elevator to" → "elevator two", "elevator
 # for" → "elevator four").  These are only corrected when they follow
@@ -297,8 +334,8 @@ _ELEVATOR_NUMS: dict = {
     "for": "four", "fore": "four",
 }
 _ELEVATOR_FILLERS: frozenset = frozenset({"number", "floor", "level", "the", "on"})
-
-
+ 
+ 
 def _fix_elevator_numbers(text: str) -> str:
     """Correct floor-number homophones spoken right after "elevator"."""
     if "elevator" not in text:
@@ -316,11 +353,11 @@ def _fix_elevator_numbers(text: str) -> str:
         out.append(tok)
         armed = (tok == "elevator")
     return " ".join(out)
-
-
+ 
+ 
 def _normalise_homophones(text: str) -> str:
     """Replace known Vosk mishearings with the intended command word.
-
+ 
     Whole-word, case-insensitive.  Returns lower-cased text because every
     downstream matcher (FastNavigator, wake gate, confirmation) already
     works in lower case.  Runs phrase fixes first, then the single-word
@@ -334,13 +371,13 @@ def _normalise_homophones(text: str) -> str:
     text = _HOMOPHONE_RE.sub(lambda m: _HOMOPHONE_SUBS[m.group(1)], text)
     text = _fix_elevator_numbers(text)
     return text
-
+ 
 # ---------------------------------------------------------------------------
 # Voice confirmation word sets
 # Used by VoiceController._voice_confirm() to interpret the user's yes/no.
 # ---------------------------------------------------------------------------
 import difflib
-
+ 
 # Single-word answers. These also include common Vosk mishearings of the
 # short words (e.g. "yes" often comes back as "yet" or "yas", "no" as "now")
 # so a clear answer is not lost just because the recogniser slipped a letter.
@@ -354,7 +391,7 @@ _CONFIRM_NO_WORDS: frozenset = frozenset({
     "no", "nope", "nah", "naw", "now", "cancel", "stop", "abort",
     "negative", "wait", "hold", "nevermind", "back", "actually",
 })
-
+ 
 # Multi-word answers, matched as a substring of the whole phrase so filler
 # around them ("the no please thanks") still resolves.
 _CONFIRM_YES_PHRASES: tuple = (
@@ -365,11 +402,11 @@ _CONFIRM_NO_PHRASES: tuple = (
     "no please", "no thanks", "never mind", "hold on", "do not",
     "don't", "forget it", "forget that", "not now", "stay put",
 )
-
-
+ 
+ 
 def _classify_confirmation(text: str) -> Optional[str]:
     """Return 'yes', 'no', or None for a spoken confirmation reply.
-
+ 
     Tolerant by design: it ignores filler words around the answer, accepts
     common Vosk mishearings, and falls back to a fuzzy match so a slightly
     garbled "yes"/"no" still lands. 'no' is checked before 'yes' so a mixed
@@ -381,7 +418,7 @@ def _classify_confirmation(text: str) -> Optional[str]:
     text = text.lower().strip()
     if not text:
         return None
-
+ 
     # Phrases first (substring of the full reply).
     for phrase in _CONFIRM_NO_PHRASES:
         if phrase in text:
@@ -389,16 +426,16 @@ def _classify_confirmation(text: str) -> Optional[str]:
     for phrase in _CONFIRM_YES_PHRASES:
         if phrase in text:
             return "yes"
-
+ 
     words = text.split()
-
+ 
     # Exact single-word match.
     for w in words:
         if w in _CONFIRM_NO_WORDS:
             return "no"
         if w in _CONFIRM_YES_WORDS:
             return "yes"
-
+ 
     # Fuzzy backstop for anything the explicit lists missed.
     for w in words:
         if len(w) < 2:
@@ -407,10 +444,10 @@ def _classify_confirmation(text: str) -> Optional[str]:
             return "no"
         if difflib.get_close_matches(w, _CONFIRM_YES_WORDS, n=1, cutoff=0.8):
             return "yes"
-
+ 
     return None
-
-
+ 
+ 
 # Leading words to peel off a "no" reply when looking for a fresh command
 # hidden behind it ("no, take me to lab a" -> "take me to lab a").
 _NO_LEAD_WORDS: frozenset = _CONFIRM_NO_WORDS | frozenset({
@@ -418,11 +455,11 @@ _NO_LEAD_WORDS: frozenset = _CONFIRM_NO_WORDS | frozenset({
     "not", "never", "mind", "nevermind", "instead", "rather",
     "and", "but", "then", "ok", "okay",
 })
-
-
+ 
+ 
 def _command_after_no(text: str) -> str:
     """Return any fresh command tucked behind a 'no' reply.
-
+ 
     Drops a leading run of negation and filler words and returns what is
     left, so "no take me to lab a" yields "take me to lab a" while a plain
     "no thanks" yields an empty string (pure cancel, nothing to do next).
@@ -434,22 +471,22 @@ def _command_after_no(text: str) -> str:
     while i < len(words) and words[i] in _NO_LEAD_WORDS:
         i += 1
     return " ".join(words[i:]).strip()
-
+ 
 # Auto-load .env if present (so GROQ_API_KEY just works).
 try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
     pass
-
-
+ 
+ 
 # -----------------------------------------------------------------------------
 # Configuration
 # -----------------------------------------------------------------------------
 @dataclass
 class VoiceConfig:
     """All tunable parameters for the voice subsystem."""
-
+ 
     # ---- Vosk (speech-to-text, offline) --------------------------------
     model_path: str = "models/vosk-model-en-us-0.22"
     sample_rate: int = 16000
@@ -465,7 +502,7 @@ class VoiceConfig:
     input_device: Optional[int] = 24
     grammar_locked: bool = False
     show_partials: bool = True
-
+ 
     # ---- Wake word & conversation ---------------------------------------
     wake_word: str = "jarvis"
     # Vosk often mishears "Jarvis" as other English words because the name
@@ -478,21 +515,21 @@ class VoiceConfig:
     ])
     awake_timeout_s: float = 30.0
     wake_acknowledgement: str = "What do you want?"
-
+ 
     # ---- Voice confirmation -------------------------------------------
     # After a navigate command is recognised, Jarvis asks "Shall I take
     # you to X, sir?" and listens for a spoken yes/no reply.
     # confirm_timeout_s is how long Jarvis waits before giving up (cancel).
     confirm_timeout_s: float = 8.0
-
+ 
     # ---- Confirmation window (legacy keyboard fallback) ---------------
     confirmation_seconds: float = 2.0
-
+ 
     # ---- Fast navigation (keyword bypass — no LLM needed) --------------
     # When True, utterances matching a motion verb + known destination are
     # dispatched immediately without calling the LLM (~0 ms vs ~300 ms).
     fast_navigate: bool = True
-
+ 
     # ---- Noise gate (energy-based mic filter) --------------------------
     # The Plantronics Voyager 5200 UC has hardware Acoustic Fence which
     # rejects most off-axis crowd noise physically.  Field testing in a
@@ -518,7 +555,7 @@ class VoiceConfig:
     # Keep the gate open this many extra 125 ms frames after speech drops
     # below threshold so trailing consonants are not swallowed.
     noise_gate_hold_frames: int = 10
-
+ 
     # ---- Silence gate (utterance completion by pause detection) --------
     # Buffer Vosk final results and only dispatch them after the user has
     # been silent for at least silence_commit_s seconds.  This prevents
@@ -537,7 +574,55 @@ class VoiceConfig:
     # back towards 1.0 s only if users find sentences are split mid-thought.
     use_silence_gate: bool = True
     silence_commit_s: float = 0.6
-
+ 
+    # ---- Trailing-filler early finalize --------------------------------
+    # Vosk holds an utterance open when the live partial ends on a filler
+    # word like "the" or "of", waiting to see whether a noun follows.  After
+    # a finished command the noun never comes, so the partial sits on a
+    # dangling "the" and the final lands late.  When the partial has not
+    # changed for trailing_finalize_s seconds and still ends on one of
+    # _STT_TRAILING_TERMINATORS (with real words ahead of it), we force the
+    # final ourselves so the command dispatches without the extra wait.
+    # Only runs while awake, so idle room noise is never force-committed.
+    # Set finalize_on_trailing_filler=False to revert to Vosk's own timing.
+    finalize_on_trailing_filler: bool = True
+    trailing_finalize_s: float = 0.25
+ 
+    # ---- Stalled-partial early finalize --------------------------------
+    # The trailing-filler rule above only fires when the partial ends on a
+    # filler like "the".  Vosk also stalls on plenty of utterances that are
+    # not grammatical sentences but are clearly finished, such as a bare
+    # destination the user spoke without a verb.  When the live partial holds
+    # any real word and has not changed for stall_finalize_s seconds, commit
+    # it instead of waiting for Vosk's endpoint.  A command no longer has to
+    # be a correct sentence to land fast.  Still awake-only, so idle room
+    # noise is never force-committed.
+    # Set finalize_on_stalled_partial=False to revert to Vosk's own timing.
+    finalize_on_stalled_partial: bool = True
+    stall_finalize_s: float = 0.45
+ 
+    # ---- Silence guard on early finalize -------------------------------
+    # Both early-finalize rules above act on the partial text, so a real
+    # "the" or "a" spoken in the middle of a command (such as "take me to
+    # the office" or a destination like "lab a") used to trip them during
+    # the short pause before the noun, cutting the command in half.  With
+    # this on, an early finalize only fires once the NoiseGate reports the
+    # user has actually stopped talking, never mid-utterance.  The gate
+    # already holds through normal between-word gaps, so a real filler word
+    # stays part of live speech.  finalize_min_silent_chunks is how many
+    # 125 ms chunks of true silence are needed first.
+    # Set finalize_requires_silence=False to go back to text-only timing.
+    finalize_requires_silence: bool = True
+    finalize_min_silent_chunks: int = 1
+ 
+    # ---- "the" stripping -----------------------------------------------
+    # Vosk leans on "the" when it chews on noise or an unfinished phrase, and
+    # the word carries no intent for navigation or operator commands.  With
+    # this on, every standalone "the" is dropped from the final transcript so
+    # a line never starts or ends on it and never stalls waiting for the noun
+    # after it.  Set drop_all_the=False to keep "the" in the transcript.
+    drop_all_the: bool = True
+ 
     # ---- Neural denoiser (DeepFilterNet3 before Vosk) ------------------
     # Third stage of the rejection pipeline.  Runs every speech chunk
     # through DeepFilterNet3, a full-band neural speech enhancement model
@@ -556,7 +641,7 @@ class VoiceConfig:
     # suppressed with no cap.  Put a number here (e.g. 12.0) only if you
     # want to deliberately leave that many dB of background in.
     deepfilter_atten_lim_db: Optional[float] = None
-
+ 
     # ---- LLM intent gate -----------------------------------------------
     llm_provider: str = "groq"          # "groq" | "ollama"
     groq_api_key: Optional[str] = None  # None → reads GROQ_API_KEY env / .env
@@ -564,23 +649,27 @@ class VoiceConfig:
     ollama_host: str = "http://localhost:11434"
     ollama_model: str = "llama3.2:3b"
     llm_timeout_s: float = 6.0
-    llm_temperature: float = 0.0
+    # A little warmth so jokes and small talk vary instead of repeating the
+    # same canned line. Intent classification stays reliable because the
+    # schema and the long example list pin it down, and every clear drive
+    # command is resolved by FastNavigator before the model is ever called.
+    llm_temperature: float = 0.4
     history_turns: int = 8
-
+ 
     # ---- Tool context (real-time facts injected into prompt) -----------
     enable_weather_tool: bool = True
     enable_time_tool: bool = True
     location_lat: float = 52.0116        # Delft
     location_lon: float = 4.3571
     location_name: str = "Delft"
-
+ 
     # ---- Text-to-speech ------------------------------------------------
     tts_enabled: bool = True
     tts_provider: str = "edge"           # "sapi" | "edge"
     tts_rate: int = 180
     tts_voice: Optional[str] = "George"
     edge_voice: str = "en-GB-ThomasNeural"
-
+ 
     # ---- Barge-in (talk over Jarvis while he is speaking) --------------
     # When True, the Speaker keeps an ear on the microphone while it is
     # talking and cuts its own playback the moment the user starts speaking,
@@ -597,10 +686,10 @@ class VoiceConfig:
     barge_in_enabled: bool = True
     barge_in_threshold_db: float = -30.0
     barge_in_frames: int = 3
-
+ 
     # ---- Address -------------------------------------------------------
     default_address: str = "Master"
-
+ 
     # ---- Destinations --------------------------------------------------
     # Only "stop" is built in. Every real destination is seeded at runtime
     # from the map markers (main.py reads map_points.json and calls
@@ -609,15 +698,15 @@ class VoiceConfig:
     destinations: dict = field(default_factory=lambda: {
         "stop": "EMERGENCY_STOP",
     })
-
-
+ 
+ 
 # -----------------------------------------------------------------------------
 # Noise gate (energy-based, real-time, near-zero latency)
 # -----------------------------------------------------------------------------
 class NoiseGate:
     """
     Suppresses audio chunks that are almost certainly background noise.
-
+ 
     How it works
     ------------
     For every 125 ms PCM chunk coming off the microphone:
@@ -628,15 +717,15 @@ class NoiseGate:
          the transcription pipeline still works correctly.
       3. If the energy is above threshold, reset the hold counter and pass
          the audio through unchanged.
-
+ 
     The hold period prevents trailing consonants and gentle word endings
     from being swallowed by the gate.
-
+ 
     The Plantronics Voyager 5200 UC already applies hardware acoustic
     echo cancellation and noise suppression via its DSP.  This gate is a
     second, software-side layer for any residual noise that slips through.
     """
-
+ 
     def __init__(
         self,
         threshold_db: float = -42.0,
@@ -646,12 +735,12 @@ class NoiseGate:
         self._threshold = 32768.0 * (10.0 ** (threshold_db / 20.0))
         self._hold = hold_frames
         self._hold_count: int = 0
-
+ 
     def process(self, pcm_bytes: bytes) -> Tuple[bytes, bool]:
         """
         Classify a PCM chunk as speech or silence and return the audio to
         forward downstream.
-
+ 
         Returns a tuple ``(audio, is_speech)``:
           * audio    — original chunk if it is speech (or still in the
                        hold window after speech), or a zero-filled block
@@ -665,7 +754,7 @@ class NoiseGate:
         """
         samples = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32)
         rms = float(np.sqrt(np.mean(samples ** 2))) if samples.size else 0.0
-
+ 
         if rms >= self._threshold:
             self._hold_count = self._hold   # speech detected — reset hold
             return pcm_bytes, True
@@ -675,15 +764,15 @@ class NoiseGate:
                 return pcm_bytes, True      # still holding open after speech
             # Replace with silence so Vosk sees a clean gap.
             return bytes(len(pcm_bytes)), False
-
-
+ 
+ 
 # -----------------------------------------------------------------------------
 # Deep neural denoiser (DeepFilterNet3 in front of Vosk)
 # -----------------------------------------------------------------------------
 class DeepFilterDenoiser:
     """
     Neural speech enhancement for the third stage of the rejection pipeline.
-
+ 
     Stage map
     ---------
       1. Plantronics Voyager 5200 UC hardware Acoustic Fence — physical
@@ -694,7 +783,7 @@ class DeepFilterDenoiser:
          DeepFilterNet3, a neural full-band speech enhancement model that
          suppresses stationary noise, transient events, and competing
          voices alike, leaving only the target speaker.
-
+ 
     Why DeepFilterNet over spectral subtraction
     --------------------------------------------
     The previous noisereduce stage learned a stationary noise floor from
@@ -704,20 +793,20 @@ class DeepFilterDenoiser:
     DeepFilterNet was trained on thousands of hours of mixed speech and
     noise including babble and crowd scenes, so it suppresses competing
     voices as well as it suppresses fan noise.
-
+ 
     Resampling
     ----------
     DeepFilterNet operates at 48 kHz.  Audio arriving from the 16 kHz
     pipeline is upsampled before enhancement and downsampled afterwards,
     so the rest of the pipeline (Vosk, NoiseGate) remains unchanged.
-
+ 
     Graceful degradation
     --------------------
     If the ``deepfilternet`` package is not installed the denoiser prints
     a one-time warning and acts as passthrough so the system still runs.
     Install with:  pip install deepfilternet
     """
-
+ 
     def __init__(self, sample_rate: int = 16000,
                  post_filter: bool = True,
                  atten_lim_db: Optional[float] = None) -> None:
@@ -766,7 +855,7 @@ class DeepFilterDenoiser:
                     self.num_channels = num_channels
                     self.bits_per_sample = bits_per_sample
                     self.encoding = encoding
-
+ 
             if "torchaudio.backend" not in sys.modules:
                 _backend = types.ModuleType("torchaudio.backend")
                 _backend.__path__ = []          # marks it as a package
@@ -802,14 +891,14 @@ class DeepFilterDenoiser:
         except Exception as e:
             print(f"[DeepFilterDenoiser] DeepFilterNet unavailable: {e}. "
                   "Passthrough.  Install with: pip install deepfilternet")
-
+ 
     def feed_noise(self, pcm_bytes: bytes) -> None:
         """No-op — DeepFilterNet is a neural model and needs no noise profile."""
-
+ 
     def process(self, pcm_bytes: bytes) -> bytes:
         """
         Enhance a speech chunk using DeepFilterNet3.
-
+ 
         Internally resamples from the pipeline sample rate (16 kHz) to
         48 kHz for the model, then downsamples back before returning.
         Falls back to passthrough on any error.
@@ -838,28 +927,28 @@ class DeepFilterDenoiser:
         except Exception as e:
             print(f"[DeepFilterDenoiser] enhance error: {e}")
             return pcm_bytes
-
-
+ 
+ 
 # -----------------------------------------------------------------------------
 # Fast navigation keyword matcher (zero LLM latency for drive commands)
 # -----------------------------------------------------------------------------
 class FastNavigator:
     """
     Resolves explicit navigation commands without calling the LLM.
-
+ 
     For utterances like "take me to lab a" or "bring me to the cafeteria",
     this class extracts the destination keyword using a compiled regex and
     maps it directly to a location ID — saving the ~200–500 ms Groq round-
     trip that would otherwise be needed.
-
+ 
     The LLM is still used for everything else (questions, map, goodbye,
     ambiguous chatter).
-
+ 
     Lookup table (destinations → location IDs)
     -------------------------------------------
     The table is derived from VoiceConfig.destinations, so adding a new
     location in the config automatically makes it fast-matchable.
-
+ 
     Matching rules
     --------------
     1. "stop" (alone, ≤3 words) → EMERGENCY_STOP immediately, no LLM.
@@ -869,7 +958,7 @@ class FastNavigator:
        (e.g., "take me to the cafeteria").
     4. Anything that doesn't match falls through to the LLM.
     """
-
+ 
     def __init__(self, destinations: dict) -> None:
         self.destinations = destinations
         # Build a compiled regex for all non-stop destination names.
@@ -888,7 +977,7 @@ class FastNavigator:
             self._dest_re = re.compile(pattern, re.IGNORECASE)
         else:
             self._dest_re = None
-
+ 
     def match(
         self,
         text: str,
@@ -903,19 +992,19 @@ class FastNavigator:
             loc_id = self.destinations.get("stop")
             if loc_id:
                 return ("stop", loc_id, f"Stopping immediately, {address}.")
-
+ 
         # ---- Motion verb check ----
         if not _NAV_VERB_RE.search(text):
             return None     # no motion verb → let LLM decide intent
-
+ 
         # ---- Destination keyword check ----
         if self._dest_re is None:
             return None
-
+ 
         m = self._dest_re.search(text)
         if not m:
             return None     # motion verb present but no known destination
-
+ 
         dest_key = m.group(1).lower()
         # Normalise to the exact key stored in the dict
         actual_key = next(
@@ -924,13 +1013,13 @@ class FastNavigator:
         )
         if actual_key is None or actual_key == "stop":
             return None
-
+ 
         loc_id = self.destinations[actual_key]
         dest_display = actual_key.title()
         reply = f"On my way to {dest_display}, {address}."
         return (actual_key, loc_id, reply)
-
-
+ 
+ 
 # -----------------------------------------------------------------------------
 # Audio capture
 # -----------------------------------------------------------------------------
@@ -946,7 +1035,7 @@ class AudioStream:
         # it is full means a backlog can never build.
         self.queue: "queue.Queue[bytes]" = queue.Queue(maxsize=50)
         self._stream: Optional[sd.RawInputStream] = None
-
+ 
     def _callback(self, indata, frames, time_info, status):
         if status:
             print(f"[AudioStream] {status}", file=sys.stderr)
@@ -960,11 +1049,11 @@ class AudioStream:
                 self.queue.put_nowait(bytes(indata))
             except (queue.Empty, queue.Full):
                 pass
-
+ 
     @staticmethod
     def _find_device_by_name(name_fragment: str) -> Optional[int]:
         """Return the best-matching input device for name_fragment.
-
+ 
         Prefers WASAPI devices for lowest latency on Windows (sounddevice
         lists MME first, WASAPI last — so a higher index for the same
         physical mic = more likely to be the WASAPI endpoint).  Falls back
@@ -980,7 +1069,7 @@ class AudioStream:
             )
         except Exception:
             wasapi_idx = None
-
+ 
         first_match: Optional[int] = None
         for i, dev in enumerate(devices):
             if (name_fragment.lower() in dev["name"].lower()
@@ -990,10 +1079,10 @@ class AudioStream:
                 if first_match is None:
                     first_match = i   # non-WASAPI fallback
         return first_match
-
+ 
     def start(self) -> None:
         device = self.config.input_device
-
+ 
         # Print all available input devices on startup so index mismatches are
         # immediately visible in the console.
         all_devs = sd.query_devices()
@@ -1001,7 +1090,7 @@ class AudioStream:
         for i, dev in enumerate(all_devs):
             if dev["max_input_channels"] > 0:
                 print(f"  [{i}] {dev['name']}")
-
+ 
         # If a preferred device index is set, verify it still exists; if not
         # (Windows reshuffles indices when USB devices connect/disconnect),
         # fall back to looking up the Plantronics by name.
@@ -1029,7 +1118,7 @@ class AudioStream:
                     print("  re-run, or set VoiceConfig.input_device to the right")
                     print("  index from the device list printed above.")
                     print("!" * 70 + "\n")
-
+ 
         # Try the resolved device first, then fall back to the system default.
         # Without this outer try/except the voice thread died silently when the
         # stream open failed (e.g. wrong sample rate for a non-Plantronics mic).
@@ -1055,18 +1144,18 @@ class AudioStream:
                 if attempt is None:
                     print("[AudioStream] Could not open any input device — voice disabled.")
                     raise
-
+ 
     def stop(self) -> None:
         if self._stream is not None:
             self._stream.stop()
             self._stream.close()
             self._stream = None
-
+ 
     @staticmethod
     def list_devices() -> None:
         print(sd.query_devices())
-
-
+ 
+ 
 # -----------------------------------------------------------------------------
 # Vosk engine
 # -----------------------------------------------------------------------------
@@ -1088,15 +1177,25 @@ class VoskEngine:
             self._recognizer = KaldiRecognizer(self._model, config.sample_rate)
         self._recognizer.SetWords(True)
         print("[VoskEngine] Ready.")
-
+ 
     def feed(self, pcm_bytes: bytes) -> Optional[dict]:
         if self._recognizer.AcceptWaveform(pcm_bytes):
             return json.loads(self._recognizer.Result())
         return None
-
+ 
     def partial(self) -> dict:
         return json.loads(self._recognizer.PartialResult())
-
+ 
+    def final(self) -> dict:
+        """Force the recogniser to commit whatever it has as a final result.
+ 
+        Used to end an utterance early when the live partial has clearly
+        finished but is being held open by a dangling filler word.  Calling
+        FinalResult() also resets the recogniser, so the next utterance
+        starts clean.  Same shape as feed()/Result(): {"text", "result"}.
+        """
+        return json.loads(self._recognizer.FinalResult())
+ 
     def reset(self) -> None:
         """Clear any in-progress utterance so it does not bleed into the next
         command. Used after a confirmation is matched on a partial result."""
@@ -1104,16 +1203,16 @@ class VoskEngine:
             self._recognizer.Reset()
         except Exception:
             pass
-
-
+ 
+ 
 # -----------------------------------------------------------------------------
 # Wake-word + conversation gate
 # -----------------------------------------------------------------------------
 class _WakeAwoken:
     pass
 AWOKEN = _WakeAwoken()
-
-
+ 
+ 
 class WakeWordGate:
     """
     Idle until "Jarvis" is heard, then enter a conversation window where
@@ -1121,7 +1220,7 @@ class WakeWordGate:
     again. The window auto-extends on each utterance and resets to idle
     on (a) timeout, (b) successful navigate command, or (c) goodbye.
     """
-
+ 
     def __init__(self, config: VoiceConfig):
         self.wake_word = config.wake_word.lower()
         # The wake word plus any known mishearings (e.g. "harvest" for
@@ -1135,14 +1234,14 @@ class WakeWordGate:
         self.awake_timeout_s = config.awake_timeout_s
         self._awake_until = 0.0
         self._active = False
-
+ 
     @property
     def is_awake(self) -> bool:
         return self._active and time.time() < self._awake_until
-
+ 
     def _is_wake_word(self, word: str) -> bool:
         """True if a single spoken word is the wake word or a near-miss of it.
-
+ 
         The fixed alias list only covers mishearings we have already seen.
         Vosk invents a fresh one most sessions ("jarvas", "darvis", "jervis"),
         so each token is also compared phonetically to "jarvis" and accepted
@@ -1156,12 +1255,12 @@ class WakeWordGate:
             return True
         return (difflib.SequenceMatcher(None, w, self.wake_word).ratio()
                 >= _WAKE_FUZZY_THRESHOLD)
-
+ 
     def filter(self, transcript: str) -> Optional[Union[str, _WakeAwoken]]:
         text = transcript.lower().strip()
         if not text:
             return None
-
+ 
         # Wake on the first word that is the wake word, a known alias, or a
         # close mishearing of "jarvis" (see _is_wake_word).
         words = text.split()
@@ -1173,25 +1272,25 @@ class WakeWordGate:
             tail = " ".join(words[wake_idx + 1:]).lstrip(" ,.:;!?-")
             self._enter_conversation()
             return tail if tail else AWOKEN
-
+ 
         if self.is_awake:
             self._refresh()
             return text
-
+ 
         return None
-
+ 
     def _enter_conversation(self) -> None:
         self._active = True
         self._refresh()
-
+ 
     def _refresh(self) -> None:
         self._awake_until = time.time() + self.awake_timeout_s
-
+ 
     def end_conversation(self) -> None:
         self._active = False
         self._awake_until = 0.0
-
-
+ 
+ 
 # -----------------------------------------------------------------------------
 # Silence-gated utterance committer
 # -----------------------------------------------------------------------------
@@ -1199,7 +1298,7 @@ class SilenceCommitter:
     """
     Buffers wake-gate-passed Vosk finals and only dispatches once the
     user has been silent for a configurable window.
-
+ 
     Why this helps
     --------------
     Vosk's internal endpointing fires on short natural pauses (~0.3 s),
@@ -1209,13 +1308,13 @@ class SilenceCommitter:
     be misclassified.  Waiting for a longer silence (default 2 s) lets
     the user finish a sentence naturally before any processing begins.
     The default window is 0.6 s (see VoiceConfig.silence_commit_s).
-
+ 
     Emergency-stop bypass
     ---------------------
     The caller (VoiceController.run) matches _STOP_ONLY_RE before
     feeding here and dispatches those directly, so "stop" is always
     instantaneous regardless of this gate.
-
+ 
     API
     ---
     feed(text)          — add a wake-gate result to the buffer and mark
@@ -1226,16 +1325,16 @@ class SilenceCommitter:
     reset()             — discard pending buffer (called on re-wake or
                           after an emergency dispatch).
     """
-
+ 
     def __init__(self, silence_s: float = 2.0) -> None:
         self._silence_s = silence_s
         self._buffer: list = []
         self._last_speech_t: float = 0.0
-
+ 
     @property
     def has_pending(self) -> bool:
         return bool(self._buffer)
-
+ 
     def feed(self, text: str) -> None:
         """Append a wake-gate result and stamp the last-speech time."""
         if text.strip():
@@ -1243,18 +1342,18 @@ class SilenceCommitter:
             # Treat the arrival of a new final as implicit speech activity
             # so the silence timer resets on each new fragment.
             self._last_speech_t = time.time()
-
+ 
     def tick(self, is_speech: bool) -> Optional[str]:
         """
         Update speech-activity tracking and return any committed utterance.
-
+ 
         Parameters
         ----------
         is_speech:
             True when the NoiseGate classified the current 125 ms chunk
             as speech.  When the gate is disabled, pass True whenever
             Vosk produced a non-empty partial in the same chunk.
-
+ 
         Returns
         -------
         The accumulated utterance string when silence_s consecutive
@@ -1270,13 +1369,13 @@ class SilenceCommitter:
             self._buffer.clear()
             return utterance or None
         return None
-
+ 
     def reset(self) -> None:
         """Discard pending buffer without dispatching."""
         self._buffer.clear()
         self._last_speech_t = 0.0
-
-
+ 
+ 
 # -----------------------------------------------------------------------------
 # LLM intent classifier (Groq or Ollama) + conversation history + live tools
 # -----------------------------------------------------------------------------
@@ -1287,22 +1386,22 @@ class Intent:
     destination: Optional[str]
     reply: Optional[str]
     raw: str = ""
-
-
+ 
+ 
 _INTENT_SYSTEM_PROMPT = """\
 You are Jarvis, the polite British conversational assistant for an
 autonomous smart wheelchair built as a Bachelor End Project at TU Delft.
 The user wears a clip-on microphone and is in a public open day demo.
 They have already addressed you (the wake word "Jarvis" triggered) and
 may chat with you across multiple turns until they say goodbye.
-
+ 
 You speak in a warm, butler-like, lightly formal British register —
 short sentences, slight wit, never sycophantic. Always address the
 user as "Master". Use it naturally inside the sentence; do not force
 it into every reply.
-
+ 
 Classify each user utterance into ONE of six intents:
-
+ 
   navigate  — an EXPLICIT drive command. The user is telling the chair
               to MOVE. Look for verbs of motion: "go to", "take me to",
               "bring me to", "drive to", "let's go to", "i want to go to",
@@ -1311,20 +1410,20 @@ Classify each user utterance into ONE of six intents:
               Any stop or halt phrase ("stop", "stop driving", "stop the
               chair", "halt") is NOT navigate. Classify it as dev_command
               with destination "emergency_stop".
-
+ 
   show_map  — the user wants to see the venue map. Triggers: "show me
               the map", "show the map", "open the map", "where am i",
               "where can i go", "what are my options", "let me see the
               floor plan".
-
+ 
   hide_map  — the user wants to dismiss the map: "close the map",
               "hide the map", "go back", "dismiss this", "okay close it".
-
+ 
   create_point — the user wants to mark a custom waypoint on the map.
               Triggers: "create a point", "add a point", "mark a location",
               "place a marker", "drop a pin", "save this spot", "add
               waypoint".
-
+ 
   dev_command — the operator wants to control a developer system function.
               Set destination to one of the sub-commands below.
               "start mapping" / "initialize mapping" / "begin mapping"  → "start_mapping"
@@ -1335,28 +1434,34 @@ Classify each user utterance into ONE of six intents:
               "stop navigation"                                         → "stop_navigation"
               "start all" / "launch everything"                         → "start_all"
               "stop all" / "shut everything down"                       → "stop_all"
+              "start tracking mode" / "begin tracking"                  → "start_tracking"
+              "stop tracking mode" / "end tracking"                     → "stop_tracking"
               "developer mode" / "dev mode" / "switch to developer"     → "mode_developer"
               "user mode" / "switch to user" / "visitor mode"          → "mode_user"
               "emergency stop" / "activate e-stop" / "e stop"          → "emergency_stop"
               "stop" / "stop driving" / "stop the chair" / "halt"       → "emergency_stop"
-
+ 
   question  — the user is asking you anything: facts, time, weather,
               jokes, opinions, status, small talk questions. Answer
-              concisely and warmly (≤30 words). Use any "Real-time facts"
-              context provided. Be honest if you don't know.
-
+              concisely and warmly (≤30 words). When a "Real-time facts"
+              block is present you MUST answer from it and use its exact
+              numbers, never a value from these examples. For weather, state
+              the current temperature and conditions from that fact. For
+              jokes or open questions, make up a fresh answer and vary it so
+              you do not repeat yourself. Be honest if you don't know.
+ 
   goodbye   — the user is ending the chat: "thanks", "thank you", "bye",
               "that's all", "never mind", "goodbye", "stop talking",
               "we're done", "ok cool". If the map is currently visible,
               prefer hide_map instead.
-
+ 
   clarify   — you think you know which destination the user means but you
               are not certain, so you ask them to confirm. Set destination
               to the valid destination you are checking and phrase the
               reply as a yes/no question ("Did you mean lab a, Master?").
               The user will answer with a simple yes or no, so do not ask
               them to repeat the destination.
-
+ 
   chatter   — a false alarm: background noise, an unrelated remark, or
               speech clearly aimed at someone else rather than you. The
               wake word was caught but nothing here is for Jarvis. After a
@@ -1365,16 +1470,16 @@ Classify each user utterance into ONE of six intents:
               not a question or a command. A place name spoken on its own
               (the user naming where they want to go) is NOT chatter — use
               clarify for that.
-
+ 
 Valid destinations (use the exact phrasing — see "Runtime destinations" context).
-
+ 
 Output ONLY a single JSON object, no prose, exactly this schema:
 {
   "intent": "navigate" | "show_map" | "hide_map" | "create_point" | "dev_command" | "question" | "chatter" | "goodbye" | "clarify",
   "destination": "<one valid destination>" or null,
   "reply": "<short spoken response, <=30 words>"
 }
-
+ 
 Examples:
 "take me to lab a"             -> {"intent":"navigate","destination":"lab a","reply":"On my way to lab A, Master."}
 "bring me to the entrance"     -> {"intent":"navigate","destination":"entrance","reply":"Heading to the entrance, Master."}
@@ -1396,15 +1501,15 @@ Examples:
 "no i was talking to you"      -> {"intent":"chatter","destination":null,"reply":""}
 "so anyway like i was saying"  -> {"intent":"chatter","destination":null,"reply":""}
 "the place with the elevators" -> {"intent":"clarify","destination":"elevator one","reply":"Did you mean elevator one, Master?"}
-"what's the weather like"      -> {"intent":"question","destination":null,"reply":"Partly cloudy and 16 degrees in Delft, Master."}
-"and tomorrow"                 -> {"intent":"question","destination":null,"reply":"I don't have the forecast, Master, but expect typical Dutch spring weather."}
+"what's the weather like"      -> {"intent":"question","destination":null,"reply":"<read the current temperature and conditions from the real-time weather fact and state them, e.g. 'It is 33 degrees and sunny in Delft, Master.'>"}
+"and tomorrow"                 -> {"intent":"question","destination":null,"reply":"<read the tomorrow line from the real-time weather fact and give its high and conditions, Master>"}
 "who built you"                -> {"intent":"question","destination":null,"reply":"A Bachelor End Project team at TU Delft, Master."}
-"tell me a joke"               -> {"intent":"question","destination":null,"reply":"Why don't wheelchairs play chess, Master? Because they always roll into checkmate."}
+"tell me a joke"               -> {"intent":"question","destination":null,"reply":"<make up a fresh, short, friendly joke and tell a different one each time, Master>"}
 "thanks"                       -> {"intent":"goodbye","destination":null,"reply":"Anytime, Master. Just say Jarvis when you need me."}
 "that's all"                   -> {"intent":"goodbye","destination":null,"reply":"Very good, Master."}
 """
-
-
+ 
+ 
 # Open-Meteo weather code -> human description.
 _WEATHER_CODES = {
     0: "clear", 1: "mostly clear", 2: "partly cloudy", 3: "cloudy",
@@ -1415,24 +1520,24 @@ _WEATHER_CODES = {
     80: "rain showers", 81: "rain showers", 82: "violent rain showers",
     95: "thunderstorm", 96: "thunderstorm with hail", 99: "thunderstorm with hail",
 }
-
-
+ 
+ 
 class IntentClassifier:
     """Provider-agnostic LLM intent gate with conversation history + tools."""
-
+ 
     def __init__(self, config: VoiceConfig):
         self.config = config
         self._available = False
         self._provider = config.llm_provider
         self._history: List[dict] = []
-
+ 
         if self._provider == "groq":
             self._init_groq()
         elif self._provider == "ollama":
             self._init_ollama()
         else:
             print(f"[IntentClassifier] unknown provider '{self._provider}'.")
-
+ 
     # ---- providers -------------------------------------------------
     def _init_groq(self) -> None:
         try:
@@ -1452,7 +1557,7 @@ class IntentClassifier:
             print(f"[IntentClassifier] Groq ready ({self._model}).")
         except Exception as e:
             print(f"[IntentClassifier] Groq init failed: {e}")
-
+ 
     def _init_ollama(self) -> None:
         try:
             import ollama
@@ -1466,14 +1571,14 @@ class IntentClassifier:
             print(f"[IntentClassifier] Ollama ready ({self._model}).")
         except Exception as e:
             print(f"[IntentClassifier] Ollama init failed: {e}")
-
+ 
     # ---- public API ------------------------------------------------
     def classify(self, utterance: str, address: str = "Master") -> Intent:
         if not self._available:
             return Intent("chatter", None,
                           "My language model is offline; please set "
                           "GROQ_API_KEY in a .env file.", "")
-
+ 
         # Build messages: system + tool context + history + new turn.
         messages = [{"role": "system", "content": _INTENT_SYSTEM_PROMPT}]
         addr_ctx = (
@@ -1496,7 +1601,7 @@ class IntentClassifier:
         # Trim history to last N turns.
         messages.extend(self._history[-2 * self.config.history_turns:])
         messages.append({"role": "user", "content": utterance})
-
+ 
         try:
             content = (self._call_groq(messages) if self._provider == "groq"
                        else self._call_ollama(messages))
@@ -1513,10 +1618,10 @@ class IntentClassifier:
         except Exception as e:
             print(f"[IntentClassifier] classify error: {e}")
             return Intent("chatter", None, "Sorry, I didn't catch that.", "")
-
+ 
     def reset_history(self) -> None:
         self._history = []
-
+ 
     # ---- LLM transports --------------------------------------------
     def _call_groq(self, messages: List[dict]) -> str:
         resp = self._client.chat.completions.create(
@@ -1527,7 +1632,7 @@ class IntentClassifier:
             messages=messages,
         )
         return resp.choices[0].message.content
-
+ 
     def _call_ollama(self, messages: List[dict]) -> str:
         resp = self._client.chat(
             model=self._model,
@@ -1537,21 +1642,22 @@ class IntentClassifier:
             messages=messages,
         )
         return resp["message"]["content"]
-
+ 
     # ---- Live tool context (weather, time) -------------------------
     def _build_tool_context(self, utterance: str) -> Optional[str]:
         u = utterance.lower()
         facts: List[str] = []
-
+ 
         if (self.config.enable_weather_tool
                 and any(k in u for k in
-                        ["weather", "temperature", "rain", "sun", "cold",
-                         "hot", "wind", "snow"])):
+                        ["weather", "temperature", "forecast", "degree",
+                         "rain", "sun", "cold", "hot", "warm", "chilly",
+                         "wind", "snow", "outside"])):
             try:
                 facts.append(self._fetch_weather())
             except Exception as e:
                 facts.append(f"Weather data unavailable: {e}")
-
+ 
         if (self.config.enable_time_tool
                 and any(k in u for k in
                         ["time", "what time", "clock", "date", "day"])):
@@ -1559,28 +1665,46 @@ class IntentClassifier:
             facts.append(
                 f"Current local time: {now.strftime('%A %d %B, %H:%M')}"
             )
-
+ 
         if not facts:
             return None
-        return "Real-time facts you may use in your reply:\n- " + \
-               "\n- ".join(facts)
-
+        return (
+            "Real-time facts. When a fact below is present you MUST base your "
+            "reply on its exact numbers and words. Do not invent a temperature "
+            "and never reuse a number from the prompt examples.\n- "
+            + "\n- ".join(facts)
+        )
+ 
     def _fetch_weather(self) -> str:
+        # Pull current conditions plus a two-day daily forecast so the rider
+        # can also ask about tomorrow. The daily block is best effort, so a
+        # missing field never breaks the current reading.
         url = (
             "https://api.open-meteo.com/v1/forecast"
             f"?latitude={self.config.location_lat}"
             f"&longitude={self.config.location_lon}"
             "&current=temperature_2m,weather_code,wind_speed_10m"
+            "&daily=weather_code,temperature_2m_max,temperature_2m_min"
+            "&timezone=auto&forecast_days=2"
         )
         with urllib.request.urlopen(url, timeout=3) as resp:
             data = json.loads(resp.read())
         cur = data["current"]
         desc = _WEATHER_CODES.get(cur.get("weather_code"), "unknown")
-        return (f"Weather in {self.config.location_name}: {desc}, "
-                f"{cur['temperature_2m']} degrees C, "
-                f"wind {cur['wind_speed_10m']} km/h.")
-
-
+        out = (f"Weather in {self.config.location_name} right now: {desc}, "
+               f"{cur['temperature_2m']} degrees C, "
+               f"wind {cur['wind_speed_10m']} km/h.")
+        try:
+            day = data["daily"]
+            tmrw = _WEATHER_CODES.get(day["weather_code"][1], "unknown")
+            out += (f" Tomorrow in {self.config.location_name}: {tmrw}, "
+                    f"high {day['temperature_2m_max'][1]} degrees C, "
+                    f"low {day['temperature_2m_min'][1]} degrees C.")
+        except (KeyError, IndexError, TypeError):
+            pass
+        return out
+ 
+ 
 # -----------------------------------------------------------------------------
 # Text-to-speech (SAPI by default; Edge-TTS optional for natural voices)
 # -----------------------------------------------------------------------------
@@ -1593,7 +1717,7 @@ class Speaker:
         self._pygame = None
         self._audio_queue: Optional["queue.Queue[bytes]"] = None
         self._tts_cache: dict = {}   # text → pre-synthesised .mp3 tmp path
-
+ 
         # ---- Barge-in (interrupt playback when the user talks) ----
         self._barge_enabled: bool = bool(getattr(config, "barge_in_enabled", False))
         # dBFS → linear RMS threshold for int16 audio (same maths as NoiseGate).
@@ -1605,7 +1729,7 @@ class Speaker:
         self._last_interrupted: bool = False  # set by _say_edge, read by worker
         self._barge_captured: list = []       # user speech to re-feed after a cut
         self._barge_collected: list = []      # every chunk read during playback
-
+ 
         # All TTS calls are routed through this queue so that every pygame /
         # COM operation runs on one dedicated thread (the one that initialized
         # the audio backend).  This avoids the silent failure that occurs when
@@ -1615,26 +1739,26 @@ class Speaker:
         self._tts_queue: "queue.Queue[Optional[tuple]]" = queue.Queue()
         self._tts_done: threading.Event = threading.Event()
         self._tts_thread: Optional[threading.Thread] = None
-
+ 
         if not config.tts_enabled:
             return
-
+ 
         if config.tts_provider == "edge":
             self._init_edge()
         if self._mode == "off":
             self._init_sapi()
-
+ 
         if self._mode != "off":
             self._tts_thread = threading.Thread(
                 target=self._tts_worker, daemon=True, name="Speaker-TTS"
             )
             self._tts_thread.start()
-
+ 
     def bind_audio_queue(self, q: "queue.Queue[bytes]") -> None:
         """Give the speaker a reference to the mic queue so it can mute
         itself while speaking (prevents Jarvis from hearing its own voice)."""
         self._audio_queue = q
-
+ 
     # ---- Pre-synthesis cache (Edge-TTS only) -----------------------
     def prime(self, phrases: list) -> None:
         """Pre-synthesize a list of known phrases in a background thread so
@@ -1644,7 +1768,7 @@ class Speaker:
         threading.Thread(
             target=self._prime_worker, args=(phrases,), daemon=True
         ).start()
-
+ 
     def _prime_worker(self, phrases: list) -> None:
         for text in phrases:
             if text and text not in self._tts_cache:
@@ -1654,7 +1778,7 @@ class Speaker:
                     print(f"[Speaker] Pre-cached: '{text}'")
                 except Exception as e:
                     print(f"[Speaker] Pre-cache failed for '{text}': {e}")
-
+ 
     def _tts_worker(self) -> None:
         """Dedicated thread that owns the audio backend and processes all
         say() requests.  Keeps pygame / COM calls on one thread."""
@@ -1662,15 +1786,17 @@ class Speaker:
             item = self._tts_queue.get()
             if item is None:          # shutdown sentinel
                 break
-            text, drain_flag, done_event = item
+            text, drain_flag, done_event, on_start = item
             self._last_interrupted = False
             self._barge_captured = []
             self._barge_collected = []
             try:
                 if self._mode == "edge":
-                    self._say_edge(text)
+                    self._say_edge(text, on_start=on_start)
                 elif self._mode == "sapi" and self._engine is not None:
                     try:
+                        if on_start is not None:
+                            on_start()
                         self._engine.say(text)
                         self._engine.runAndWait()
                     except Exception as e:
@@ -1695,7 +1821,7 @@ class Speaker:
             finally:
                 if done_event is not None:
                     done_event.set()
-
+ 
     def _refeed(self, chunks: list) -> None:
         """Put captured mic chunks back onto the queue (preserving order)."""
         if self._audio_queue is None:
@@ -1707,7 +1833,7 @@ class Speaker:
                 self._audio_queue.put_nowait(chunk)
             except queue.Full:
                 break
-
+ 
     def _drain_mic(self) -> None:
         """Throw away any audio that accumulated while TTS was playing."""
         if self._audio_queue is None:
@@ -1721,7 +1847,7 @@ class Speaker:
                 break
         if drained:
             print(f"[Speaker] Drained {drained} stale mic chunks after TTS.")
-
+ 
     def _init_sapi(self) -> None:
         try:
             import pyttsx3
@@ -1743,7 +1869,7 @@ class Speaker:
             print("[Speaker] TTS ready (pyttsx3 / SAPI).")
         except Exception as e:
             print(f"[Speaker] SAPI unavailable: {e}")
-
+ 
     def _init_edge(self) -> None:
         try:
             import edge_tts          # noqa: F401
@@ -1756,22 +1882,34 @@ class Speaker:
         except Exception as e:
             print(f"[Speaker] Edge-TTS unavailable: {e}. "
                   "Falling back to SAPI.")
-
-    def say(self, text: Optional[str], drain: bool = True) -> None:
+ 
+    def say(
+        self,
+        text: Optional[str],
+        drain: bool = True,
+        on_start: Optional[Callable[[], None]] = None,
+    ) -> None:
         """Speak *text*.
-
+ 
         Parameters
         ----------
         drain:
             When True (default), flush any microphone audio that
             accumulated while Jarvis was speaking so Vosk doesn't
             mis-transcribe the TTS output as a new command.
-
+ 
             Set to False for very short one-word acks (e.g. the AWOKEN
             "Yes, sir?" response on a headset) where the earphone has
             negligible acoustic bleed into the mic and we want to keep
             any user audio that arrived in the queue (e.g. an inline
             command spoken right after the wake word).
+        on_start:
+            Optional callback fired the instant audio playback begins,
+            on the TTS worker thread. Edge-TTS synthesises over the
+            network, so the caller's on-screen caption would otherwise
+            appear a beat before the voice. Revealing the caption from
+            here keeps the text and the audio in sync. Fired once even
+            if Edge falls back to SAPI mid-call.
         """
         if not text or not text.strip():
             return
@@ -1780,28 +1918,30 @@ class Speaker:
             # Route through the dedicated TTS thread so that all pygame /
             # COM operations happen on the thread that initialized them.
             done = threading.Event()
-            self._tts_queue.put((text, drain, done))
+            self._tts_queue.put((text, drain, done, on_start))
             done.wait()
         else:
             # Fallback (no worker thread — tts_enabled=False or init failed):
             # call directly, accepting the cross-thread risk.
             if self._mode == "edge":
-                self._say_edge(text)
+                self._say_edge(text, on_start=on_start)
             elif self._mode == "sapi" and self._engine is not None:
                 try:
+                    if on_start is not None:
+                        on_start()
                     self._engine.say(text)
                     self._engine.runAndWait()
                 except Exception as e:
                     print(f"[Speaker] SAPI error: {e}")
             if drain:
                 self._drain_mic()
-
+ 
     def _synthesise_to_file(self, text: str) -> str:
         """Synthesise *text* to a new temp .mp3 and return the path."""
         import tempfile, edge_tts
         tmp_fd, tmp_path = tempfile.mkstemp(suffix=".mp3", prefix="jarvis_tts_")
         os.close(tmp_fd)
-
+ 
         async def _synth():
             # Hard timeout so a stalled cloud connection can never hang the
             # caller forever.  Edge-TTS is a network service, and say() waits
@@ -1812,28 +1952,42 @@ class Speaker:
                 edge_tts.Communicate(text, self.config.edge_voice).save(tmp_path),
                 timeout=6.0,
             )
-
+ 
         loop = asyncio.new_event_loop()
         try:
             loop.run_until_complete(_synth())
         finally:
             loop.close()
         return tmp_path
-
-    def _say_edge(self, text: str) -> None:
+ 
+    def _say_edge(
+        self, text: str, on_start: Optional[Callable[[], None]] = None
+    ) -> None:
+        # Fire the caption callback the moment audio starts, not when say() was
+        # called. Synthesis above is a network round trip, so revealing the
+        # GUI text here keeps it level with the voice. Guarded so a SAPI
+        # fallback can call it without firing twice.
+        fired = [False]
+ 
+        def _start() -> None:
+            if on_start is not None and not fired[0]:
+                fired[0] = True
+                on_start()
+ 
         # Check pre-synthesis cache first — cache hit = zero network wait.
         cached_path = self._tts_cache.get(text)
         tmp_path: Optional[str] = None
         owns_file = False
-
+ 
         try:
             if cached_path and os.path.exists(cached_path):
                 tmp_path = cached_path
             else:
                 tmp_path = self._synthesise_to_file(text)
                 owns_file = True
-
+ 
             self._pygame.mixer.music.load(tmp_path)
+            _start()
             self._pygame.mixer.music.play()
             self._barge_speech_run = 0
             collected: list = []
@@ -1857,18 +2011,18 @@ class Speaker:
             self._barge_collected = collected
         except Exception as e:
             print(f"[Speaker] Edge-TTS error: {e} - falling back to SAPI.")
-            self._say_sapi_fallback(text)
+            self._say_sapi_fallback(text, on_start=_start)
         finally:
             if owns_file and tmp_path:
                 try:
                     os.remove(tmp_path)
                 except OSError:
                     pass
-
+ 
     def _barge_detected(self, collected: list) -> bool:
         """Drain mic chunks that arrived during playback and report whether the
         user has started talking over Jarvis.
-
+ 
         Each available chunk is read off the mic queue (so it is not lost),
         appended to *collected*, and tested against the barge-in RMS
         threshold.  Returns True once `barge_in_frames` consecutive speech
@@ -1892,19 +2046,23 @@ class Speaker:
             if self._barge_speech_run >= self._barge_frames:
                 return True
         return False
-
-    def _say_sapi_fallback(self, text: str) -> None:
+ 
+    def _say_sapi_fallback(
+        self, text: str, on_start: Optional[Callable[[], None]] = None
+    ) -> None:
         """Emergency fallback: use SAPI even when edge is the preferred mode."""
         try:
             import pyttsx3
             eng = pyttsx3.init()
             eng.setProperty("rate", self.config.tts_rate)
+            if on_start is not None:
+                on_start()
             eng.say(text)
             eng.runAndWait()
         except Exception as e2:
             print(f"[Speaker] SAPI fallback also failed: {e2}")
-
-
+ 
+ 
 # -----------------------------------------------------------------------------
 # Confirmation window (REQ-UI-FR05)
 # -----------------------------------------------------------------------------
@@ -1914,12 +2072,12 @@ class Hit:
     location_id: str
     confidence: float
     raw_text: str
-
-
+ 
+ 
 class ConfirmationWindow:
     def __init__(self, seconds: float = 2.0):
         self.seconds = seconds
-
+ 
     def confirm(self, hit: Hit) -> bool:
         if hit.location_id == "EMERGENCY_STOP":
             print("\n[Confirm] EMERGENCY STOP - dispatching immediately.")
@@ -1927,14 +2085,14 @@ class ConfirmationWindow:
         print(f"\n>>> Driving to {hit.location_id} ('{hit.phrase}') "
               f"in {self.seconds:.1f}s. Press ENTER to CANCEL.")
         cancelled = threading.Event()
-
+ 
         def watch_stdin():
             try:
                 sys.stdin.readline()
                 cancelled.set()
             except Exception:
                 pass
-
+ 
         threading.Thread(target=watch_stdin, daemon=True).start()
         deadline = time.time() + self.seconds
         while time.time() < deadline:
@@ -1944,20 +2102,20 @@ class ConfirmationWindow:
             time.sleep(0.05)
         print("[Confirm] Confirmed - sending to pathfinding.")
         return True
-
-
+ 
+ 
 # -----------------------------------------------------------------------------
 # Payload emitter
 # -----------------------------------------------------------------------------
 class PayloadEmitter:
     def __init__(self, transport: Optional[Callable[[dict], None]] = None):
         self.transport = transport or self._default_transport
-
+ 
     @staticmethod
     def _default_transport(payload: dict) -> None:
         print("[PayloadEmitter] >>>")
         print(json.dumps(payload, indent=2))
-
+ 
     def emit(self, hit: Hit, mode: str = "VOICE",
              confirmed: bool = True) -> None:
         payload = {
@@ -1969,14 +2127,14 @@ class PayloadEmitter:
             "timestamp": time.time(),
         }
         self.transport(payload)
-
-
+ 
+ 
 # -----------------------------------------------------------------------------
 # Observer hook
 # -----------------------------------------------------------------------------
 class VoiceObserver:
     """Override any subset of these in your GUI / logger / test harness."""
-
+ 
     def on_state(self, state: str) -> None: ...
     def on_partial(self, text: str) -> None: ...
     def on_final(self, text: str) -> None: ...
@@ -1988,8 +2146,8 @@ class VoiceObserver:
     def on_navigate(self, payload: dict) -> None: ...
     def on_dev_command(self, command: str) -> None: ...
     def on_stop_driving(self) -> None: ...
-
-
+ 
+ 
 # -----------------------------------------------------------------------------
 # Orchestrator
 # -----------------------------------------------------------------------------
@@ -2016,7 +2174,7 @@ class VoiceController:
         )
         if self.fast_navigator:
             print("[FastNavigator] Active — navigate commands bypass LLM.")
-
+ 
         # Single-worker pool for the parallel LLM+FastNav race.  One worker
         # is enough because commands are processed sequentially; the pool is
         # only here to let the LLM HTTP call start before FastNav finishes its
@@ -2025,7 +2183,7 @@ class VoiceController:
         self._llm_pool = concurrent.futures.ThreadPoolExecutor(
             max_workers=1, thread_name_prefix="llm-race"
         )
-
+ 
         # Software noise gate (second layer after Plantronics hardware DSP)
         self.noise_gate = (
             NoiseGate(
@@ -2037,7 +2195,7 @@ class VoiceController:
         if self.noise_gate:
             print(f"[NoiseGate] Active — threshold {self.config.noise_gate_threshold_db} dBFS, "
                   f"hold {self.config.noise_gate_hold_frames} frames.")
-
+ 
         # Neural denoiser (third layer, DeepFilterNet3).
         # Disabled if the noise gate is off because the gate's is_speech
         # flag drives which chunks are sent through enhancement.
@@ -2051,7 +2209,7 @@ class VoiceController:
                 and self.noise_gate is not None)
             else None
         )
-
+ 
         self._address: str = self.config.default_address
         self._map_visible: bool = False
         # When the LLM asks "Did you mean X?" (clarify intent) the candidate
@@ -2061,7 +2219,7 @@ class VoiceController:
         self._running = False
         self.observer.on_address(self._address)
         self.observer.on_state("STANDING BY")
-
+ 
         # Pre-synthesise common phrases so the first TTS response is
         # instant (no Edge-TTS network round-trip on the critical path).
         _prime_phrases = [
@@ -2081,7 +2239,7 @@ class VoiceController:
                     f"On my way to {dest.title()}, {self._address}."
                 )
         self.speaker.prime(_prime_phrases)
-
+ 
     # -- payload bridge so the GUI sees navigations too ---------------
     def _on_payload(self, payload: dict) -> None:
         try:
@@ -2089,10 +2247,10 @@ class VoiceController:
         finally:
             print("[PayloadEmitter] >>>")
             print(json.dumps(payload, indent=2))
-
+ 
     def add_destination(self, name: str, loc_id: str) -> None:
         """Register a new named destination at runtime (thread-safe).
-
+ 
         Updates config.destinations and rebuilds FastNavigator so the new
         location is immediately matchable without restarting the system.
         Called by main.py when a waypoint is placed via the map overlay or
@@ -2103,10 +2261,10 @@ class VoiceController:
         if self.fast_navigator is not None:
             self.fast_navigator = FastNavigator(self.config.destinations)
         print(f"[VoiceController] Destination registered: '{key}' → {loc_id}")
-
+ 
     def _resolve_map_destination(self, dest_phrase: str) -> Optional[str]:
         """Return the location id for a destination only if it is a map marker.
-
+ 
         Matches case-insensitively against the live destinations table (which
         holds nothing but map markers plus "stop"). Returns None for anything
         not on the map so callers can refuse the command instead of inventing
@@ -2121,7 +2279,7 @@ class VoiceController:
             if name.lower() == key:
                 return loc_id
         return None
-
+ 
     def _reject_unknown_destination(self, dest_phrase: str) -> None:
         """Tell the user the requested place is not a marker on the map."""
         valid = [k for k in self.config.destinations if k != "stop"]
@@ -2135,25 +2293,32 @@ class VoiceController:
             reply = (
                 f"There are no destinations on the map yet, {self._address}."
             )
-        self.observer.on_reply(reply)
         self._broadcast_state("SPEAKING")
-        self.speaker.say(reply)
+        self._say(reply)
         self._broadcast_state("LISTENING")
-
+ 
     def stop(self) -> None:
         self._running = False
-
+ 
     def run(self) -> None:
         self.audio.start()
         self._running = True
-
+ 
         valid = list(self.config.destinations.keys())
         print(f"\n[VoiceController] Say '{self.config.wake_word.title()}' "
               f"to wake the chair. Valid destinations: {valid}")
         print("Press Ctrl+C to stop.\n")
         self._broadcast_state("LISTENING")
-
+ 
         last_partial = ""
+        # Track when the live partial last changed so we can tell a moving
+        # utterance from one that has stalled on a trailing filler word.
+        stall_partial = ""
+        stall_partial_t = 0.0
+        # Consecutive chunks the NoiseGate has classified as silence.  Used
+        # to hold an early finalize until the user has actually stopped, so a
+        # real mid-command "the"/"a" is never mistaken for the end.
+        silent_chunks = 0
         # Silence-gate committer — buffers commands until the user has
         # been silent for silence_commit_s seconds so fragments of a
         # sentence are joined before the pipeline processes them.
@@ -2183,7 +2348,7 @@ class VoiceController:
                             _commit_full = ""
                             self._drop_stale_audio("after command")
                     continue
-
+ 
                 # ---- Idle backlog cap -----------------------------------
                 # While Jarvis is idle (not awake), the only thing that
                 # should fill the queue is the open mic hearing the room.
@@ -2195,7 +2360,7 @@ class VoiceController:
                 if (not self.wake_gate.is_awake
                         and self.audio.queue.qsize() > 15):
                     self._drop_stale_audio("idle backlog")
-
+ 
                 # ---- Software noise gate + neural denoiser -------------
                 # Pipeline: NoiseGate classifies the chunk as speech or
                 # silence.  Speech chunks are enhanced by DeepFilterNet3
@@ -2220,7 +2385,15 @@ class VoiceController:
                                 pcm = self.denoiser.process(pcm)
                         else:
                             self.denoiser.feed_noise(pcm)
-
+ 
+                # Track how long the user has been silent so the early
+                # finalize below only fires after a real stop, not on a
+                # mid-command filler word.
+                if is_speech:
+                    silent_chunks = 0
+                else:
+                    silent_chunks += 1
+ 
                 # Tick the committer on every chunk so silence detection
                 # works at audio resolution (125 ms) rather than waiting
                 # for the next queue.Empty timeout.
@@ -2232,33 +2405,71 @@ class VoiceController:
                         _commit_full = ""
                         self._drop_stale_audio("after command")
                         continue
-
+ 
                 result = self.engine.feed(pcm)
-
+ 
                 if result is None:
-                    if self.config.show_partials:
-                        partial = self.engine.partial().get("partial", "")
-                        # A lone "the"/"a" partial is Vosk chewing on room
-                        # noise, not the user.  Suppress it so a stray "the"
-                        # does not sit flashing on screen between commands.
-                        p_words = partial.split()
-                        if (len(p_words) == 1
-                                and p_words[0].lower() in _STT_NOISE_WORDS):
-                            partial = ""
-                        if partial and partial != last_partial:
-                            print(f"\r[live ] {partial:<70}",
-                                  end="", flush=True)
-                            self.observer.on_partial(partial)
-                            last_partial = partial
-                    continue
-
+                    partial = self.engine.partial().get("partial", "")
+ 
+                    # ---- Trailing-filler early finalize ----------------
+                    # Vosk parks the partial on a dangling "the"/"of" after
+                    # a finished command and holds the utterance open, which
+                    # is the lag the user notices.  When the partial has not
+                    # changed for trailing_finalize_s and still ends on such
+                    # a filler (with real words ahead of it), commit it now
+                    # instead of waiting for Vosk's own endpoint.  Awake-only
+                    # so idle room noise is never force-committed.
+                    if partial != stall_partial:
+                        stall_partial = partial
+                        stall_partial_t = time.time()
+                    stalled_s = time.time() - stall_partial_t
+                    filler_done = (self.config.finalize_on_trailing_filler
+                                   and self._partial_stalled_on_filler(
+                                       partial, stalled_s))
+                    stalled_done = (self.config.finalize_on_stalled_partial
+                                    and self._partial_stalled_done(
+                                        partial, stalled_s))
+                    # Hold the early finalize until the user has actually
+                    # gone quiet, so a real "the"/"a" mid-command never ends
+                    # the utterance early (see VoiceConfig.finalize_requires_silence).
+                    user_stopped = (not self.config.finalize_requires_silence
+                                    or silent_chunks
+                                    >= self.config.finalize_min_silent_chunks)
+                    if (self.wake_gate.is_awake and user_stopped
+                            and (filler_done or stalled_done)):
+                        result = self.engine.final()
+                        stall_partial = ""
+                        stall_partial_t = 0.0
+                        # Fall through to the final-handling block below.
+ 
+                    if result is None:
+                        if self.config.show_partials:
+                            # A lone "the"/"a" partial is Vosk chewing on room
+                            # noise, not the user.  Suppress it so a stray
+                            # "the" does not sit flashing on screen between
+                            # commands.
+                            p_words = partial.split()
+                            if (len(p_words) == 1
+                                    and p_words[0].lower() in _STT_NOISE_WORDS):
+                                partial = ""
+                            if partial and partial != last_partial:
+                                print(f"\r[live ] {partial:<70}",
+                                      end="", flush=True)
+                                self.observer.on_partial(partial)
+                                last_partial = partial
+                        continue
+ 
                 final_text = (result.get("text") or "").strip()
                 # Drop a dangling "the"/"a" off the ends before anything
                 # else looks at the line.  This stops a stray trailing word
                 # from sitting on screen and from holding the live partial
                 # open longer than it needs to.
                 final_text = _strip_edge_noise_words(final_text)
-
+                # Then drop every remaining "the" so it never sits in the
+                # command or on screen (see VoiceConfig.drop_all_the).
+                if self.config.drop_all_the:
+                    final_text = _drop_all_the(final_text)
+ 
                 # ---- Noise / hallucination guard -----------------------
                 if final_text:
                     words = final_text.lower().split()
@@ -2277,7 +2488,7 @@ class VoiceController:
                                   end="", flush=True)
                             final_text = ""
                 # --------------------------------------------------------
-
+ 
                 if final_text:
                     print(f"\r[final] {final_text:<70}")
                     self.observer.on_final(final_text)
@@ -2285,7 +2496,7 @@ class VoiceController:
                     print("\r" + " " * 78 + "\r", end="")
                 self.observer.on_partial("")
                 last_partial = ""
-
+ 
                 # Correct verb mishearings (wake/break -> take, road -> go,
                 # elevate -> elevator, …) at the earliest point so the wake
                 # gate, committer and fast path all work on the intended words.
@@ -2306,9 +2517,8 @@ class VoiceController:
                     self._pending_clarify = None
                     self._broadcast_state("AWAITING COMMAND")
                     reply = f"Yes, {self._address}?"
-                    self.observer.on_reply(reply)
                     self._broadcast_state("SPEAKING")
-                    self.speaker.say(reply, drain=False)
+                    self._say(reply, drain=False)
                     # Throw away the mic backlog that piled up while "Yes,
                     # Master?" was playing.  Without this the loop decodes a
                     # second or two of stale room audio first, which both
@@ -2317,7 +2527,7 @@ class VoiceController:
                     self._drop_stale_audio("after wake ack")
                     self._broadcast_state("AWAITING COMMAND")
                     continue
-
+ 
                 # Emergency stop and already-complete navigation commands are
                 # dispatched immediately, bypassing the silence window.  A
                 # full "verb + destination" match (e.g. "take me to lab a")
@@ -2336,7 +2546,12 @@ class VoiceController:
                 # are finished sentences too, so they skip the silence window
                 # and react immediately like the stop and map commands.
                 dev_hit = _match_dev_command(command) is not None
-                if (_STOP_ONLY_RE.match(command)
+                # Run the stop check on the homophone-corrected text so a
+                # clipped "stop" that came back as "top" or "the top" still
+                # skips the silence window. Without this the emergency stop
+                # only fired after the commit delay, which felt slow.
+                stop_hit = bool(_STOP_ONLY_RE.match(_normalise_homophones(command)))
+                if (stop_hit
                         or _SLEEP_RE.match(command)
                         or fast_hit is not None
                         or map_hit
@@ -2352,53 +2567,66 @@ class VoiceController:
                     _commit_full = final_text
                 else:
                     self._handle_command(command, final_text)
-
+ 
         except KeyboardInterrupt:
             print("\n[VoiceController] Shutting down (Ctrl+C).")
         finally:
             self.audio.stop()
             self._broadcast_state("STANDING BY")
-
+ 
     # -- observer helpers --------------------------------------------
     def _broadcast_state(self, state: str) -> None:
         try:
             self.observer.on_state(state)
         except Exception as e:
             print(f"[VoiceController] observer.on_state error: {e}")
-
+ 
+    def _say(self, text: Optional[str], drain: bool = True) -> None:
+        """Speak *text* and reveal its caption on the GUI in sync with the audio.
+ 
+        The reply label used to be set before say() ran, but Edge-TTS
+        synthesises over the network, so the text landed a beat ahead of the
+        voice. Handing on_reply to the speaker as its on_start hook fires it at
+        playback onset instead, so the caption and the voice arrive together.
+        """
+        if not text or not text.strip():
+            return
+        self.speaker.say(
+            text, drain=drain, on_start=lambda: self.observer.on_reply(text)
+        )
+ 
     # -- voice confirmation -----------------------------------------
     def _voice_confirm(self, dest_display: str) -> bool:
         """
         Ask the user to confirm navigation verbally, then listen for a
         spoken yes or no reply.
-
+ 
         Jarvis says: "Shall I take you to <dest>, <address>?"
         User says  : "yes" / "go" / "okay" → returns True
                      "no" / "cancel" / "stop" → returns False
         Timeout    : returns False (safe default — chair stays put).
-
+ 
         The confirmation loop feeds audio through the noise gate and
         Vosk recogniser but bypasses the wake gate and LLM — it only
         looks for simple yes/no vocabulary.
         """
         question = f"Shall I take you to {dest_display}, {self._address}?"
-        self.observer.on_reply(question)   # show the prompt on the GUI
         self._broadcast_state("SPEAKING")
         # drain=False: keep audio captured during TTS so the user can say
         # "yes" while Jarvis is still asking and the confirmation loop
         # picks it up.  Barge-in stops playback early when the user talks
         # over Jarvis; drain=False ensures non-barge audio is also kept.
-        self.speaker.say(question, drain=False)
+        self._say(question, drain=False)
         self._broadcast_state("CONFIRMING")
         print(f"[Confirm] Listening for yes/no (timeout {self.config.confirm_timeout_s}s) …")
-
+ 
         deadline = time.time() + self.config.confirm_timeout_s
         while time.time() < deadline:
             try:
                 pcm = self.audio.queue.get(timeout=0.2)
             except queue.Empty:
                 continue
-
+ 
             # Apply the same gate + neural denoiser pipeline as the main loop.
             if self.noise_gate is not None:
                 pcm, is_speech = self.noise_gate.process(pcm)
@@ -2407,7 +2635,7 @@ class VoiceController:
                         pcm = self.denoiser.process(pcm)
                     else:
                         self.denoiser.feed_noise(pcm)
-
+ 
             result = self.engine.feed(pcm)
             if result is None:
                 # Show partial so the user sees they're being heard, and try to
@@ -2426,24 +2654,22 @@ class VoiceController:
                         print(f"\r[Confirm] Heard (live): '{partial}' → YES{' ' * 20}")
                         self.engine.reset()
                         reply = f"On my way, {self._address}."
-                        self.observer.on_reply(reply)
-                        self.speaker.say(reply, drain=False)
+                        self._say(reply, drain=False)
                         return True
                 continue
-
+ 
             text = (result.get("text") or "").strip().lower()
             if not text:
                 continue
-
+ 
             print(f"\r[Confirm] Heard: '{text}'{' ' * 50}")
-
+ 
             norm_text = _normalise_homophones(text)
             verdict = _classify_confirmation(norm_text)
             if verdict == "yes":
                 # A yes settles it — ignore anything said after it.
                 reply = f"On my way, {self._address}."
-                self.observer.on_reply(reply)
-                self.speaker.say(reply, drain=False)
+                self._say(reply, drain=False)
                 return True
             if verdict == "no":
                 # A no cancels.  If the user tacked a fresh instruction on the
@@ -2454,31 +2680,59 @@ class VoiceController:
                 if remainder:
                     print(f"[Confirm] 'no' + follow-up command: '{remainder}'")
                     ack = f"Of course, {self._address}."
-                    self.observer.on_reply(ack)
-                    self.speaker.say(ack, drain=False)
+                    self._say(ack, drain=False)
                     self._handle_command(remainder, remainder)
                 else:
                     reply = f"Understood, {self._address}. Let me know when you're ready."
-                    self.observer.on_reply(reply)
-                    self.speaker.say(reply, drain=False)
+                    self._say(reply, drain=False)
                 return False
-
+ 
             # Heard something but it wasn't a clear yes/no — prompt once more
             reply = f"Sorry, {self._address} — yes or no?"
-            self.observer.on_reply(reply)
-            self.speaker.say(reply, drain=False)
-
+            self._say(reply, drain=False)
+ 
         # Timed out — stay put for safety
         print("[Confirm] Timed out — cancelling navigation.")
         reply = f"No confirmation received, {self._address}. Staying put."
-        self.observer.on_reply(reply)
-        self.speaker.say(reply, drain=False)
+        self._say(reply, drain=False)
         return False
-
+ 
     # -- command pipeline -------------------------------------------
+    def _partial_stalled_on_filler(self, partial: str, stalled_s: float) -> bool:
+        """True when a live partial has finished but is held open by a filler.
+ 
+        The partial must have been unchanged for at least trailing_finalize_s,
+        end on one of _STT_TRAILING_TERMINATORS, and carry at least one real
+        word ahead of that filler.  The last condition keeps us from ever
+        committing an utterance that is still nothing but filler, so a stray
+        "the" on room noise is never turned into a command.
+        """
+        if stalled_s < self.config.trailing_finalize_s:
+            return False
+        words = partial.split()
+        if len(words) < 2:
+            return False
+        if words[-1].lower() not in _STT_TRAILING_TERMINATORS:
+            return False
+        return any(w.lower() not in _STT_NOISE_WORDS for w in words[:-1])
+ 
+    def _partial_stalled_done(self, partial: str, stalled_s: float) -> bool:
+        """True when a live partial looks finished even if it is not a sentence.
+ 
+        The partial must have been unchanged for at least stall_finalize_s and
+        carry at least one real (non-noise) word.  This commits a finished but
+        ungrammatical utterance, like a bare destination spoken without a verb,
+        without waiting for Vosk's own endpoint.  The real-word check keeps a
+        stray "the" or "uh" on room noise from ever becoming a command.
+        """
+        if stalled_s < self.config.stall_finalize_s:
+            return False
+        words = partial.split()
+        return any(w.lower() not in _STT_NOISE_WORDS for w in words)
+ 
     def _drop_stale_audio(self, reason: str) -> int:
         """Throw away everything sitting in the mic queue and reset Vosk.
-
+ 
         _handle_command blocks the audio thread for the whole Groq round
         trip and the spoken reply, and on an open mic the queue fills with
         room audio the entire time.  If we then processed that backlog the
@@ -2497,10 +2751,10 @@ class VoiceController:
             self.engine.reset()
             print(f"[drain] dropped {dropped} stale chunks ({reason})")
         return dropped
-
+ 
     def _trigger_stop_driving(self) -> None:
         """End the current drive in response to a spoken stop command.
-
+ 
         Hands off to ``on_stop_driving()``, which main.py turns into a goal at
         the chair's current AMCL pose.  Nav2 then plans to where the chair
         already is and finishes at once, so it stops driving without killing
@@ -2508,11 +2762,14 @@ class VoiceController:
         route never stopped the chair because main.py rejects any goal that is
         not a map marker, which is why a bare emit did nothing.
         """
-        reply = f"Stopping here, {self._address}."
-        self.observer.on_reply(reply)
-        self._broadcast_state("SPEAKING")
-        self.speaker.say(reply)
+        # Halt the chair first, then speak. Speaking is a blocking TTS call,
+        # so firing it before on_stop_driving() delayed the actual stop by the
+        # length of the spoken line. The rider wants the chair to react the
+        # instant the word lands, so the motion command goes out first.
         self.observer.on_stop_driving()
+        reply = f"Stopping here, {self._address}."
+        self._broadcast_state("SPEAKING")
+        self._say(reply)
         self._pending_clarify = None
         self.wake_gate.end_conversation()
         self.intent_classifier.reset_history()
@@ -2547,9 +2804,8 @@ class VoiceController:
             print("[WakeGate] sleep command → returning to idle.")
             self._pending_clarify = None
             reply = f"Going to sleep, {self._address}. Say Jarvis when you need me."
-            self.observer.on_reply(reply)
             self._broadcast_state("SPEAKING")
-            self.speaker.say(reply)
+            self._say(reply)
             self.wake_gate.end_conversation()
             self.intent_classifier.reset_history()
             self._broadcast_state("STANDING BY")
@@ -2572,15 +2828,13 @@ class VoiceController:
                 if remainder:
                     print(f"[Clarify] 'no' + follow-up command: '{remainder}'")
                     ack = f"Of course, {self._address}."
-                    self.observer.on_reply(ack)
                     self._broadcast_state("SPEAKING")
-                    self.speaker.say(ack, drain=False)
+                    self._say(ack, drain=False)
                     self._handle_command(remainder, remainder)
                 else:
                     reply = f"No problem, {self._address}. Where would you like to go?"
-                    self.observer.on_reply(reply)
                     self._broadcast_state("SPEAKING")
-                    self.speaker.say(reply)
+                    self._say(reply)
                     self._broadcast_state("LISTENING")
                 return
 
@@ -2592,18 +2846,16 @@ class VoiceController:
         if _MAP_SHOW_RE.search(command):
             print("[FastMap] show_map  (LLM skipped)")
             reply = f"Of course, {self._address}."
-            self.observer.on_reply(reply)
             self._broadcast_state("SPEAKING")
-            self.speaker.say(reply)
+            self._say(reply)
             self.observer.on_show_map()
             self._broadcast_state("LISTENING")
             return
         if _MAP_HIDE_RE.search(command):
             print("[FastMap] hide_map  (LLM skipped)")
             reply = f"Closing the map, {self._address}."
-            self.observer.on_reply(reply)
             self._broadcast_state("SPEAKING")
-            self.speaker.say(reply)
+            self._say(reply)
             self.observer.on_hide_map()
             self._broadcast_state("LISTENING")
             return
@@ -2618,9 +2870,8 @@ class VoiceController:
             reply = _DEV_CMD_REPLIES.get(
                 dev_cmd, f"Done, {self._address}."
             ).format(address=self._address)
-            self.observer.on_reply(reply)
             self._broadcast_state("SPEAKING")
-            self.speaker.say(reply)
+            self._say(reply)
             self.observer.on_dev_command(dev_cmd)
             self._broadcast_state("LISTENING")
             return
@@ -2692,19 +2943,16 @@ class VoiceController:
 
         reply = intent.reply or ""
         if intent.intent_type == "show_map":
-            self.observer.on_reply(reply)
             self._broadcast_state("SPEAKING")
-            self.speaker.say(reply)
+            self._say(reply)
             self.observer.on_show_map()
         elif intent.intent_type == "hide_map":
-            self.observer.on_reply(reply)
             self._broadcast_state("SPEAKING")
-            self.speaker.say(reply)
+            self._say(reply)
             self.observer.on_hide_map()
         elif intent.intent_type == "create_point":
-            self.observer.on_reply(reply)
             self._broadcast_state("SPEAKING")
-            self.speaker.say(reply)
+            self._say(reply)
             self.observer.on_create_point()
         elif intent.intent_type == "dev_command":
             # A stop that only the LLM caught still ends the drive the same way
@@ -2712,28 +2960,24 @@ class VoiceController:
             if intent.destination in ("emergency_stop", "stop_driving"):
                 self._trigger_stop_driving()
                 return
-            self.observer.on_reply(reply)
             self._broadcast_state("SPEAKING")
-            self.speaker.say(reply)
+            self._say(reply)
             if intent.destination:
                 self.observer.on_dev_command(intent.destination)
         elif intent.intent_type == "clarify":
             # Ask the user to confirm the guessed destination and park it so
             # a plain yes/no on the next turn resolves it (see _handle_command).
             self._pending_clarify = (intent.destination or "").lower().strip() or None
-            self.observer.on_reply(reply)
             self._broadcast_state("SPEAKING")
-            self.speaker.say(reply)
+            self._say(reply)
         elif intent.intent_type == "goodbye":
-            self.observer.on_reply(reply)
             self._broadcast_state("SPEAKING")
-            self.speaker.say(reply)
+            self._say(reply)
             self.wake_gate.end_conversation()
             self.intent_classifier.reset_history()
         elif intent.intent_type == "question":
-            self.observer.on_reply(reply)
             self._broadcast_state("SPEAKING")
-            self.speaker.say(reply)
+            self._say(reply)
         else:  # chatter — false alarm or speech aimed at someone else.
             # The follow-up after the wake word was not a question or a
             # command for Jarvis, so treat the wake as a false trigger and
@@ -2768,9 +3012,8 @@ class VoiceController:
             raw_text=full_transcript,
         )
         reply = f"On my way to {dest_phrase.title()}, {self._address}."
-        self.observer.on_reply(reply)
         self._broadcast_state("SPEAKING")
-        self.speaker.say(reply, drain=False)
+        self._say(reply, drain=False)
         self.emitter.emit(hit)
         self.wake_gate.end_conversation()
         self.intent_classifier.reset_history()
@@ -2789,9 +3032,8 @@ class VoiceController:
                 f"I didn't catch a destination, {self._address}. "
                 f"Where would you like to go?"
             )
-            self.observer.on_reply(reply)
             self._broadcast_state("SPEAKING")
-            self.speaker.say(reply)
+            self._say(reply)
             self._broadcast_state("LISTENING")
             return
         # Only allow destinations that exist as map markers. The LLM can
@@ -2817,17 +3059,32 @@ class VoiceController:
         self._broadcast_state("LISTENING")
 
 
+# -----------------------------------------------------------------------------
+# Standalone voice CLI (no GUI, no ROS2) — `python voice_control.py`
+# -----------------------------------------------------------------------------
 if __name__ == "__main__":
-    cfg  = VoiceConfig()
-    ctrl = VoiceController(config=cfg)
-    dests = ", ".join(cfg.destinations.keys())
-    print(
-        f"\n[VoiceController] Say '{cfg.wake_word}' to wake the chair. "
-        f"Valid destinations: {dests}"
-    )
-    print("Press Ctrl+C to quit.\n")
+    # NOTE: this CLI entry block was rebuilt after an editing accident
+    # truncated the file. Everything above is the verbatim pipeline; if your
+    # original __main__ differed, restore it from your editor's local history.
+    class _ConsoleObserver(VoiceObserver):
+        """Print pipeline events so the voice stack can run without the GUI."""
+
+        def on_state(self, state: str) -> None:
+            print(f"[state ] {state}")
+
+        def on_reply(self, text: str) -> None:
+            print(f"[jarvis] {text}")
+
+        def on_navigate(self, payload: dict) -> None:
+            print(f"[navigate] {json.dumps(payload)}")
+
+    config = VoiceConfig()
+    controller = VoiceController(config, observer=_ConsoleObserver())
+    dests = ", ".join(d for d in config.destinations if d != "stop")
+    print(f"Destinations: {dests}")
+    print(f'Say "{config.wake_word.title()}" to wake the chair. '
+          f"Press Ctrl+C to quit.")
     try:
-        ctrl.run()
+        controller.run()
     except KeyboardInterrupt:
-        print(f"\n[VoiceController] Shutting down (Ctrl+C).")
-        ctrl.stop()
+        print("\n[voice_control] Stopped.")
